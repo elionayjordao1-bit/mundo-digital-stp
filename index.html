@@ -1,3 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mundo Digital STP</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+h1{text-align:center}
+input,button{padding:8px;margin:4px}
+table{width:100%;border-collapse:collapse;background:#fff;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px;text-align:center}
+th{background:#2c7be5;color:#fff}
+.hidden{display:none}
+.card{background:#fff;padding:15px;margin:10px 0;border-radius:6px}
+button{cursor:pointer}
+</style>
+</head>
+
+<body>
+
+<h1>🏪 Mundo Digital STP</h1>
+
+<div id="loginBox">
+  <h3>Login</h3>
+  <input id="email" placeholder="Email">
+  <input id="senha" type="password" placeholder="Senha">
+  <button onclick="fazerLogin()">Entrar</button>
+  <p id="erro" style="color:red"></p>
+</div>
+
+<div id="app" class="hidden">
+
+  <p>Usuário: <b><span id="userEmail"></span></b></p>
+  <button onclick="logout()">Sair</button>
+
+  <div class="card">
+    <h3>💰 Valor Total em Estoque</h3>
+    <h2 id="totalEstoque">0 Db</h2>
+  </div>
+
+  <div class="card">
+    <h3>📦 Cadastro de Produto</h3>
+    <input id="produto" placeholder="Produto">
+    <input id="estoque" type="number" placeholder="Quantidade">
+    <input id="preco" type="number" placeholder="Preço (Db)">
+    <button onclick="addProduto()">Salvar</button>
+  </div>
+
+  <div class="card">
+    <h3>📋 Estoque</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Qtd</th>
+          <th>Preço</th>
+          <th>+</th>
+          <th>-</th>
+        </tr>
+      </thead>
+      <tbody id="lista"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>📜 Histórico</h3>
+    <button onclick="exportarExcel()">📤 Exportar Excel</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Tipo</th>
+          <th>Qtd</th>
+          <th>Usuário</th>
+          <th>Data</th>
+        </tr>
+      </thead>
+      <tbody id="historico"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>📊 Relatórios</h3>
+    <button onclick="vendasHoje()">Vendas Hoje</button>
+    <button onclick="vendasMes()">Vendas do Mês</button>
+  </div>
+
+</div>
+
+<script>
 // 🔥 Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyBCw8qEFmYrBbRnDM4OFCgx-44FUtSbqts",
@@ -13,173 +108,118 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
 
-
 // 🔐 LOGIN
 function fazerLogin(){
-  const email = document.getElementById("email").value;
-  const senha = document.getElementById("senha").value;
-
-  auth.signInWithEmailAndPassword(email, senha)
-    .catch(e => document.getElementById("erro").innerText = e.message);
+  auth.signInWithEmailAndPassword(email.value, senha.value)
+    .catch(e => erro.innerText = e.message);
 }
 
-function logout(){
-  auth.signOut();
-}
+function logout(){ auth.signOut(); }
 
 auth.onAuthStateChanged(user=>{
   if(user){
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
-    document.getElementById("userEmail").innerText = user.email;
-
+    loginBox.classList.add("hidden");
+    app.classList.remove("hidden");
+    userEmail.innerText = user.email;
     carregarProdutos();
     carregarHistorico();
   }else{
-    document.getElementById("loginBox").classList.remove("hidden");
-    document.getElementById("app").classList.add("hidden");
+    loginBox.classList.remove("hidden");
+    app.classList.add("hidden");
   }
 });
 
-
 // 📦 PRODUTOS
 function addProduto(){
-  const nome    = document.getElementById("produto").value;
-  const estoque = Number(document.getElementById("estoque").value);
-  const preco   = Number(document.getElementById("preco").value);
-
-  if(!nome || estoque < 0 || preco < 0){
-    alert("Preencha corretamente");
-    return;
-  }
-
   db.collection("produtos").add({
-    nome, estoque, preco
+    nome: produto.value,
+    estoque: Number(estoque.value),
+    preco: Number(preco.value)
   });
-
-  document.getElementById("produto").value = "";
-  document.getElementById("estoque").value = "";
-  document.getElementById("preco").value   = "";
 }
 
+// 🔁 MOVIMENTAÇÃO
+function movimentar(id,nome,atual,tipo){
+  let qtd = Number(prompt("Quantidade:"));
+  if(!qtd || qtd<=0) return;
+  let novo = tipo=="entrada"?atual+qtd:atual-qtd;
+  if(novo<0) return alert("Estoque insuficiente");
 
-// 🔁 ENTRADA / SAÍDA
-function movimentar(id, nome, atual, tipo){
-  const qtd = Number(prompt("Quantidade:"));
-  if(!qtd || qtd <= 0) return;
-
-  let novo = tipo === "entrada" ? atual + qtd : atual - qtd;
-  if(novo < 0){
-    alert("Estoque insuficiente");
-    return;
-  }
-
-  db.collection("produtos").doc(id).update({ estoque: novo });
-
+  db.collection("produtos").doc(id).update({estoque:novo});
   db.collection("movimentacoes").add({
-    produto: nome,
-    tipo: tipo,
-    quantidade: qtd,
-    usuario: auth.currentUser.email,
-    data: new Date()
+    produto:nome, tipo, quantidade:qtd,
+    usuario:auth.currentUser.email,
+    data:new Date()
   });
 }
 
-
-// 📋 LISTAGEM + TOTAL EM ESTOQUE
+// 📋 LISTA + TOTAL
 function carregarProdutos(){
-  db.collection("produtos").onSnapshot(snapshot=>{
-    const lista = document.getElementById("lista");
-    const totalEl = document.getElementById("totalEstoque");
-
-    lista.innerHTML = "";
-    let total = 0;
-
-    snapshot.forEach(doc=>{
-      const p = doc.data();
-      total += Number(p.estoque) * Number(p.preco);
-
-      lista.innerHTML += `
-        <tr>
-          <td>${p.nome}</td>
-          <td>${p.estoque}</td>
-          <td>${Number(p.preco).toLocaleString('pt-PT')} Db</td>
-          <td><button onclick="movimentar('${doc.id}','${p.nome}',${p.estoque},'entrada')">+</button></td>
-          <td><button onclick="movimentar('${doc.id}','${p.nome}',${p.estoque},'saida')">-</button></td>
-        </tr>
-      `;
+  db.collection("produtos").onSnapshot(s=>{
+    lista.innerHTML="";
+    let total=0;
+    s.forEach(d=>{
+      let p=d.data();
+      total+=p.estoque*p.preco;
+      lista.innerHTML+=`
+      <tr>
+        <td>${p.nome}</td>
+        <td>${p.estoque}</td>
+        <td>${p.preco.toLocaleString('pt-PT')} Db</td>
+        <td><button onclick="movimentar('${d.id}','${p.nome}',${p.estoque},'entrada')">+</button></td>
+        <td><button onclick="movimentar('${d.id}','${p.nome}',${p.estoque},'saida')">-</button></td>
+      </tr>`;
     });
-
-    if(totalEl){
-      totalEl.innerText = total.toLocaleString('pt-PT') + " Db";
-    }
+    totalEstoque.innerText = total.toLocaleString('pt-PT')+" Db";
   });
 }
-
 
 // 📜 HISTÓRICO
 function carregarHistorico(){
-  db.collection("movimentacoes")
-    .orderBy("data","desc")
-    .limit(50)
-    .onSnapshot(snapshot=>{
-      const h = document.getElementById("historico");
-      h.innerHTML = "";
-
-      snapshot.forEach(doc=>{
-        const m = doc.data();
-        h.innerHTML += `
-          <tr>
-            <td>${m.produto}</td>
-            <td>${m.tipo}</td>
-            <td>${m.quantidade}</td>
-            <td>${m.usuario}</td>
-            <td>${m.data.toDate().toLocaleString()}</td>
-          </tr>
-        `;
-      });
+  db.collection("movimentacoes").orderBy("data","desc").limit(50)
+  .onSnapshot(s=>{
+    historico.innerHTML="";
+    s.forEach(d=>{
+      let m=d.data();
+      historico.innerHTML+=`
+      <tr>
+        <td>${m.produto}</td>
+        <td>${m.tipo}</td>
+        <td>${m.quantidade}</td>
+        <td>${m.usuario}</td>
+        <td>${m.data.toDate().toLocaleString()}</td>
+      </tr>`;
     });
+  });
 }
-
 
 // 📊 RELATÓRIOS
 function vendasHoje(){
-  let h = new Date();
-  h.setHours(0,0,0,0);
-
-  db.collection("movimentacoes")
-    .where("tipo","==","saida")
-    .where("data",">=",h)
-    .get()
-    .then(s => alert("Vendas hoje: " + s.size));
+  let h=new Date();h.setHours(0,0,0,0);
+  db.collection("movimentacoes").where("tipo","==","saida").where("data",">=",h)
+  .get().then(s=>alert("Vendas hoje: "+s.size));
 }
-
 function vendasMes(){
-  let d = new Date();
-  let i = new Date(d.getFullYear(), d.getMonth(), 1);
-
-  db.collection("movimentacoes")
-    .where("tipo","==","saida")
-    .where("data",">=",i)
-    .get()
-    .then(s => alert("Vendas do mês: " + s.size));
+  let d=new Date(),i=new Date(d.getFullYear(),d.getMonth(),1);
+  db.collection("movimentacoes").where("tipo","==","saida").where("data",">=",i)
+  .get().then(s=>alert("Vendas do mês: "+s.size));
 }
 
-
-// 📤 EXPORTAR EXCEL
+// 📤 EXCEL
 function exportarExcel(){
-  db.collection("movimentacoes").get().then(snapshot=>{
-    let csv = "Produto,Tipo,Quantidade,Usuario,Data\n";
-
-    snapshot.forEach(doc=>{
-      const m = doc.data();
-      csv += `${m.produto},${m.tipo},${m.quantidade},${m.usuario},${m.data.toDate()}\n`;
+  db.collection("movimentacoes").get().then(s=>{
+    let csv="Produto,Tipo,Quantidade,Usuario,Data\n";
+    s.forEach(d=>{
+      let m=d.data();
+      csv+=`${m.produto},${m.tipo},${m.quantidade},${m.usuario},${m.data.toDate()}\n`;
     });
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "historico_estoque.csv";
+    let a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([csv]));
+    a.download="historico_estoque.csv";
     a.click();
   });
 }
+</script>
+
+</body>
+</html>
