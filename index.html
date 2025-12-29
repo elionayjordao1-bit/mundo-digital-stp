@@ -58,6 +58,9 @@ button{cursor:pointer}
 <div class="card">
 <h3>📋 Estoque</h3>
 <button onclick="exportarEstoque()">📤 Exportar Excel</button>
+<button onclick="apagarHistoricoMes()" style="background:#c0392b;color:white">
+🗑 Apagar histórico deste mês
+</button>
 <table>
 <thead>
 <tr>
@@ -240,3 +243,33 @@ a.click();
 
 </body>
 </html>
+function apagarHistoricoMes(){
+  if(!confirm("ATENÇÃO: Isso apagará TODO o histórico deste mês. Deseja continuar?")){
+    return;
+  }
+
+  let agora = new Date();
+  let inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+  let fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59);
+
+  db.collection("movimentacoes")
+    .where("data", ">=", inicioMes)
+    .where("data", "<=", fimMes)
+    .get()
+    .then(snapshot => {
+      if(snapshot.empty){
+        alert("Nenhum registro deste mês para apagar.");
+        return;
+      }
+
+      let batch = db.batch();
+      snapshot.forEach(doc => batch.delete(doc.ref));
+      return batch.commit();
+    })
+    .then(() => {
+      alert("Histórico deste mês apagado com sucesso!");
+    })
+    .catch(err => {
+      alert("Erro ao apagar: " + err.message);
+    });
+}
