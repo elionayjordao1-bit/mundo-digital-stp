@@ -20,6 +20,7 @@ th{background:#2c7be5;color:#fff}
 button{cursor:pointer}
 .venda{background:#e5533d;color:white}
 .entrada{background:#2c7be5;color:white}
+.excluir{background:#555;color:white}
 </style>
 </head>
 
@@ -60,6 +61,7 @@ button{cursor:pointer}
 <!-- ESTOQUE -->
 <div class="card">
   <h3>📋 Estoque</h3>
+  <button onclick="exportarEstoque()">📤 Exportar Estoque (Excel)</button>
   <table>
     <thead>
       <tr>
@@ -69,6 +71,7 @@ button{cursor:pointer}
         <th>Total</th>
         <th>Entrada</th>
         <th>Venda</th>
+        <th>Excluir</th>
       </tr>
     </thead>
     <tbody id="lista"></tbody>
@@ -78,6 +81,7 @@ button{cursor:pointer}
 <!-- HISTÓRICO -->
 <div class="card">
   <h3>📜 Histórico</h3>
+  <button onclick="exportarHistorico()">📤 Exportar Histórico (Excel)</button>
   <table>
     <thead>
       <tr>
@@ -137,6 +141,12 @@ function addProduto(){
   });
 }
 
+function excluirProduto(id){
+  if(confirm("Deseja excluir este produto?")){
+    db.collection("produtos").doc(id).delete();
+  }
+}
+
 function movimentar(id,nome,atual,preco,tipo){
   let qtd = Number(prompt("Quantidade:"));
   if(!qtd || qtd<=0) return;
@@ -174,6 +184,7 @@ function carregarProdutos(){
         <td>${totalProduto.toLocaleString('pt-PT')} Db</td>
         <td><button class="entrada" onclick="movimentar('${d.id}','${p.nome}',${p.estoque},${p.preco},'entrada')">+</button></td>
         <td><button class="venda" onclick="movimentar('${d.id}','${p.nome}',${p.estoque},${p.preco},'saida')">Vender</button></td>
+        <td><button class="excluir" onclick="excluirProduto('${d.id}')">🗑</button></td>
       </tr>`;
     });
 
@@ -197,6 +208,36 @@ function carregarHistorico(){
       </tr>`;
     });
   });
+}
+
+// 📤 EXPORTAÇÕES
+function exportarEstoque(){
+  db.collection("produtos").get().then(s=>{
+    let csv="Produto,Quantidade,Preço,Total\n";
+    s.forEach(d=>{
+      let p=d.data();
+      csv+=`${p.nome},${p.estoque},${p.preco},${p.estoque*p.preco}\n`;
+    });
+    baixarCSV(csv,"estoque.csv");
+  });
+}
+
+function exportarHistorico(){
+  db.collection("movimentacoes").get().then(s=>{
+    let csv="Produto,Tipo,Quantidade,Usuario,Data\n";
+    s.forEach(d=>{
+      let m=d.data();
+      csv+=`${m.produto},${m.tipo},${m.quantidade},${m.usuario},${m.data.toDate()}\n`;
+    });
+    baixarCSV(csv,"historico.csv");
+  });
+}
+
+function baixarCSV(csv,nome){
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv]));
+  a.download=nome;
+  a.click();
 }
 </script>
 
