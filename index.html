@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mundo Digital STP</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+h1{text-align:center}
+input,button{padding:8px;margin:4px}
+table{width:100%;border-collapse:collapse;background:#fff;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px;text-align:center}
+th{background:#2c7be5;color:#fff}
+.hidden{display:none}
+.card{background:#fff;padding:15px;margin:10px 0;border-radius:6px}
+</style>
+</head>
+
+<body>
+
+<h1>🏪 Mundo Digital STP</h1>
+
+<div id="login">
+  <h3>Login</h3>
+  <input id="email" placeholder="Email">
+  <input id="senha" type="password" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
+  <p id="erro" style="color:red"></p>
+</div>
+
+<div id="app" class="hidden">
+  <p>Usuário: <b><span id="userEmail"></span></b></p>
+  <button onclick="logout()">Sair</button>
+
+  <div class="card">
+    <h3>📦 Cadastro de Produto</h3>
+    <input id="produto" placeholder="Produto">
+    <input id="estoque" type="number" placeholder="Quantidade">
+    <input id="preco" type="number" placeholder="Preço">
+    <button onclick="addProduto()">Salvar</button>
+  </div>
+
+  <div class="card">
+    <h3>📋 Estoque</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Qtd</th>
+          <th>Preço</th>
+          <th>Venda</th>
+        </tr>
+      </thead>
+      <tbody id="lista"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBCw8qEFmYrBbRnDM4OFCgx-44FUtSbqts",
+  authDomain: "mundo-digital-stp.firebaseapp.com",
+  projectId: "mundo-digital-stp",
+  storageBucket: "mundo-digital-stp.firebasestorage.app",
+  messagingSenderId: "1062673569126",
+  appId: "1:1062673569126:web:2e44ecbf098d90931464a7"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+function login(){
+  auth.signInWithEmailAndPassword(
+    email.value,
+    senha.value
+  ).catch(e=>erro.innerText=e.message);
+}
+
+function logout(){ auth.signOut(); }
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    login.classList.add("hidden");
+    app.classList.remove("hidden");
+    userEmail.innerText=user.email;
+    carregar();
+  }else{
+    login.classList.remove("hidden");
+    app.classList.add("hidden");
+  }
+});
+
+function addProduto(){
+  db.collection("produtos").add({
+    nome: produto.value,
+    estoque: Number(estoque.value),
+    preco: Number(preco.value)
+  });
+}
+
+function vender(id,q){
+  if(q>0) db.collection("produtos").doc(id).update({estoque:q-1});
+}
+
+function carregar(){
+  db.collection("produtos").onSnapshot(s=>{
+    lista.innerHTML="";
+    s.forEach(d=>{
+      let p=d.data();
+      lista.innerHTML+=`
+      <tr>
+        <td>${p.nome}</td>
+        <td>${p.estoque}</td>
+        <td>${p.preco}</td>
+        <td><button onclick="vender('${d.id}',${p.estoque})">Vender</button></td>
+      </tr>`;
+    });
+  });
+}
+</script>
+
+</body>
+</html>
