@@ -148,12 +148,12 @@ function carregarProdutos(){
   let total = 0;
 
   db.collection("produtos").onSnapshot(s=>{
-    lista.innerHTML="";
+    lista.innerHTML = "";
     total = 0;
 
     s.forEach(d=>{
       let p = d.data();
-      total += p.estoque * p.preco;
+      total += Number(p.estoque) * Number(p.preco);
 
       lista.innerHTML += `
       <tr>
@@ -164,6 +164,12 @@ function carregarProdutos(){
         <td><button onclick="movimentar('${d.id}','${p.nome}',${p.estoque},'saida')">-</button></td>
       </tr>`;
     });
+
+    document.getElementById("totalEstoque").innerText =
+      total.toLocaleString('pt-PT') + " Db";
+  });
+}
+
 
     document.getElementById("totalEstoque").innerText =
       total.toLocaleString('pt-PT') + " Db";
