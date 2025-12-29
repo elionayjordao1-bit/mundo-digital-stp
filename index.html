@@ -62,7 +62,8 @@ button{cursor:pointer}
 <thead>
 <tr>
 <th>Produto</th><th>Qtd</th><th>Mín</th><th>Compra</th>
-<th>Venda</th><th>Lucro</th><th>Total</th><th>+</th><th>Vender</th><th>🗑</th>
+<th>Venda</th><th>Lucro</th><th>Total</th>
+<th>+</th><th>Vender</th><th>🗑</th>
 </tr>
 </thead>
 <tbody id="lista"></tbody>
@@ -74,7 +75,10 @@ button{cursor:pointer}
 <button onclick="exportarHistorico()">📤 Exportar Excel</button>
 <table>
 <thead>
-<tr><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Valor</th><th>Usuário</th><th>Data</th></tr>
+<tr>
+<th>Produto</th><th>Tipo</th><th>Qtd</th>
+<th>Valor</th><th>Usuário</th><th>Data</th>
+</tr>
 </thead>
 <tbody id="historico"></tbody>
 </table>
@@ -133,6 +137,7 @@ let p=d.data();
 let lucro=p.venda-p.compra;
 let totalProd=p.estoque*p.venda;
 total+=totalProd;
+
 lista.innerHTML+=`
 <tr class="${p.estoque<=p.minimo?'baixo':''}">
 <td>${p.nome}</td>
@@ -142,64 +147,94 @@ lista.innerHTML+=`
 <td>${p.venda} Db</td>
 <td>${lucro} Db</td>
 <td>${totalProd} Db</td>
-<td><button onclick="mov('${d.id}',${p.estoque},${p.venda},'entrada')">+</button></td>
-<td><button onclick="mov('${d.id}',${p.estoque},${p.venda},'saida')">Vender</button></td>
+<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
+<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
 <td><button onclick="del('${d.id}')">🗑</button></td>
 </tr>`;
 });
 totalEstoque.innerText=total+" Db";
 });
+
 db.collection("movimentacoes").orderBy("data","desc")
 .onSnapshot(s=>{
 historico.innerHTML="";
 let hoje=0,mes=0;
 let now=new Date();
+
 s.forEach(d=>{
 let m=d.data();
 let data=m.data.toDate();
-if(data.toDateString()==now.toDateString()) hoje+=m.valor;
-if(data.getMonth()==now.getMonth()) mes+=m.valor;
+let valor=Number(m.valor)||0;
+
+if(data.toDateString()==now.toDateString()) hoje+=valor;
+if(data.getMonth()==now.getMonth() && data.getFullYear()==now.getFullYear()) mes+=valor;
+
 historico.innerHTML+=`
-<tr><td>${m.produto}</td><td>${m.tipo}</td><td>${m.quantidade}</td>
-<td>${m.valor} Db</td><td>${m.usuario}</td><td>${data.toLocaleString()}</td></tr>`;
+<tr>
+<td>${m.produto}</td>
+<td>${m.tipo}</td>
+<td>${m.quantidade}</td>
+<td>${valor} Db</td>
+<td>${m.usuario}</td>
+<td>${data.toLocaleString()}</td>
+</tr>`;
 });
+
 vendasHoje.innerText=hoje+" Db";
 vendasMes.innerText=mes+" Db";
 });
 }
 
-function mov(id,atual,preco,t){
+function mov(id,nome,atual,preco,t){
 let q=+prompt("Quantidade:");
 if(!q||q<=0)return;
 let novo=t=="entrada"?atual+q:atual-q;
 if(novo<0)return alert("Estoque insuficiente");
+
 db.collection("produtos").doc(id).update({estoque:novo});
 db.collection("movimentacoes").add({
-produto:id,tipo:t,quantidade:q,valor:q*preco,
-usuario:auth.currentUser.email,data:new Date()
+produto:nome,
+tipo:t,
+quantidade:q,
+valor:q*preco,
+usuario:auth.currentUser.email,
+data:new Date()
 });
 }
 
-function del(id){if(confirm("Excluir produto?"))db.collection("produtos").doc(id).delete();}
+function del(id){
+if(confirm("Excluir produto?")){
+db.collection("produtos").doc(id).delete();
+}
+}
 
 function exportarEstoque(){
 db.collection("produtos").get().then(s=>{
 let c="Produto,Qtd,Min,Compra,Venda\n";
-s.forEach(d=>{let p=d.data();c+=`${p.nome},${p.estoque},${p.minimo},${p.compra},${p.venda}\n`;});
+s.forEach(d=>{
+let p=d.data();
+c+=`${p.nome},${p.estoque},${p.minimo},${p.compra},${p.venda}\n`;
+});
 baixar(c,"estoque.csv");
 });
 }
+
 function exportarHistorico(){
 db.collection("movimentacoes").get().then(s=>{
 let c="Produto,Tipo,Qtd,Valor,Usuario,Data\n";
-s.forEach(d=>{let m=d.data();c+=`${m.produto},${m.tipo},${m.quantidade},${m.valor},${m.usuario},${m.data.toDate()}\n`;});
+s.forEach(d=>{
+let m=d.data();
+c+=`${m.produto},${m.tipo},${m.quantidade},${m.valor},${m.usuario},${m.data.toDate()}\n`;
+});
 baixar(c,"historico.csv");
 });
 }
+
 function baixar(c,n){
 let a=document.createElement("a");
 a.href=URL.createObjectURL(new Blob([c]));
-a.download=n;a.click();
+a.download=n;
+a.click();
 }
 </script>
 
