@@ -163,7 +163,11 @@ function carregarProdutos(){
       total+=p.estoque*p.preco;
       lista.innerHTML+=`
       <tr>
-        <td>${p.nome}</td>
+        <td>
+  <strong>${p.nome}</strong><br>
+  <small>Total: ${(p.estoque * p.preco).toLocaleString('pt-PT')} Db</small>
+</td>
+
         <td>${p.estoque}</td>
         <td>${p.preco.toLocaleString('pt-PT')} Db</td>
         <td><button onclick="movimentar('${d.id}','${p.nome}',${p.estoque},'entrada')">+</button></td>
