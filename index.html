@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Mundo Digital STP</title>
 
+<!-- Firebase COMPAT (essencial para GitHub Pages) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -65,60 +66,78 @@ const firebaseConfig = {
   apiKey: "AIzaSyBCw8qEFmYrBbRnDM4OFCgx-44FUtSbqts",
   authDomain: "mundo-digital-stp.firebaseapp.com",
   projectId: "mundo-digital-stp",
-  storageBucket: "mundo-digital-stp.firebasestorage.app",
+  storageBucket: "mundo-digital-stp.appspot.com",
   messagingSenderId: "1062673569126",
   appId: "1:1062673569126:web:2e44ecbf098d90931464a7"
 };
 
+// 🔥 INICIALIZAÇÃO CORRETA
 firebase.initializeApp(firebaseConfig);
+
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// 🔐 LOGIN
 function login(){
   auth.signInWithEmailAndPassword(
-    email.value,
-    senha.value
-  ).catch(e=>erro.innerText=e.message);
-}
-
-function logout(){ auth.signOut(); }
-
-auth.onAuthStateChanged(user=>{
-  if(user){
-    login.classList.add("hidden");
-    app.classList.remove("hidden");
-    userEmail.innerText=user.email;
-    carregar();
-  }else{
-    login.classList.remove("hidden");
-    app.classList.add("hidden");
-  }
-});
-
-function addProduto(){
-  db.collection("produtos").add({
-    nome: produto.value,
-    estoque: Number(estoque.value),
-    preco: Number(preco.value)
+    document.getElementById("email").value,
+    document.getElementById("senha").value
+  ).catch(e=>{
+    document.getElementById("erro").innerText = e.message;
   });
 }
 
-function vender(id,q){
-  if(q>0) db.collection("produtos").doc(id).update({estoque:q-1});
+function logout(){
+  auth.signOut();
+}
+
+// 🔄 ESTADO DE LOGIN
+auth.onAuthStateChanged(user=>{
+  if(user){
+    document.getElementById("login").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    document.getElementById("userEmail").innerText = user.email;
+    carregar();
+  } else {
+    document.getElementById("login").classList.remove("hidden");
+    document.getElementById("app").classList.add("hidden");
+  }
+});
+
+// 📦 PRODUTOS
+function addProduto(){
+  db.collection("produtos").add({
+    nome: document.getElementById("produto").value,
+    estoque: Number(document.getElementById("estoque").value),
+    preco: Number(document.getElementById("preco").value),
+    criadoEm: new Date()
+  });
+}
+
+function vender(id, qtd){
+  if(qtd <= 0) return;
+  db.collection("produtos").doc(id).update({
+    estoque: qtd - 1
+  });
 }
 
 function carregar(){
-  db.collection("produtos").onSnapshot(s=>{
-    lista.innerHTML="";
-    s.forEach(d=>{
-      let p=d.data();
-      lista.innerHTML+=`
-      <tr>
-        <td>${p.nome}</td>
-        <td>${p.estoque}</td>
-        <td>${p.preco}</td>
-        <td><button onclick="vender('${d.id}',${p.estoque})">Vender</button></td>
-      </tr>`;
+  db.collection("produtos").onSnapshot(snapshot=>{
+    document.getElementById("lista").innerHTML = "";
+    snapshot.forEach(doc=>{
+      const p = doc.data();
+      document.getElementById("lista").innerHTML += `
+        <tr>
+          <td>${p.nome}</td>
+          <td>${p.estoque}</td>
+          <td>R$ ${p.preco}</td>
+          <td>
+            <button onclick="vender('${doc.id}', ${p.estoque})">
+              Vender
+            </button>
+          </td>
+        </tr>
+      `;
     });
   });
 }
