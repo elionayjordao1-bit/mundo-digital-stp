@@ -18,6 +18,8 @@ th{background:#2c7be5;color:#fff}
 .hidden{display:none}
 .card{background:#fff;padding:15px;margin:10px 0;border-radius:6px}
 button{cursor:pointer}
+.venda{background:#e5533d;color:white}
+.entrada{background:#2c7be5;color:white}
 </style>
 </head>
 
@@ -25,6 +27,7 @@ button{cursor:pointer}
 
 <h1>🏪 Mundo Digital STP</h1>
 
+<!-- LOGIN -->
 <div id="loginBox">
   <h3>Login</h3>
   <input id="email" placeholder="Email">
@@ -33,62 +36,61 @@ button{cursor:pointer}
   <p id="erro" style="color:red"></p>
 </div>
 
+<!-- APP -->
 <div id="app" class="hidden">
 
-  <p>Usuário: <b><span id="userEmail"></span></b></p>
-  <button onclick="logout()">Sair</button>
+<p>Usuário: <b><span id="userEmail"></span></b></p>
+<button onclick="logout()">Sair</button>
 
-  <div class="card">
-    <h3>💰 Valor Total em Estoque</h3>
-    <h2 id="totalEstoque">0 Db</h2>
-  </div>
+<!-- TOTAL GERAL -->
+<div class="card">
+  <h3>💰 Valor Total do Estoque</h3>
+  <h2 id="totalEstoque">0 Db</h2>
+</div>
 
-  <div class="card">
-    <h3>📦 Cadastro de Produto</h3>
-    <input id="produto" placeholder="Produto">
-    <input id="estoque" type="number" placeholder="Quantidade">
-    <input id="preco" type="number" placeholder="Preço (Db)">
-    <button onclick="addProduto()">Salvar</button>
-  </div>
+<!-- CADASTRO -->
+<div class="card">
+  <h3>📦 Cadastro de Produto</h3>
+  <input id="produto" placeholder="Produto">
+  <input id="estoque" type="number" placeholder="Quantidade">
+  <input id="preco" type="number" placeholder="Preço (Db)">
+  <button onclick="addProduto()">Salvar</button>
+</div>
 
-  <div class="card">
-    <h3>📋 Estoque</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Produto</th>
-          <th>Qtd</th>
-          <th>Preço</th>
-          <th>+</th>
-          <th>-</th>
-        </tr>
-      </thead>
-      <tbody id="lista"></tbody>
-    </table>
-  </div>
+<!-- ESTOQUE -->
+<div class="card">
+  <h3>📋 Estoque</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Produto</th>
+        <th>Qtd</th>
+        <th>Preço</th>
+        <th>Total</th>
+        <th>Entrada</th>
+        <th>Venda</th>
+      </tr>
+    </thead>
+    <tbody id="lista"></tbody>
+  </table>
+</div>
 
-  <div class="card">
-    <h3>📜 Histórico</h3>
-    <button onclick="exportarExcel()">📤 Exportar Excel</button>
-    <table>
-      <thead>
-        <tr>
-          <th>Produto</th>
-          <th>Tipo</th>
-          <th>Qtd</th>
-          <th>Usuário</th>
-          <th>Data</th>
-        </tr>
-      </thead>
-      <tbody id="historico"></tbody>
-    </table>
-  </div>
-
-  <div class="card">
-    <h3>📊 Relatórios</h3>
-    <button onclick="vendasHoje()">Vendas Hoje</button>
-    <button onclick="vendasMes()">Vendas do Mês</button>
-  </div>
+<!-- HISTÓRICO -->
+<div class="card">
+  <h3>📜 Histórico</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Produto</th>
+        <th>Tipo</th>
+        <th>Qtd</th>
+        <th>Usuário</th>
+        <th>Data</th>
+      </tr>
+    </thead>
+    <tbody id="historico"></tbody>
+  </table>
+</div>
 
 </div>
 
@@ -104,11 +106,9 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const auth = firebase.auth();
-const db   = firebase.firestore();
+const db = firebase.firestore();
 
-// 🔐 LOGIN
 function fazerLogin(){
   auth.signInWithEmailAndPassword(email.value, senha.value)
     .catch(e => erro.innerText = e.message);
@@ -129,7 +129,6 @@ auth.onAuthStateChanged(user=>{
   }
 });
 
-// 📦 PRODUTOS
 function addProduto(){
   db.collection("produtos").add({
     nome: produto.value,
@@ -138,49 +137,52 @@ function addProduto(){
   });
 }
 
-// 🔁 MOVIMENTAÇÃO
-function movimentar(id,nome,atual,tipo){
+function movimentar(id,nome,atual,preco,tipo){
   let qtd = Number(prompt("Quantidade:"));
   if(!qtd || qtd<=0) return;
-  let novo = tipo=="entrada"?atual+qtd:atual-qtd;
+
+  let novo = tipo=="entrada" ? atual+qtd : atual-qtd;
   if(novo<0) return alert("Estoque insuficiente");
 
   db.collection("produtos").doc(id).update({estoque:novo});
+
   db.collection("movimentacoes").add({
-    produto:nome, tipo, quantidade:qtd,
+    produto:nome,
+    tipo,
+    quantidade:qtd,
+    valor:qtd*preco,
     usuario:auth.currentUser.email,
     data:new Date()
   });
 }
 
-// 📋 LISTA + TOTAL
 function carregarProdutos(){
   db.collection("produtos").onSnapshot(s=>{
     lista.innerHTML="";
-    let total=0;
+    let totalGeral=0;
+
     s.forEach(d=>{
       let p=d.data();
-      total+=p.estoque*p.preco;
+      let totalProduto=p.estoque*p.preco;
+      totalGeral+=totalProduto;
+
       lista.innerHTML+=`
       <tr>
-        <td>
-  <strong>${p.nome}</strong><br>
-  <small>Total: ${(p.estoque * p.preco).toLocaleString('pt-PT')} Db</small>
-</td>
-
+        <td>${p.nome}</td>
         <td>${p.estoque}</td>
         <td>${p.preco.toLocaleString('pt-PT')} Db</td>
-        <td><button onclick="movimentar('${d.id}','${p.nome}',${p.estoque},'entrada')">+</button></td>
-        <td><button onclick="movimentar('${d.id}','${p.nome}',${p.estoque},'saida')">-</button></td>
+        <td>${totalProduto.toLocaleString('pt-PT')} Db</td>
+        <td><button class="entrada" onclick="movimentar('${d.id}','${p.nome}',${p.estoque},${p.preco},'entrada')">+</button></td>
+        <td><button class="venda" onclick="movimentar('${d.id}','${p.nome}',${p.estoque},${p.preco},'saida')">Vender</button></td>
       </tr>`;
     });
-    totalEstoque.innerText = total.toLocaleString('pt-PT')+" Db";
+
+    totalEstoque.innerText = totalGeral.toLocaleString('pt-PT')+" Db";
   });
 }
 
-// 📜 HISTÓRICO
 function carregarHistorico(){
-  db.collection("movimentacoes").orderBy("data","desc").limit(50)
+  db.collection("movimentacoes").orderBy("data","desc")
   .onSnapshot(s=>{
     historico.innerHTML="";
     s.forEach(d=>{
@@ -194,33 +196,6 @@ function carregarHistorico(){
         <td>${m.data.toDate().toLocaleString()}</td>
       </tr>`;
     });
-  });
-}
-
-// 📊 RELATÓRIOS
-function vendasHoje(){
-  let h=new Date();h.setHours(0,0,0,0);
-  db.collection("movimentacoes").where("tipo","==","saida").where("data",">=",h)
-  .get().then(s=>alert("Vendas hoje: "+s.size));
-}
-function vendasMes(){
-  let d=new Date(),i=new Date(d.getFullYear(),d.getMonth(),1);
-  db.collection("movimentacoes").where("tipo","==","saida").where("data",">=",i)
-  .get().then(s=>alert("Vendas do mês: "+s.size));
-}
-
-// 📤 EXCEL
-function exportarExcel(){
-  db.collection("movimentacoes").get().then(s=>{
-    let csv="Produto,Tipo,Quantidade,Usuario,Data\n";
-    s.forEach(d=>{
-      let m=d.data();
-      csv+=`${m.produto},${m.tipo},${m.quantidade},${m.usuario},${m.data.toDate()}\n`;
-    });
-    let a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([csv]));
-    a.download="historico_estoque.csv";
-    a.click();
   });
 }
 </script>
