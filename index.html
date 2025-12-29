@@ -145,19 +145,28 @@ function movimentar(id,nome,atual,tipo){
 }
 
 function carregarProdutos(){
+  let total = 0;
+
   db.collection("produtos").onSnapshot(s=>{
     lista.innerHTML="";
+    total = 0;
+
     s.forEach(d=>{
-      let p=d.data();
-      lista.innerHTML+=`
+      let p = d.data();
+      total += p.estoque * p.preco;
+
+      lista.innerHTML += `
       <tr>
         <td>${p.nome}</td>
         <td>${p.estoque}</td>
-        <td>Db ${p.preco}</td>
+        <td>${Number(p.preco).toLocaleString('pt-PT')} Db</td>
         <td><button onclick="movimentar('${d.id}','${p.nome}',${p.estoque},'entrada')">+</button></td>
         <td><button onclick="movimentar('${d.id}','${p.nome}',${p.estoque},'saida')">-</button></td>
       </tr>`;
     });
+
+    document.getElementById("totalEstoque").innerText =
+      total.toLocaleString('pt-PT') + " Db";
   });
 }
 
