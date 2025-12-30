@@ -1,52 +1,149 @@
-<!-- 🔧 ARQUIVO CORRIGIDO – PERMISSÕES CERTAS -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Mundo Digital STP</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:20px}
+h1{text-align:center}
+input,button{padding:6px;margin:4px}
+table{width:100%;border-collapse:collapse;background:#fff;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px;text-align:center}
+th{background:#2c7be5;color:#fff}
+.hidden{display:none}
+.card{background:#fff;padding:15px;margin:10px 0;border-radius:6px}
+.baixo{background:#ffcccc}
+button{cursor:pointer}
+</style>
+</head>
+
+<body>
+
+<h1>🏪 Mundo Digital STP</h1>
+
+<div id="loginBox">
+  <input id="email" placeholder="Email">
+  <input id="senha" type="password" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
+  <p id="erro" style="color:red"></p>
+</div>
+
+<div id="app" class="hidden">
+
+<p>Usuário: <b id="userEmail"></b> (<span id="userRole"></span>)</p>
+<button onclick="logout()">Sair</button>
+
+<div id="relatorio" class="card">
+<h3>💰 Relatório</h3>
+<p>Hoje: <b id="vendasHoje">0 Db</b></p>
+<p>Mês: <b id="vendasMes">0 Db</b></p>
+<p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
+</div>
+
+<div id="novoProduto" class="card">
+<h3>📦 Novo Produto</h3>
+<input id="nome" placeholder="Produto">
+<input id="estoque" type="number" placeholder="Qtd">
+<input id="minimo" type="number" placeholder="Estoque mínimo">
+<input id="compra" type="number" placeholder="Preço compra">
+<input id="venda" type="number" placeholder="Preço venda">
+<button onclick="addProduto()">Salvar</button>
+</div>
+
+<div class="card">
+<h3>📋 Estoque</h3>
+<table>
+<thead>
+<tr>
+<th>Produto</th><th>Qtd</th><th>Mín</th>
+<th>Compra</th><th>Venda</th><th>Lucro</th><th>Total</th>
+<th id="thEntrada">+</th>
+<th id="thVenda">Vender</th>
+<th id="thExcluir">🗑</th>
+</tr>
+</thead>
+<tbody id="lista"></tbody>
+</table>
+</div>
+
+<div class="card">
+<h3>📜 Histórico</h3>
+<table>
+<thead>
+<tr>
+<th>Produto</th><th>Tipo</th><th>Qtd</th>
+<th>Valor</th><th>Usuário</th><th>Data</th>
+</tr>
+</thead>
+<tbody id="historico"></tbody>
+</table>
+</div>
+
+</div>
+
 <script>
+const firebaseConfig={
+apiKey:"AIzaSyBCw8qEFmYrBbRnDM4OFCgx-44FUtSbqts",
+authDomain:"mundo-digital-stp.firebaseapp.com",
+projectId:"mundo-digital-stp",
+storageBucket:"mundo-digital-stp.appspot.com",
+messagingSenderId:"1062673569126",
+appId:"1:1062673569126:web:2e44ecbf098d90931464a7"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth();
+const db=firebase.firestore();
+
 let ROLE="";
 
+function login(){
+auth.signInWithEmailAndPassword(email.value,senha.value)
+.catch(e=>erro.innerText=e.message);
+}
+function logout(){auth.signOut();}
+
 auth.onAuthStateChanged(async u=>{
-if(u){
+if(!u){
+loginBox.classList.remove("hidden");
+app.classList.add("hidden");
+return;
+}
+
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
 
-const doc=await db.collection("usuarios").doc(u.uid).get();
-ROLE=doc.data().role;
+const snap=await db.collection("usuarios").doc(u.uid).get();
+ROLE=snap.data().role;
 userRole.innerText=ROLE;
 
 aplicarPermissoes();
 carregar();
-}else{
-loginBox.classList.remove("hidden");
-app.classList.add("hidden");
-}
 });
 
 function aplicarPermissoes(){
-/* RELATÓRIO */
 if(ROLE!=="admin"){
-document.getElementById("relatorio").style.display="none";
+relatorio.style.display="none";
+novoProduto.style.display="none";
 }
-
-/* CADASTRO PRODUTO */
-if(ROLE!=="admin"){
-document.getElementById("novoProduto").style.display="none";
-}
-
-/* COLUNAS */
 if(ROLE==="vendas"){
-document.getElementById("thEntrada").style.display="none";
-document.getElementById("thExcluir").style.display="none";
+thEntrada.style.display="none";
+thExcluir.style.display="none";
 }
 if(ROLE==="estoque"){
-document.getElementById("thVenda").style.display="none";
-document.getElementById("thExcluir").style.display="none";
+thVenda.style.display="none";
+thExcluir.style.display="none";
 }
 }
 
 function addProduto(){
-if(ROLE!=="admin"){
-alert("Sem permissão");
-return;
-}
+if(ROLE!=="admin") return alert("Sem permissão");
 db.collection("produtos").add({
 nome:nome.value,
 estoque:+estoque.value,
@@ -56,9 +153,37 @@ venda:+venda.value
 });
 }
 
+function carregar(){
+db.collection("produtos").onSnapshot(s=>{
+lista.innerHTML="";
+let total=0;
+s.forEach(d=>{
+let p=d.data();
+let lucro=p.venda-p.compra;
+let totalProd=p.estoque*p.venda;
+total+=totalProd;
+
+lista.innerHTML+=`
+<tr class="${p.estoque<=p.minimo?'baixo':''}">
+<td>${p.nome}</td>
+<td>${p.estoque}</td>
+<td>${p.minimo}</td>
+<td>${p.compra} Db</td>
+<td>${p.venda} Db</td>
+<td>${lucro} Db</td>
+<td>${totalProd} Db</td>
+<td>${ROLE!=="vendas"?`<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`:""}</td>
+<td>${ROLE!=="estoque"?`<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`:""}</td>
+<td>${ROLE==="admin"?`<button onclick="del('${d.id}')">🗑</button>`:""}</td>
+</tr>`;
+});
+totalEstoque.innerText=total+" Db";
+});
+}
+
 function mov(id,nome,atual,preco,t){
-if(ROLE==="vendas" && t==="entrada") return;
-if(ROLE==="estoque" && t==="saida") return;
+if(ROLE==="vendas"&&t==="entrada") return;
+if(ROLE==="estoque"&&t==="saida") return;
 
 let q=+prompt("Quantidade:");
 if(!q||q<=0)return;
@@ -83,3 +208,6 @@ db.collection("produtos").doc(id).delete();
 }
 }
 </script>
+
+</body>
+</html>
