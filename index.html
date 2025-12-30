@@ -35,17 +35,17 @@ button{cursor:pointer}
 
 <div id="app" class="hidden">
 
-<p>Usuário: <b id="userEmail"></b></p>
+<p>Usuário: <b id="userEmail"></b> (<span id="userRole"></span>)</p>
 <button onclick="logout()">Sair</button>
 
-<div class="card">
+<div id="relatorio" class="card">
 <h3>💰 Relatório</h3>
 <p>Hoje: <b id="vendasHoje">0 Db</b></p>
 <p>Mês: <b id="vendasMes">0 Db</b></p>
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<div class="card">
+<div id="novoProduto" class="card">
 <h3>📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
 <input id="estoque" type="number" placeholder="Qtd">
@@ -63,7 +63,9 @@ button{cursor:pointer}
 <tr>
 <th>Produto</th><th>Qtd</th><th>Mín</th><th>Compra</th>
 <th>Venda</th><th>Lucro</th><th>Total</th>
-<th>+</th><th>Vender</th><th>🗑</th>
+<th id="thEntrada">+</th>
+<th id="thVenda">Vender</th>
+<th id="thExcluir">🗑</th>
 </tr>
 </thead>
 <tbody id="lista"></tbody>
@@ -87,7 +89,7 @@ button{cursor:pointer}
 </div>
 
 <script>
-const firebaseConfig = {
+const firebaseConfig={
 apiKey:"AIzaSyBCw8qEFmYrBbRnDM4OFCgx-44FUtSbqts",
 authDomain:"mundo-digital-stp.firebaseapp.com",
 projectId:"mundo-digital-stp",
@@ -100,17 +102,25 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
 
+let ROLE="";
+
 function login(){
 auth.signInWithEmailAndPassword(email.value,senha.value)
 .catch(e=>erro.innerText=e.message);
 }
 function logout(){auth.signOut();}
 
-auth.onAuthStateChanged(u=>{
+auth.onAuthStateChanged(async u=>{
 if(u){
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
+
+const doc=await db.collection("usuarios").doc(u.uid).get();
+ROLE=doc.data().role;
+userRole.innerText=ROLE;
+
+aplicarPermissoes();
 carregar();
 }else{
 loginBox.classList.remove("hidden");
@@ -118,7 +128,21 @@ app.classList.add("hidden");
 }
 });
 
+function aplicarPermissoes(){
+if(ROLE==="vendas"){
+document.getElementById("relatorio").style.display="none";
+document.getElementById("novoProduto").style.display="none";
+document.getElementById("thEntrada").style.display="none";
+document.getElementById("thExcluir").style.display="none";
+}
+if(ROLE==="estoque"){
+document.getElementById("relatorio").style.display="none";
+document.getElementById("thVenda").style.display="none";
+}
+}
+
 function addProduto(){
+if(ROLE!=="admin") return alert("Sem permissão");
 db.collection("produtos").add({
 nome:nome.value,
 estoque:+estoque.value,
@@ -147,9 +171,9 @@ lista.innerHTML+=`
 <td>${p.venda} Db</td>
 <td>${lucro} Db</td>
 <td>${totalProd} Db</td>
-<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
-<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
-<td><button onclick="del('${d.id}')">🗑</button></td>
+<td>${ROLE!=="vendas"?`<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`:""}</td>
+<td>${ROLE!=="estoque"?`<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`:""}</td>
+<td>${ROLE==="admin"?`<button onclick="del('${d.id}')">🗑</button>`:""}</td>
 </tr>`;
 });
 totalEstoque.innerText=total+" Db";
@@ -186,6 +210,7 @@ vendasMes.innerText=mes+" Db";
 }
 
 function mov(id,nome,atual,preco,t){
+if((ROLE==="vendas"&&t==="entrada")||(ROLE==="estoque"&&t==="saida")) return;
 let q=+prompt("Quantidade:");
 if(!q||q<=0)return;
 let novo=t=="entrada"?atual+q:atual-q;
@@ -203,6 +228,7 @@ data:new Date()
 }
 
 function del(id){
+if(ROLE!=="admin") return;
 if(confirm("Excluir produto?")){
 db.collection("produtos").doc(id).delete();
 }
