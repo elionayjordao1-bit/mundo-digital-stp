@@ -98,6 +98,7 @@ appId:"1:1062673569126:web:2e44ecbf098d90931464a7"
 
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
+let ROLE = "admin";
 const db=firebase.firestore();
 
 function login(){
@@ -107,7 +108,13 @@ auth.signInWithEmailAndPassword(email.value,senha.value)
 function logout(){auth.signOut();}
 
 auth.onAuthStateChanged(u=>{
-if(u){
+if(u){ db.collection("usuarios").doc(u.uid).get().then(doc=>{
+  if(doc.exists){
+    ROLE = doc.data().role || "admin";
+  } else {
+    ROLE = "admin";
+  }
+});
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
@@ -119,15 +126,58 @@ app.classList.add("hidden");
 });
 
 function addProduto(){
-db.collection("produtos").add({
-nome:nome.value,
-estoque:+estoque.value,
-minimo:+minimo.value,
-compra:+compra.value,
-venda:+venda.value
-});
-}
+  if(ROLE !== "admin"){
+    alert("Você não tem permissão para cadastrar produtos.");
+    return;
+  }
 
+  db.collection("produtos").add({
+    nome: nome.value,
+    estoque: +estoque.value,
+    minimo: +minimo.value,
+    compra: +compra.value,
+    venda: +venda.value
+  });
+}
+function mov(id,nome,atual,preco,t){
+
+  if(ROLE === "vendas" && t === "entrada"){
+    alert("Funcionário de vendas não pode dar entrada.");
+    return;
+  }
+
+  if(ROLE === "estoque" && t === "saida"){
+    alert("Funcionário de estoque não pode vender.");
+    return;
+  }
+
+  let q = +prompt("Quantidade:");
+  if(!q || q <= 0) return;
+
+  let novo = t === "entrada" ? atual + q : atual - q;
+  if(novo < 0) return alert("Estoque insuficiente");
+
+  db.collection("produtos").doc(id).update({estoque: novo});
+
+  db.collection("movimentacoes").add({
+    produto: nome,
+    tipo: t,
+    quantidade: q,
+    valor: q * preco,
+    usuario: auth.currentUser.email,
+    data: new Date()
+  });
+}
+function del(id){
+  if(ROLE !== "admin"){
+    alert("Você não tem permissão para excluir produtos.");
+    return;
+  }
+
+  if(confirm("Excluir produto?")){
+    db.collection("produtos").doc(id).delete();
+  }
+}
 function carregar(){
 db.collection("produtos").onSnapshot(s=>{
 lista.innerHTML="";
