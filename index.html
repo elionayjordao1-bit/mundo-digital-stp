@@ -18,7 +18,6 @@ th{background:#2c7be5;color:#fff}
 .hidden{display:none}
 .card{background:#fff;padding:15px;margin:10px 0;border-radius:6px}
 .baixo{background:#ffcccc}
-button{cursor:pointer}
 </style>
 </head>
 
@@ -35,17 +34,22 @@ button{cursor:pointer}
 
 <div id="app" class="hidden">
 
-<p>Usuário: <b id="userEmail"></b></p>
+<p>
+Usuário: <b id="userEmail"></b> |
+Perfil: <b id="userRole"></b>
+</p>
 <button onclick="logout()">Sair</button>
 
-<div class="card">
+<!-- RELATÓRIO -->
+<div class="card" id="boxRelatorio">
 <h3>💰 Relatório</h3>
 <p>Hoje: <b id="vendasHoje">0 Db</b></p>
 <p>Mês: <b id="vendasMes">0 Db</b></p>
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<div class="card">
+<!-- NOVO PRODUTO -->
+<div class="card" id="boxProduto">
 <h3>📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
 <input id="estoque" type="number" placeholder="Qtd">
@@ -55,9 +59,10 @@ button{cursor:pointer}
 <button onclick="addProduto()">Salvar</button>
 </div>
 
+<!-- ESTOQUE -->
 <div class="card">
 <h3>📋 Estoque</h3>
-<button onclick="exportarEstoque()">📤 Exportar Excel</button>
+<button id="btnExportarEstoque" onclick="exportarEstoque()">📤 Exportar Excel</button>
 <table>
 <thead>
 <tr>
@@ -70,7 +75,8 @@ button{cursor:pointer}
 </table>
 </div>
 
-<div class="card">
+<!-- HISTÓRICO -->
+<div class="card" id="boxHistorico">
 <h3>📜 Histórico</h3>
 <button onclick="exportarHistorico()">📤 Exportar Excel</button>
 <table>
@@ -100,25 +106,44 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
 
+let ROLE = "";
+
 function login(){
 auth.signInWithEmailAndPassword(email.value,senha.value)
 .catch(e=>erro.innerText=e.message);
 }
 function logout(){auth.signOut();}
 
-auth.onAuthStateChanged(u=>{
-if(u){
+auth.onAuthStateChanged(async u=>{
+if(!u) return;
+
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
-carregar();
-}else{
-loginBox.classList.remove("hidden");
-app.classList.add("hidden");
+
+// 🔑 CARREGAR ROLE
+const doc = await db.collection("usuarios").doc(u.uid).get();
+ROLE = doc.exists ? doc.data().role : "";
+userRole.innerText = ROLE;
+
+// 🔐 PERMISSÕES
+if(ROLE!=="admin"){
+  boxProduto.classList.add("hidden");
+  document.getElementById("btnExportarEstoque").classList.add("hidden");
 }
+if(ROLE==="vendas"){
+  boxRelatorio.classList.add("hidden");
+}
+if(ROLE==="estoque"){
+  boxRelatorio.classList.add("hidden");
+  boxHistorico.classList.add("hidden");
+}
+
+carregar();
 });
 
 function addProduto(){
+if(ROLE!=="admin") return alert("Sem permissão");
 db.collection("produtos").add({
 nome:nome.value,
 estoque:+estoque.value,
@@ -147,9 +172,9 @@ lista.innerHTML+=`
 <td>${p.venda} Db</td>
 <td>${lucro} Db</td>
 <td>${totalProd} Db</td>
-<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
-<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
-<td><button onclick="del('${d.id}')">🗑</button></td>
+<td>${ROLE!=="vendas" ? `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>` : ''}</td>
+<td>${ROLE!=="estoque" ? `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>` : ''}</td>
+<td>${ROLE==="admin" ? `<button onclick="del('${d.id}')">🗑</button>` : ''}</td>
 </tr>`;
 });
 totalEstoque.innerText=total+" Db";
@@ -157,64 +182,48 @@ totalEstoque.innerText=total+" Db";
 
 db.collection("movimentacoes").orderBy("data","desc")
 .onSnapshot(s=>{
+if(ROLE==="estoque") return;
 historico.innerHTML="";
-let hoje=0,mes=0;
-let now=new Date();
-
+let hoje=0,mes=0,now=new Date();
 s.forEach(d=>{
 let m=d.data();
 let data=m.data.toDate();
 let valor=Number(m.valor)||0;
-
 if(data.toDateString()==now.toDateString()) hoje+=valor;
-if(data.getMonth()==now.getMonth() && data.getFullYear()==now.getFullYear()) mes+=valor;
-
+if(data.getMonth()==now.getMonth()) mes+=valor;
 historico.innerHTML+=`
 <tr>
-<td>${m.produto}</td>
-<td>${m.tipo}</td>
-<td>${m.quantidade}</td>
-<td>${valor} Db</td>
-<td>${m.usuario}</td>
-<td>${data.toLocaleString()}</td>
+<td>${m.produto}</td><td>${m.tipo}</td><td>${m.quantidade}</td>
+<td>${valor} Db</td><td>${m.usuario}</td><td>${data.toLocaleString()}</td>
 </tr>`;
 });
-
 vendasHoje.innerText=hoje+" Db";
 vendasMes.innerText=mes+" Db";
 });
 }
 
 function mov(id,nome,atual,preco,t){
+if(t==="entrada" && ROLE==="vendas") return;
+if(t==="saida" && ROLE==="estoque") return;
 let q=+prompt("Quantidade:");
-if(!q||q<=0)return;
-let novo=t=="entrada"?atual+q:atual-q;
-if(novo<0)return alert("Estoque insuficiente");
-
-db.collection("produtos").doc(id).update({estoque:novo});
+if(!q) return;
+db.collection("produtos").doc(id).update({estoque:t==="entrada"?atual+q:atual-q});
 db.collection("movimentacoes").add({
-produto:nome,
-tipo:t,
-quantidade:q,
-valor:q*preco,
-usuario:auth.currentUser.email,
-data:new Date()
+produto:nome,tipo:t,quantidade:q,valor:q*preco,
+usuario:auth.currentUser.email,data:new Date()
 });
 }
 
 function del(id){
-if(confirm("Excluir produto?")){
-db.collection("produtos").doc(id).delete();
-}
+if(ROLE!=="admin") return;
+if(confirm("Excluir produto?")) db.collection("produtos").doc(id).delete();
 }
 
 function exportarEstoque(){
+if(ROLE!=="admin") return;
 db.collection("produtos").get().then(s=>{
 let c="Produto,Qtd,Min,Compra,Venda\n";
-s.forEach(d=>{
-let p=d.data();
-c+=`${p.nome},${p.estoque},${p.minimo},${p.compra},${p.venda}\n`;
-});
+s.forEach(d=>{let p=d.data();c+=`${p.nome},${p.estoque},${p.minimo},${p.compra},${p.venda}\n`;});
 baixar(c,"estoque.csv");
 });
 }
@@ -222,10 +231,7 @@ baixar(c,"estoque.csv");
 function exportarHistorico(){
 db.collection("movimentacoes").get().then(s=>{
 let c="Produto,Tipo,Qtd,Valor,Usuario,Data\n";
-s.forEach(d=>{
-let m=d.data();
-c+=`${m.produto},${m.tipo},${m.quantidade},${m.valor},${m.usuario},${m.data.toDate()}\n`;
-});
+s.forEach(d=>{let m=d.data();c+=`${m.produto},${m.tipo},${m.quantidade},${m.valor},${m.usuario},${m.data.toDate()}\n`;});
 baixar(c,"historico.csv");
 });
 }
@@ -233,10 +239,8 @@ baixar(c,"historico.csv");
 function baixar(c,n){
 let a=document.createElement("a");
 a.href=URL.createObjectURL(new Blob([c]));
-a.download=n;
-a.click();
+a.download=n;a.click();
 }
 </script>
-
 </body>
 </html>
