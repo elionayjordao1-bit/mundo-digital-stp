@@ -115,38 +115,75 @@ auth.signInWithEmailAndPassword(email.value,senha.value)
 
 function logout(){ auth.signOut(); }
 
-auth.onAuthStateChanged(u=>{
-if(!u){
-loginBox.classList.remove("hidden");
-app.classList.add("hidden");
-return;
-}
+// --- colocar no topo do script, se ainda não existir:
+let ROLE = null;
 
-db.collection("usuarios").doc(u.uid).get().then(doc=>{
-ROLE = doc.exists ? doc.data().role : "admin";
-userEmail.innerText = u.email;
-userRole.innerText = ROLE;
+// Substitua sua função auth.onAuthStateChanged existente por esta versão:
+auth.onAuthStateChanged(async (u) => {
+  if (!u) {
+    // usuário saiu
+    loginBox.classList.remove("hidden");
+    app.classList.add("hidden");
+    userEmail.innerText = "";
+    userRole.innerText = "";
+    ROLE = null;
+    return;
+  }
 
-loginBox.classList.add("hidden");
-app.classList.remove("hidden");
+  // usuário entrou
+  loginBox.classList.add("hidden");
+  app.classList.remove("hidden");
+  userEmail.innerText = u.email;
 
-if(!PERM[ROLE].add) novoProdutoCard.classList.add("hidden");
-if(!PERM[ROLE].rel) relatorioCard.classList.add("hidden");
+  try {
+    const snap = await db.collection("usuarios").doc(u.uid).get();
 
-carregar();
+    if (!snap.exists) {
+      // documento não existe — mostra aviso e define ROLE como null para debug
+      console.warn("Documento 'usuarios' não encontrado para UID:", u.uid);
+      ROLE = null;
+      userRole.innerText = "(sem cargo)";
+      // Não abortamos; decide o que prefere: permitir admin ou bloquear.
+      // Para segurança recomendo: bloquear ações sensíveis até corrigir no Firestore.
+    } else {
+      ROLE = (snap.data().role || null);
+      userRole.innerText = ROLE ? ROLE : "(sem cargo)";
+    }
+  } catch (err) {
+    console.error("Erro ao ler role:", err);
+    ROLE = null;
+    userRole.innerText = "(erro)";
+  }
+
+  // Só chama carregar() depois de definir ROLE (evita cliques antes do role carregar)
+  carregar();
 });
-});
+
 
 function addProduto(){
-if(!PERM[ROLE].add) return alert("Sem permissão");
-db.collection("produtos").add({
-nome:nome.value,
-estoque:+estoque.value,
-minimo:+minimo.value,
-compra:+compra.value,
-venda:+venda.value
-});
+  if (!ROLE) {
+    alert("Permissões ainda não carregaram. Saia e entre novamente em 1s.");
+    return;
+  }
+  if (ROLE !== "admin") {
+    alert("Sem permissão para cadastrar produto.");
+    return;
+  }
+
+  db.collection("produtos").add({
+    nome: nome.value,
+    estoque: +estoque.value,
+    minimo: +minimo.value,
+    compra: +compra.value,
+    venda: +venda.value
+  }).then(()=>{
+    // limpar campos ou mensagem opcional
+    nome.value=""; estoque.value=""; minimo.value=""; compra.value=""; venda.value="";
+  }).catch(e=>{
+    alert("Erro ao salvar: "+e.message);
+  });
 }
+
 
 function carregar(){
 db.collection("produtos").onSnapshot(s=>{
