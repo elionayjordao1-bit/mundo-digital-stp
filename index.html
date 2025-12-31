@@ -35,18 +35,17 @@ button{cursor:pointer}
 
 <div id="app" class="hidden">
 
-<p>Usuário: <b id="userEmail"></b> (<span id="userRole"></span>)</p>
-  <p>Perfil: <b id="userRole"></b></p>
+<p>Usuário: <b id="userEmail"></b></p>
 <button onclick="logout()">Sair</button>
 
-<div class="card" id="relatorioCard">
+<div class="card">
 <h3>💰 Relatório</h3>
 <p>Hoje: <b id="vendasHoje">0 Db</b></p>
 <p>Mês: <b id="vendasMes">0 Db</b></p>
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<div class="card" id="novoProdutoCard">
+<div class="card">
 <h3>📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
 <input id="estoque" type="number" placeholder="Qtd">
@@ -101,90 +100,33 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
 
-let ROLE = null;
-
-const PERM = {
-  admin:   { add:true, del:true, entrada:true, venda:true, rel:true },
-  vendas:  { add:false, del:false, entrada:false, venda:true, rel:false },
-  estoque: { add:false, del:false, entrada:true, venda:false, rel:false }
-};
-
 function login(){
 auth.signInWithEmailAndPassword(email.value,senha.value)
 .catch(e=>erro.innerText=e.message);
 }
+function logout(){auth.signOut();}
 
-function logout(){ auth.signOut(); }
-
-// --- colocar no topo do script, se ainda não existir:
-let ROLE = null;
-
-// Substitua sua função auth.onAuthStateChanged existente por esta versão:
-auth.onAuthStateChanged(async (u) => {
-  if (!u) {
-    // usuário saiu
-    loginBox.classList.remove("hidden");
-    app.classList.add("hidden");
-    userEmail.innerText = "";
-    userRole.innerText = "";
-    ROLE = null;
-    return;
-  }
-
-  // usuário entrou
-  loginBox.classList.add("hidden");
-  app.classList.remove("hidden");
-  userEmail.innerText = u.email;
-
-  try {
-    const snap = await db.collection("usuarios").doc(u.uid).get();
-
-    if (!snap.exists) {
-      // documento não existe — mostra aviso e define ROLE como null para debug
-      console.warn("Documento 'usuarios' não encontrado para UID:", u.uid);
-      ROLE = null;
-      userRole.innerText = "(sem cargo)";
-      // Não abortamos; decide o que prefere: permitir admin ou bloquear.
-      // Para segurança recomendo: bloquear ações sensíveis até corrigir no Firestore.
-    } else {
-      ROLE = (snap.data().role || null);
-      userRole.innerText = ROLE ? ROLE : "(sem cargo)";
-    }
-  } catch (err) {
-    console.error("Erro ao ler role:", err);
-    ROLE = null;
-    userRole.innerText = "(erro)";
-  }
-
-  // Só chama carregar() depois de definir ROLE (evita cliques antes do role carregar)
-  carregar();
+auth.onAuthStateChanged(u=>{
+if(u){
+loginBox.classList.add("hidden");
+app.classList.remove("hidden");
+userEmail.innerText=u.email;
+carregar();
+}else{
+loginBox.classList.remove("hidden");
+app.classList.add("hidden");
+}
 });
 
-
 function addProduto(){
-  if (!ROLE) {
-    alert("Permissões ainda não carregaram. Saia e entre novamente em 1s.");
-    return;
-  }
-  if (ROLE !== "admin") {
-    alert("Sem permissão para cadastrar produto.");
-    return;
-  }
-
-  db.collection("produtos").add({
-    nome: nome.value,
-    estoque: +estoque.value,
-    minimo: +minimo.value,
-    compra: +compra.value,
-    venda: +venda.value
-  }).then(()=>{
-    // limpar campos ou mensagem opcional
-    nome.value=""; estoque.value=""; minimo.value=""; compra.value=""; venda.value="";
-  }).catch(e=>{
-    alert("Erro ao salvar: "+e.message);
-  });
+db.collection("produtos").add({
+nome:nome.value,
+estoque:+estoque.value,
+minimo:+minimo.value,
+compra:+compra.value,
+venda:+venda.value
+});
 }
-
 
 function carregar(){
 db.collection("produtos").onSnapshot(s=>{
@@ -205,9 +147,9 @@ lista.innerHTML+=`
 <td>${p.venda} Db</td>
 <td>${lucro} Db</td>
 <td>${totalProd} Db</td>
-<td><button ${PERM[ROLE].entrada?'':'disabled'} onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
-<td><button ${PERM[ROLE].venda?'':'disabled'} onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
-<td><button ${PERM[ROLE].del?'':'disabled'} onclick="del('${d.id}')">🗑</button></td>
+<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
+<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
+<td><button onclick="del('${d.id}')">🗑</button></td>
 </tr>`;
 });
 totalEstoque.innerText=total+" Db";
@@ -223,6 +165,7 @@ s.forEach(d=>{
 let m=d.data();
 let data=m.data.toDate();
 let valor=Number(m.valor)||0;
+
 if(data.toDateString()==now.toDateString()) hoje+=valor;
 if(data.getMonth()==now.getMonth() && data.getFullYear()==now.getFullYear()) mes+=valor;
 
@@ -243,9 +186,6 @@ vendasMes.innerText=mes+" Db";
 }
 
 function mov(id,nome,atual,preco,t){
-if(t=="entrada" && !PERM[ROLE].entrada) return alert("Sem permissão");
-if(t=="saida" && !PERM[ROLE].venda) return alert("Sem permissão");
-
 let q=+prompt("Quantidade:");
 if(!q||q<=0)return;
 let novo=t=="entrada"?atual+q:atual-q;
@@ -263,7 +203,6 @@ data:new Date()
 }
 
 function del(id){
-if(!PERM[ROLE].del) return alert("Sem permissão");
 if(confirm("Excluir produto?")){
 db.collection("produtos").doc(id).delete();
 }
