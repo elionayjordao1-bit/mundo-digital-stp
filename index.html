@@ -35,17 +35,19 @@ button{cursor:pointer}
 
 <div id="app" class="hidden">
 
-<p>Usuário: <b id="userEmail"></b></p>
+<p>Usuário: <b id="userEmail"></b> | Função: <b id="userRole" style="color:#2c7be5">Carregando...</b></p>
 <button onclick="logout()">Sair</button>
 
-<div class="card">
+<!-- Bloco de Relatório Financeiro -->
+<div class="card" id="cardRelatorio">
 <h3>💰 Relatório</h3>
 <p>Hoje: <b id="vendasHoje">0 Db</b></p>
 <p>Mês: <b id="vendasMes">0 Db</b></p>
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<div class="card">
+<!-- Bloco de Cadastro de Novos Produtos -->
+<div class="card" id="cardNovoProduto">
 <h3>📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
 <input id="estoque" type="number" placeholder="Qtd">
@@ -55,9 +57,10 @@ button{cursor:pointer}
 <button onclick="addProduto()">Salvar</button>
 </div>
 
-<div class="card">
+<!-- Tabela Geral de Estoque -->
+<div class="card" id="cardEstoque">
 <h3>📋 Estoque</h3>
-<button onclick="exportarEstoque()">📤 Exportar Excel</button>
+<button id="btnExportarEstoque" onclick="exportarEstoque()">📤 Exportar Excel</button>
 <table>
 <thead>
 <tr>
@@ -70,9 +73,10 @@ button{cursor:pointer}
 </table>
 </div>
 
-<div class="card">
+<!-- Histórico de Movimentações -->
+<div class="card" id="cardHistorico">
 <h3>📜 Histórico</h3>
-<button onclick="exportarHistorico()">📤 Exportar Excel</button>
+<button id="btnExportarHistorico" onclick="exportarHistorico()">📤 Exportar Excel</button>
 <table>
 <thead>
 <tr>
@@ -100,25 +104,77 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
 
+let usuarioRole = null;
+let listenerProdutos = null;
+let listenerMovimentacoes = null;
+
 function login(){
+if(erro) erro.innerText = "";
 auth.signInWithEmailAndPassword(email.value,senha.value)
-.catch(e=>erro.innerText=e.message);
+.catch(e=> { if(erro) erro.innerText=e.message; });
 }
-function logout(){auth.signOut();}
+
+function logout(){
+if(listenerProdutos) listenerProdutos();
+if(listenerMovimentacoes) listenerMovimentacoes();
+usuarioRole = null;
+auth.signOut();
+}
 
 auth.onAuthStateChanged(u=>{
 if(u){
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
+
+// Procura a Role na sua coleção "usuarios" no Firestore
+db.collection("usuarios").doc(u.uid).get()
+.then(doc => {
+if(doc.exists) {
+usuarioRole = doc.data().role.toLowerCase().trim();
+userRole.innerText = usuarioRole.toUpperCase();
+
+// APLICANDO AS SUAS REGRAS VISUAIS DE ACESSO:
+if(usuarioRole === "admin") {
+cardRelatorio.style.display = "block";     // Tudo visível
+cardNovoProduto.style.display = "block";   // Tudo visível
+cardHistorico.style.display = "block";     // Tudo visível
+btnExportarEstoque.style.display = "inline-block";
+btnExportarHistorico.style.display = "inline-block";
+} 
+else if(usuarioRole === "vendas") {
+cardRelatorio.style.display = "none";      // ❌ Não vê relatório
+cardNovoProduto.style.display = "none";    // ❌ Não cadastra produto
+cardHistorico.style.display = "none";      // Ocultado por segurança financeira
+btnExportarEstoque.style.display = "none";
+} 
+else if(usuarioRole === "estoque") {
+cardRelatorio.style.display = "none";      // ❌ Não vê relatório financeiro
+cardNovoProduto.style.display = "none";    // ❌ Não cadastra produto
+cardHistorico.style.display = "none";      // Ocultado por segurança financeira
+btnExportarEstoque.style.display = "none";
+}
+
 carregar();
+} else {
+userRole.innerText = "SEM FUNÇÃO ATRIBUÍDA";
+alert("Aviso: Este utilizador não possui uma role definida no Firestore.");
+}
+})
+.catch(e => console.error("Erro ao carregar permissões:", e));
+
 }else{
 loginBox.classList.remove("hidden");
 app.classList.add("hidden");
+usuarioRole = null;
+userRole.innerText = "Carregando...";
 }
 });
 
 function addProduto(){
+if(usuarioRole !== "admin") {
+return alert("Ação negada: Apenas administradores podem cadastrar produtos.");
+}
 db.collection("produtos").add({
 nome:nome.value,
 estoque:+estoque.value,
@@ -129,7 +185,10 @@ venda:+venda.value
 }
 
 function carregar(){
-db.collection("produtos").onSnapshot(s=>{
+if(listenerProdutos) listenerProdutos();
+if(listenerMovimentacoes) listenerMovimentacoes();
+
+listenerProdutos = db.collection("produtos").onSnapshot(s=>{
 lista.innerHTML="";
 let total=0;
 s.forEach(d=>{
@@ -137,6 +196,27 @@ let p=d.data();
 let lucro=p.venda-p.compra;
 let totalProd=p.estoque*p.venda;
 total+=totalProd;
+
+let botaoEntrada = "";
+let botaoVenda = "";
+let botaoExcluir = "";
+
+// REGRAS DE ACESSO PARA OS BOTÕES DA TABELA:
+if(usuarioRole === "admin") {
+botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
+botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
+botaoExcluir = `<button onclick="del('${d.id}')">🗑</button>`;
+} 
+else if(usuarioRole === "vendas") {
+botaoEntrada = `<button disabled style="opacity:0.3; cursor:not-allowed">+</button>`; // Desativado
+botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`; // ✔ Só botão Vender
+botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`; // ❌ Não exclui produto
+} 
+else if(usuarioRole === "estoque") {
+botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`; // ✔ Só Entrada (+)
+botaoVenda = `<button disabled style="opacity:0.3; cursor:not-allowed">Vender</button>`; // ❌ Não vende
+botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`; // Desativado
+}
 
 lista.innerHTML+=`
 <tr class="${p.estoque<=p.minimo?'baixo':''}">
@@ -147,15 +227,15 @@ lista.innerHTML+=`
 <td>${p.venda} Db</td>
 <td>${lucro} Db</td>
 <td>${totalProd} Db</td>
-<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
-<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
-<td><button onclick="del('${d.id}')">🗑</button></td>
+<td>${botaoEntrada}</td>
+<td>${botaoVenda}</td>
+<td>${botaoExcluir}</td>
 </tr>`;
 });
 totalEstoque.innerText=total+" Db";
 });
 
-db.collection("movimentacoes").orderBy("data","desc")
+listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc")
 .onSnapshot(s=>{
 historico.innerHTML="";
 let hoje=0,mes=0;
@@ -163,6 +243,7 @@ let now=new Date();
 
 s.forEach(d=>{
 let m=d.data();
+if(!m.data) return;
 let data=m.data.toDate();
 let valor=Number(m.valor)||0;
 
@@ -186,6 +267,14 @@ vendasMes.innerText=mes+" Db";
 }
 
 function mov(id,nome,atual,preco,t){
+// Bloqueios de segurança caso tentem forçar comandos pelo console F12
+if(t=="entrada" && usuarioRole !== "admin" && usuarioRole !== "estoque") {
+return alert("Ação negada: Você não possui permissão para dar entrada de mercadoria.");
+}
+if(t=="saida" && usuarioRole !== "admin" && usuarioRole !== "vendas") {
+return alert("Ação negada: Você não possui permissão para realizar vendas.");
+}
+
 let q=+prompt("Quantidade:");
 if(!q||q<=0)return;
 let novo=t=="entrada"?atual+q:atual-q;
@@ -203,29 +292,28 @@ data:new Date()
 }
 
 function del(id){
+if(usuarioRole !== "admin") {
+return alert("Ação negada: Apenas administradores podem excluir produtos.");
+}
 if(confirm("Excluir produto?")){
 db.collection("produtos").doc(id).delete();
 }
 }
 
 function exportarEstoque(){
+if(usuarioRole !== "admin") return alert("Acesso negado.");
 db.collection("produtos").get().then(s=>{
 let c="Produto,Qtd,Min,Compra,Venda\n";
-s.forEach(d=>{
-let p=d.data();
-c+=`${p.nome},${p.estoque},${p.minimo},${p.compra},${p.venda}\n`;
-});
+s.forEach(d=>{ let p=d.data(); c+=`${p.nome},${p.estoque},${p.minimo},${p.compra},${p.venda}\n`; });
 baixar(c,"estoque.csv");
 });
 }
 
 function exportarHistorico(){
+if(usuarioRole !== "admin") return alert("Acesso negado.");
 db.collection("movimentacoes").get().then(s=>{
 let c="Produto,Tipo,Qtd,Valor,Usuario,Data\n";
-s.forEach(d=>{
-let m=d.data();
-c+=`${m.produto},${m.tipo},${m.quantidade},${m.valor},${m.usuario},${m.data.toDate()}\n`;
-});
+s.forEach(d=>{ let m=d.data(); c+=`${m.produto},${m.tipo},${m.quantidade},${m.valor},${m.usuario},${m.data.toDate()}\n`; });
 baixar(c,"historico.csv");
 });
 }
