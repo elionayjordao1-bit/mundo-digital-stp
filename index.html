@@ -126,6 +126,7 @@ if(u){
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
+userRole.innerText = "Carregando...";
 
 // Procura a Role na sua coleção "usuarios" no Firestore
 db.collection("usuarios").doc(u.uid).get()
@@ -136,32 +137,35 @@ userRole.innerText = usuarioRole.toUpperCase();
 
 // APLICANDO AS SUAS REGRAS VISUAIS DE ACESSO:
 if(usuarioRole === "admin") {
-cardRelatorio.style.display = "block";     // Tudo visível
-cardNovoProduto.style.display = "block";   // Tudo visível
-cardHistorico.style.display = "block";     // Tudo visível
+cardRelatorio.style.display = "block";
+cardNovoProduto.style.display = "block";
+cardHistorico.style.display = "block";
 btnExportarEstoque.style.display = "inline-block";
 btnExportarHistorico.style.display = "inline-block";
 } 
 else if(usuarioRole === "vendas") {
-cardRelatorio.style.display = "none";      // ❌ Não vê relatório
-cardNovoProduto.style.display = "none";    // ❌ Não cadastra produto
-cardHistorico.style.display = "none";      // Ocultado por segurança financeira
+cardRelatorio.style.display = "none";
+cardNovoProduto.style.display = "none";
+cardHistorico.style.display = "none";
 btnExportarEstoque.style.display = "none";
 } 
 else if(usuarioRole === "estoque") {
-cardRelatorio.style.display = "none";      // ❌ Não vê relatório financeiro
-cardNovoProduto.style.display = "none";    // ❌ Não cadastra produto
-cardHistorico.style.display = "none";      // Ocultado por segurança financeira
+cardRelatorio.style.display = "none";
+cardNovoProduto.style.display = "none";
+cardHistorico.style.display = "none";
 btnExportarEstoque.style.display = "none";
 }
 
 carregar();
 } else {
 userRole.innerText = "SEM FUNÇÃO ATRIBUÍDA";
-alert("Aviso: Este utilizador não possui uma role definida no Firestore.");
+alert("Aviso: O seu utilizador não possui uma role configurada no banco de dados.");
 }
 })
-.catch(e => console.error("Erro ao carregar permissões:", e));
+.catch(e => {
+console.error("Erro ao carregar permissões:", e);
+userRole.innerText = "ERRO DE LEITURA";
+});
 
 }else{
 loginBox.classList.remove("hidden");
@@ -172,6 +176,9 @@ userRole.innerText = "Carregando...";
 });
 
 function addProduto(){
+if(!usuarioRole) {
+return alert("Aguarde o carregamento completo do sistema antes de salvar.");
+}
 if(usuarioRole !== "admin") {
 return alert("Ação negada: Apenas administradores podem cadastrar produtos.");
 }
@@ -182,6 +189,8 @@ minimo:+minimo.value,
 compra:+compra.value,
 venda:+venda.value
 });
+// Limpa os campos após salvar
+nome.value=""; estoque.value=""; minimo.value=""; compra.value=""; venda.value="";
 }
 
 function carregar(){
@@ -201,21 +210,26 @@ let botaoEntrada = "";
 let botaoVenda = "";
 let botaoExcluir = "";
 
-// REGRAS DE ACESSO PARA OS BOTÕES DA TABELA:
-if(usuarioRole === "admin") {
+// Se ainda estiver carregando, exibe botões desativados temporariamente
+if(!usuarioRole) {
+botaoEntrada = `<button disabled>...</button>`;
+botaoVenda = `<button disabled>...</button>`;
+botaoExcluir = `<button disabled>...</button>`;
+}
+else if(usuarioRole === "admin") {
 botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
 botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
 botaoExcluir = `<button onclick="del('${d.id}')">🗑</button>`;
 } 
 else if(usuarioRole === "vendas") {
-botaoEntrada = `<button disabled style="opacity:0.3; cursor:not-allowed">+</button>`; // Desativado
-botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`; // ✔ Só botão Vender
-botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`; // ❌ Não exclui produto
+botaoEntrada = `<button disabled style="opacity:0.3; cursor:not-allowed">+</button>`;
+botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
+botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`;
 } 
 else if(usuarioRole === "estoque") {
-botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`; // ✔ Só Entrada (+)
-botaoVenda = `<button disabled style="opacity:0.3; cursor:not-allowed">Vender</button>`; // ❌ Não vende
-botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`; // Desativado
+botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
+botaoVenda = `<button disabled style="opacity:0.3; cursor:not-allowed">Vender</button>`;
+botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`;
 }
 
 lista.innerHTML+=`
@@ -267,7 +281,8 @@ vendasMes.innerText=mes+" Db";
 }
 
 function mov(id,nome,atual,preco,t){
-// Bloqueios de segurança caso tentem forçar comandos pelo console F12
+if(!usuarioRole) return alert("Aguarde o carregamento do sistema.");
+
 if(t=="entrada" && usuarioRole !== "admin" && usuarioRole !== "estoque") {
 return alert("Ação negada: Você não possui permissão para dar entrada de mercadoria.");
 }
@@ -324,7 +339,7 @@ a.href=URL.createObjectURL(new Blob([c]));
 a.download=n;
 a.click();
 }
-</script> 
+</script>
 
 </body>
 </html>
