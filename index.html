@@ -99,7 +99,6 @@ appId:"1:1062673569126:web:2e44ecbf098d90931464a7"
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
-let utilizador = {};
 
 function login(){
 auth.signInWithEmailAndPassword(email.value,senha.value)
@@ -107,38 +106,16 @@ auth.signInWithEmailAndPassword(email.value,senha.value)
 }
 function logout(){auth.signOut();}
 
-auth.onAuthStateChanged(async u=>{
-
+auth.onAuthStateChanged(u=>{
 if(u){
-
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
-
-// Procurar o documento do utilizador
-const doc = await db.collection("usuarios").doc(u.uid).get();
-
-if(doc.exists){
-    utilizador = doc.data();
-console.log(utilizador);
-}else{
-    utilizador = {
-        role:"vendas",
-        nome:u.email
-    };
-}
-
 carregar();
-console.log("Role:", utilizador.role);
-aplicarPermissoes();
-
 }else{
-
 loginBox.classList.remove("hidden");
 app.classList.add("hidden");
-
 }
-
 });
 
 function addProduto(){
@@ -258,43 +235,6 @@ let a=document.createElement("a");
 a.href=URL.createObjectURL(new Blob([c]));
 a.download=n;
 a.click();
-}
-function aplicarPermissoes(){
-
-const role = utilizador.role;
-
-// ADMIN
-if(role=="admin"){
-    return;
-}
-
-// VENDAS
-if(role=="vendas"){
-
-document.querySelector(".card:nth-of-type(2)").style.display="none";
-
-// esconder coluna +
-document.querySelectorAll("table button").forEach(b=>{
-    if(b.innerText=="+") b.style.display="none";
-});
-
-// esconder apagar
-document.querySelectorAll("table button").forEach(b=>{
-    if(b.innerText=="🗑") b.style.display="none";
-});
-
-}
-
-// ESTOQUE
-if(role=="estoque"){
-
-// esconder botão vender
-document.querySelectorAll("table button").forEach(b=>{
-    if(b.innerText=="Vender") b.style.display="none";
-});
-
-}
-
 }
 </script>
 
