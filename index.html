@@ -35,17 +35,17 @@ button{cursor:pointer}
 
 <div id="app" class="hidden">
 
-<p>Usuário: <b id="userEmail"></b> | Função: <b id="userRole" style="color:#2c7be5">Carregando...</b></p>
+<p>Usuário: <b id="userEmail"></b></p>
 <button onclick="logout()">Sair</button>
 
-<div class="card" id="cardRelatorio">
+<div class="card">
 <h3>💰 Relatório</h3>
 <p>Hoje: <b id="vendasHoje">0 Db</b></p>
 <p>Mês: <b id="vendasMes">0 Db</b></p>
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<div class="card" id="cardNovoProduto">
+<div class="card">
 <h3>📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
 <input id="estoque" type="number" placeholder="Qtd">
@@ -57,7 +57,7 @@ button{cursor:pointer}
 
 <div class="card">
 <h3>📋 Estoque</h3>
-<button id="btnExportarEstoque" onclick="exportarEstoque()">📤 Exportar Excel</button>
+<button onclick="exportarEstoque()">📤 Exportar Excel</button>
 <table>
 <thead>
 <tr>
@@ -70,9 +70,9 @@ button{cursor:pointer}
 </table>
 </div>
 
-<div class="card" id="cardHistorico">
+<div class="card">
 <h3>📜 Histórico</h3>
-<button id="btnExportarHistorico" onclick="exportarHistorico()">📤 Exportar Excel</button>
+<button onclick="exportarHistorico()">📤 Exportar Excel</button>
 <table>
 <thead>
 <tr>
@@ -100,87 +100,25 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
 
-let usuarioRole = null;
-
-// Referências dos listeners ativos para evitar duplicações ou conflitos
-let listenerProdutos = null;
-let listenerMovimentacoes = null;
-
 function login(){
-if(erro) erro.innerText = "";
 auth.signInWithEmailAndPassword(email.value,senha.value)
-.catch(e=> { if(erro) erro.innerText=e.message; });
+.catch(e=>erro.innerText=e.message);
 }
-
-function logout(){
-// Desativa os listeners ativos antes de deslogar para não dar erro de permissão no console
-if(listenerProdutos) listenerProdutos();
-if(listenerMovimentacoes) listenerMovimentacoes();
-usuarioRole = null;
-auth.signOut();
-}
+function logout(){auth.signOut();}
 
 auth.onAuthStateChanged(u=>{
 if(u){
-// Buscamos primeiro a role na coleção 'usuarios' usando o UID exato
-db.collection("usuarios").doc(u.uid).get()
-.then(doc => {
-if(doc.exists) {
-usuarioRole = doc.data().role.toLowerCase().trim();
-userRole.innerText = usuarioRole.toUpperCase();
-userEmail.innerText = u.email;
-
-// Controla de forma estrita a exibição dos blocos na interface antes de revelar o app
-if(usuarioRole === "admin") {
-cardRelatorio.style.display = "block";
-cardNovoProduto.style.display = "block";
-cardHistorico.style.display = "block";
-btnExportarEstoque.style.display = "inline-block";
-btnExportarHistorico.style.display = "inline-block";
-} else if(usuarioRole === "vendas") {
-cardRelatorio.style.display = "none";
-cardNovoProduto.style.display = "none";
-cardHistorico.style.display = "none";
-btnExportarEstoque.style.display = "none";
-btnExportarHistorico.style.display = "none";
-} else if(usuarioRole === "estoque") {
-cardRelatorio.style.display = "none";
-cardNovoProduto.style.display = "none";
-cardHistorico.style.display = "none";
-btnExportarEstoque.style.display = "none";
-btnExportarHistorico.style.display = "none";
-}
-
-// Só agora que a interface está pronta e a role definida, ativamos o app e carregamos os dados
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
+userEmail.innerText=u.email;
 carregar();
-
-} else {
-alert("Erro crítico: Este utilizador não possui um perfil de permissões (role) configurado na coleção 'usuarios'.");
-usuarioRole = null;
-}
-})
-.catch(e => {
-console.error("Erro ao obter regras de acesso:", e);
-alert("Erro de comunicação com a base de dados ao validar permissões.");
-});
-
 }else{
-// Quando não há utilizador logado, exibe apenas a caixa de login
 loginBox.classList.remove("hidden");
 app.classList.add("hidden");
-usuarioRole = null;
-userRole.innerText = "Carregando...";
 }
 });
 
 function addProduto(){
-// Bloqueio de segurança no Console (F12)
-if(usuarioRole !== "admin") {
-return alert("Ação negada: Apenas administradores podem cadastrar produtos.");
-}
-
 db.collection("produtos").add({
 nome:nome.value,
 estoque:+estoque.value,
@@ -191,11 +129,7 @@ venda:+venda.value
 }
 
 function carregar(){
-// Cancela listeners anteriores se existirem para evitar vazamento de memória
-if(listenerProdutos) listenerProdutos();
-if(listenerMovimentacoes) listenerMovimentacoes();
-
-listenerProdutos = db.collection("produtos").onSnapshot(s=>{
+db.collection("produtos").onSnapshot(s=>{
 lista.innerHTML="";
 let total=0;
 s.forEach(d=>{
@@ -203,25 +137,6 @@ let p=d.data();
 let lucro=p.venda-p.compra;
 let totalProd=p.estoque*p.venda;
 total+=totalProd;
-
-let botaoEntrada = "";
-let botaoVenda = "";
-let botaoExcluir = "";
-
-// Customização estrita dos botões da tabela de acordo com a Role
-if(usuarioRole === "admin") {
-botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
-botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
-botaoExcluir = `<button onclick="del('${d.id}')">🗑</button>`;
-} else if(usuarioRole === "vendas") {
-botaoEntrada = `<button disabled style="opacity:0.4; cursor:not-allowed">+</button>`;
-botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
-botaoExcluir = `<button disabled style="opacity:0.4; cursor:not-allowed">🗑</button>`;
-} else if(usuarioRole === "estoque") {
-botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
-botaoVenda = `<button disabled style="opacity:0.4; cursor:not-allowed">Vender</button>`;
-botaoExcluir = `<button disabled style="opacity:0.4; cursor:not-allowed">🗑</button>`;
-}
 
 lista.innerHTML+=`
 <tr class="${p.estoque<=p.minimo?'baixo':''}">
@@ -232,15 +147,15 @@ lista.innerHTML+=`
 <td>${p.venda} Db</td>
 <td>${lucro} Db</td>
 <td>${totalProd} Db</td>
-<td>${botaoEntrada}</td>
-<td>${botaoVenda}</td>
-<td>${botaoExcluir}</td>
+<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
+<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
+<td><button onclick="del('${d.id}')">🗑</button></td>
 </tr>`;
 });
 totalEstoque.innerText=total+" Db";
-}, e => console.error("Erro no snapshot de produtos:", e));
+});
 
-listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc")
+db.collection("movimentacoes").orderBy("data","desc")
 .onSnapshot(s=>{
 historico.innerHTML="";
 let hoje=0,mes=0;
@@ -248,7 +163,6 @@ let now=new Date();
 
 s.forEach(d=>{
 let m=d.data();
-if(!m.data) return; 
 let data=m.data.toDate();
 let valor=Number(m.valor)||0;
 
@@ -268,18 +182,10 @@ historico.innerHTML+=`
 
 vendasHoje.innerText=hoje+" Db";
 vendasMes.innerText=mes+" Db";
-}, e => console.error("Erro no snapshot de movimentações:", e));
+});
 }
 
 function mov(id,nome,atual,preco,t){
-// Validação imperativa de segurança contra chamadas via Console (F12)
-if(t=="entrada" && usuarioRole !== "admin" && usuarioRole !== "estoque") {
-return alert("Ação negada: Você não possui permissão para dar entrada de mercadoria.");
-}
-if(t=="saida" && usuarioRole !== "admin" && usuarioRole !== "vendas") {
-return alert("Ação negada: Você não possui permissão para realizar vendas.");
-}
-
 let q=+prompt("Quantidade:");
 if(!q||q<=0)return;
 let novo=t=="entrada"?atual+q:atual-q;
@@ -297,22 +203,12 @@ data:new Date()
 }
 
 function del(id){
-// Bloqueio de segurança no Console (F12)
-if(usuarioRole !== "admin") {
-return alert("Ação negada: Apenas administradores podem excluir produtos.");
-}
-
 if(confirm("Excluir produto?")){
 db.collection("produtos").doc(id).delete();
 }
 }
 
 function exportarEstoque(){
-// Bloqueio de segurança no Console (F12)
-if(usuarioRole !== "admin") {
-return alert("Ação negada: Você não tem permissão para exportar dados.");
-}
-
 db.collection("produtos").get().then(s=>{
 let c="Produto,Qtd,Min,Compra,Venda\n";
 s.forEach(d=>{
@@ -324,11 +220,6 @@ baixar(c,"estoque.csv");
 }
 
 function exportarHistorico(){
-// Bloqueio de segurança no Console (F12)
-if(usuarioRole !== "admin") {
-return alert("Ação negada: Você não tem permissão para exportar dados.");
-}
-
 db.collection("movimentacoes").get().then(s=>{
 let c="Produto,Tipo,Qtd,Valor,Usuario,Data\n";
 s.forEach(d=>{
