@@ -35,17 +35,17 @@ button{cursor:pointer}
 
 <div id="app" class="hidden">
 
-<p>Usuário: <b id="userEmail"></b></p>
+<p>Usuário: <b id="userEmail"></b> | Função: <b id="userRole" style="color:#2c7be5">Carregando...</b></p>
 <button onclick="logout()">Sair</button>
 
-<div class="card">
+<div class="card" id="cardRelatorio">
 <h3>💰 Relatório</h3>
 <p>Hoje: <b id="vendasHoje">0 Db</b></p>
 <p>Mês: <b id="vendasMes">0 Db</b></p>
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<div class="card">
+<div class="card" id="cardNovoProduto">
 <h3>📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
 <input id="estoque" type="number" placeholder="Qtd">
@@ -57,7 +57,7 @@ button{cursor:pointer}
 
 <div class="card">
 <h3>📋 Estoque</h3>
-<button onclick="exportarEstoque()">📤 Exportar Excel</button>
+<button id="btnExportarEstoque" onclick="exportarEstoque()">📤 Exportar Excel</button>
 <table>
 <thead>
 <tr>
@@ -70,9 +70,9 @@ button{cursor:pointer}
 </table>
 </div>
 
-<div class="card">
+<div class="card" id="cardHistorico">
 <h3>📜 Histórico</h3>
-<button onclick="exportarHistorico()">📤 Exportar Excel</button>
+<button id="btnExportarHistorico" onclick="exportarHistorico()">📤 Exportar Excel</button>
 <table>
 <thead>
 <tr>
@@ -100,6 +100,9 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
 
+// Variável global para armazenar a role do usuário logado
+let usuarioRole = null;
+
 function login(){
 auth.signInWithEmailAndPassword(email.value,senha.value)
 .catch(e=>erro.innerText=e.message);
@@ -111,14 +114,57 @@ if(u){
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
+
+// Busca os dados do usuário a partir do UID exato na coleção 'usuarios'
+db.collection("usuarios").doc(u.uid).get()
+.then(doc => {
+if(doc.exists) {
+usuarioRole = doc.data().role;
+userRole.innerText = usuarioRole.toUpperCase();
+
+// Gerenciamento visual inicial baseado nas permissões do papel
+if(usuarioRole === "admin") {
+cardRelatorio.classList.remove("hidden");
+cardNovoProduto.classList.remove("hidden");
+cardHistorico.classList.remove("hidden");
+btnExportarEstoque.classList.remove("hidden");
+} else if(usuarioRole === "vendas") {
+cardRelatorio.classList.add("hidden");
+cardNovoProduto.classList.add("hidden");
+cardHistorico.classList.add("hidden");
+btnExportarEstoque.classList.add("hidden");
+} else if(usuarioRole === "estoque") {
+cardRelatorio.classList.add("hidden");
+cardNovoProduto.classList.add("hidden");
+cardHistorico.classList.add("hidden");
+btnExportarEstoque.classList.add("hidden");
+}
+
 carregar();
+} else {
+alert("Erro: Este usuário não possui uma função associada na coleção de usuários.");
+logout();
+}
+})
+.catch(e => {
+console.error("Erro ao obter regras de acesso:", e);
+logout();
+});
+
 }else{
 loginBox.classList.remove("hidden");
 app.classList.add("hidden");
+usuarioRole = null;
+userRole.innerText = "Carregando...";
 }
 });
 
 function addProduto(){
+// Bloqueio no Console (F12)
+if(usuarioRole !== "admin") {
+return alert("Ação negada: Apenas administradores podem cadastrar produtos.");
+}
+
 db.collection("produtos").add({
 nome:nome.value,
 estoque:+estoque.value,
@@ -138,6 +184,25 @@ let lucro=p.venda-p.compra;
 let totalProd=p.estoque*p.venda;
 total+=totalProd;
 
+// Criação condicional dos botões de ação para a tabela de estoque
+let botaoEntrada = "";
+let botaoVenda = "";
+let botaoExcluir = "";
+
+if(usuarioRole === "admin") {
+botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
+botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
+botaoExcluir = `<button onclick="del('${d.id}')">🗑</button>`;
+} else if(usuarioRole === "vendas") {
+botaoEntrada = `<button disabled style="opacity:0.5; cursor:not-allowed">+</button>`;
+botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
+botaoExcluir = `<button disabled style="opacity:0.5; cursor:not-allowed">🗑</button>`;
+} else if(usuarioRole === "estoque") {
+botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
+botaoVenda = `<button disabled style="opacity:0.5; cursor:not-allowed">Vender</button>`;
+botaoExcluir = `<button disabled style="opacity:0.5; cursor:not-allowed">🗑</button>`;
+}
+
 lista.innerHTML+=`
 <tr class="${p.estoque<=p.minimo?'baixo':''}">
 <td>${p.nome}</td>
@@ -147,9 +212,9 @@ lista.innerHTML+=`
 <td>${p.venda} Db</td>
 <td>${lucro} Db</td>
 <td>${totalProd} Db</td>
-<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
-<td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
-<td><button onclick="del('${d.id}')">🗑</button></td>
+<td>${botaoEntrada}</td>
+<td>${botaoVenda}</td>
+<td>${botaoExcluir}</td>
 </tr>`;
 });
 totalEstoque.innerText=total+" Db";
@@ -186,6 +251,14 @@ vendasMes.innerText=mes+" Db";
 }
 
 function mov(id,nome,atual,preco,t){
+// Bloqueio no Console (F12)
+if(t=="entrada" && usuarioRole !== "admin" && usuarioRole !== "estoque") {
+return alert("Ação negada: Você não possui permissão para dar entrada de mercadoria.");
+}
+if(t=="saida" && usuarioRole !== "admin" && usuarioRole !== "vendas") {
+return alert("Ação negada: Você não possui permissão para realizar vendas.");
+}
+
 let q=+prompt("Quantidade:");
 if(!q||q<=0)return;
 let novo=t=="entrada"?atual+q:atual-q;
@@ -203,12 +276,22 @@ data:new Date()
 }
 
 function del(id){
+// Bloqueio no Console (F12)
+if(usuarioRole !== "admin") {
+return alert("Ação negada: Apenas administradores podem excluir produtos.");
+}
+
 if(confirm("Excluir produto?")){
 db.collection("produtos").doc(id).delete();
 }
 }
 
 function exportarEstoque(){
+// Bloqueio no Console (F12)
+if(usuarioRole !== "admin") {
+return alert("Ação negada: Você não tem permissão para exportar dados.");
+}
+
 db.collection("produtos").get().then(s=>{
 let c="Produto,Qtd,Min,Compra,Venda\n";
 s.forEach(d=>{
@@ -220,6 +303,11 @@ baixar(c,"estoque.csv");
 }
 
 function exportarHistorico(){
+// Bloqueio no Console (F12)
+if(usuarioRole !== "admin") {
+return alert("Ação negada: Você não tem permissão para exportar dados.");
+}
+
 db.collection("movimentacoes").get().then(s=>{
 let c="Produto,Tipo,Qtd,Valor,Usuario,Data\n";
 s.forEach(d=>{
