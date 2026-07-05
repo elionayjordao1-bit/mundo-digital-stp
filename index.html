@@ -100,7 +100,7 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
 
-// Variável global para armazenar a role do usuário logado
+// Variável global de segurança para controlar os níveis de acesso
 let usuarioRole = null;
 
 function login(){
@@ -115,14 +115,14 @@ loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
 
-// Busca os dados do usuário a partir do UID exato na coleção 'usuarios'
+// Procura a role utilizando o UID único obtido no login
 db.collection("usuarios").doc(u.uid).get()
 .then(doc => {
 if(doc.exists) {
 usuarioRole = doc.data().role;
 userRole.innerText = usuarioRole.toUpperCase();
 
-// Gerenciamento visual inicial baseado nas permissões do papel
+// Gerenciamento estrito da interface de utilizador
 if(usuarioRole === "admin") {
 cardRelatorio.classList.remove("hidden");
 cardNovoProduto.classList.remove("hidden");
@@ -147,7 +147,7 @@ logout();
 }
 })
 .catch(e => {
-console.error("Erro ao obter regras de acesso:", e);
+console.error("Erro ao carregar permissões:", e);
 logout();
 });
 
@@ -160,7 +160,7 @@ userRole.innerText = "Carregando...";
 });
 
 function addProduto(){
-// Bloqueio no Console (F12)
+// Proteção de segurança a nível de código contra chamadas de console (F12)
 if(usuarioRole !== "admin") {
 return alert("Ação negada: Apenas administradores podem cadastrar produtos.");
 }
@@ -184,11 +184,11 @@ let lucro=p.venda-p.compra;
 let totalProd=p.estoque*p.venda;
 total+=totalProd;
 
-// Criação condicional dos botões de ação para a tabela de estoque
 let botaoEntrada = "";
 let botaoVenda = "";
 let botaoExcluir = "";
 
+// Renderização condicional de ações conforme a regra de negócio do utilizador
 if(usuarioRole === "admin") {
 botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
 botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
@@ -251,7 +251,7 @@ vendasMes.innerText=mes+" Db";
 }
 
 function mov(id,nome,atual,preco,t){
-// Bloqueio no Console (F12)
+// Validação de segurança imperativa contra comandos forçados por terminal
 if(t=="entrada" && usuarioRole !== "admin" && usuarioRole !== "estoque") {
 return alert("Ação negada: Você não possui permissão para dar entrada de mercadoria.");
 }
@@ -276,7 +276,7 @@ data:new Date()
 }
 
 function del(id){
-// Bloqueio no Console (F12)
+// Bloqueio preventivo no Console (F12)
 if(usuarioRole !== "admin") {
 return alert("Ação negada: Apenas administradores podem excluir produtos.");
 }
@@ -287,7 +287,7 @@ db.collection("produtos").doc(id).delete();
 }
 
 function exportarEstoque(){
-// Bloqueio no Console (F12)
+// Bloqueio preventivo no Console (F12)
 if(usuarioRole !== "admin") {
 return alert("Ação negada: Você não tem permissão para exportar dados.");
 }
@@ -303,7 +303,7 @@ baixar(c,"estoque.csv");
 }
 
 function exportarHistorico(){
-// Bloqueio no Console (F12)
+// Bloqueio preventivo no Console (F12)
 if(usuarioRole !== "admin") {
 return alert("Ação negada: Você não tem permissão para exportar dados.");
 }
