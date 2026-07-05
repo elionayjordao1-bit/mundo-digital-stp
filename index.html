@@ -109,9 +109,10 @@ let listenerProdutos = null;
 let listenerMovimentacoes = null;
 
 function login(){
-if(erro) erro.innerText = "";
+let erroCampo = document.getElementById("erro");
+if(erroCampo) erroCampo.innerText = "";
 auth.signInWithEmailAndPassword(email.value,senha.value)
-.catch(e=> { if(erro) erro.innerText=e.message; });
+.catch(e=> { if(erroCampo) erroCampo.innerText=e.message; });
 }
 
 function logout(){
@@ -128,15 +129,21 @@ app.classList.remove("hidden");
 userEmail.innerText=u.email;
 userRole.innerText = "Carregando...";
 
-// Procura a Role na sua coleção "usuarios" no Firestore
+// Busca o documento do utilizador na coleção do Firebase
 db.collection("usuarios").doc(u.uid).get()
 .then(doc => {
-if(doc.exists && doc.data().usuarios && doc.data().usuarios.role) {
-// MUDANÇA AQUI: Lendo a role de dentro do seu objeto 'usuarios' mapeado no Firestore
-usuarioRole = doc.data().usuarios.role.toLowerCase().trim();
+if(doc.exists) {
+let dados = doc.data();
+
+// LÊ O VALOR EXATO DO CAMPO COM AS BARRAS VERTICAIS QUE ESTÁ NO SEU BANCO
+let campoRoleDinamico = `usuarios | ${u.uid} | role`;
+let valorRole = dados[campoRoleDinamico];
+
+if(valorRole) {
+usuarioRole = valorRole.toLowerCase().trim();
 userRole.innerText = usuarioRole.toUpperCase();
 
-// APLICANDO AS SUAS REGRAS VISUAIS DE ACESSO:
+// Aplicando as regras de acesso visual:
 if(usuarioRole === "admin") {
 cardRelatorio.style.display = "block";
 cardNovoProduto.style.display = "block";
@@ -160,7 +167,11 @@ btnExportarEstoque.style.display = "none";
 carregar();
 } else {
 userRole.innerText = "SEM FUNÇÃO ATRIBUÍDA";
-alert("Aviso: Formato de perfil inválido ou role não encontrada para este utilizador.");
+alert("Aviso: O campo '" + campoRoleDinamico + "' não foi localizado nos dados do documento.");
+}
+} else {
+userRole.innerText = "DOCUMENTO NÃO ENCONTRADO";
+alert("Aviso: Nenhum documento correspondente ao UID do utilizador foi achado na coleção 'usuarios'.");
 }
 })
 .catch(e => {
@@ -305,7 +316,6 @@ data:new Date()
 });
 }
 
-// ... Mantendo as demais funções idênticas (del, exportarEstoque, exportarHistorico, baixar)
 function del(id){
 if(usuarioRole !== "admin") return alert("Ação negada.");
 if(confirm("Excluir produto?")){ db.collection("produtos").doc(id).delete(); }
