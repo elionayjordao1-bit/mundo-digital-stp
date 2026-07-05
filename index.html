@@ -134,10 +134,19 @@ db.collection("usuarios").doc(u.uid).get()
 .then(doc => {
 if(doc.exists) {
 let dados = doc.data();
+let valorRole = null;
 
-// LÊ O VALOR EXATO DO CAMPO COM AS BARRAS VERTICAIS QUE ESTÁ NO SEU BANCO
+// TENTATIVA 1: Tenta ler o campo de forma direta e padrão ("role")
+if (dados.role) {
+valorRole = dados.role;
+} 
+// TENTATIVA 2: Tenta ler com a string dinâmica caso o Firebase tenha mesclado os nomes
+else {
 let campoRoleDinamico = `usuarios | ${u.uid} | role`;
-let valorRole = dados[campoRoleDinamico];
+if (dados[campoRoleDinamico]) {
+valorRole = dados[campoRoleDinamico];
+}
+}
 
 if(valorRole) {
 usuarioRole = valorRole.toLowerCase().trim();
@@ -167,7 +176,8 @@ btnExportarEstoque.style.display = "none";
 carregar();
 } else {
 userRole.innerText = "SEM FUNÇÃO ATRIBUÍDA";
-alert("Aviso: O campo '" + campoRoleDinamico + "' não foi localizado nos dados do documento.");
+console.log("Dados recebidos do documento:", dados);
+alert("Aviso: O campo 'role' não foi encontrado em nenhuma das estruturas conhecidas. Verifique o console do navegador para detalhes.");
 }
 } else {
 userRole.innerText = "DOCUMENTO NÃO ENCONTRADO";
