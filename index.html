@@ -120,6 +120,7 @@ const doc = await db.collection("usuarios").doc(u.uid).get();
 
 if(doc.exists){
     utilizador = doc.data();
+console.log(utilizador);
 }else{
     utilizador = {
         role:"vendas",
@@ -128,6 +129,7 @@ if(doc.exists){
 }
 
 carregar();
+console.log("Role:", utilizador.role);
 aplicarPermissoes();
 
 }else{
