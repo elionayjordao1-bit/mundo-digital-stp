@@ -135,7 +135,6 @@ if(doc.exists) {
 let dados = doc.data();
 let valorRole = null;
 
-// Método dinâmico: varre todas as chaves do documento para encontrar a palavra "role"
 Object.keys(dados).forEach(key => {
 if(key.toLowerCase().includes("role")) {
 valorRole = dados[key];
@@ -146,6 +145,7 @@ if(valorRole) {
 usuarioRole = valorRole.toLowerCase().trim();
 userRole.innerText = usuarioRole.toUpperCase();
 
+// Verificação inteligente flexível para esconder/mostrar blocos
 if(usuarioRole === "admin") {
 cardRelatorio.style.display = "block";
 cardNovoProduto.style.display = "block";
@@ -153,13 +153,13 @@ cardHistorico.style.display = "block";
 btnExportarEstoque.style.display = "inline-block";
 btnExportarHistorico.style.display = "inline-block";
 } 
-else if(usuarioRole === "vendas") {
+else if(usuarioRole.includes("venda")) {
 cardRelatorio.style.display = "none";
 cardNovoProduto.style.display = "none";
 cardHistorico.style.display = "none";
 btnExportarEstoque.style.display = "none";
 } 
-else if(usuarioRole === "estoque") {
+else if(usuarioRole.includes("estoque")) {
 cardRelatorio.style.display = "none";
 cardNovoProduto.style.display = "none";
 cardHistorico.style.display = "none";
@@ -220,17 +220,18 @@ let botaoEntrada = "";
 let botaoVenda = "";
 let botaoExcluir = "";
 
+// Validação dos botões com base nas funções flexíveis
 if(usuarioRole === "admin") {
 botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
 botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
 botaoExcluir = `<button onclick="del('${d.id}')">🗑</button>`;
 } 
-else if(usuarioRole === "vendas") {
+else if(usuarioRole.includes("venda")) {
 botaoEntrada = `<button disabled style="opacity:0.3; cursor:not-allowed">+</button>`;
 botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
 botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`;
 } 
-else if(usuarioRole === "estoque") {
+else if(usuarioRole.includes("estoque")) {
 botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
 botaoVenda = `<button disabled style="opacity:0.3; cursor:not-allowed">Vender</button>`;
 botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`;
@@ -286,8 +287,8 @@ vendasMes.innerText=mes+" Db";
 
 function mov(id,nome,atual,preco,t){
 if(!usuarioRole) return;
-if(t=="entrada" && usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Sem permissão");
-if(t=="saida" && usuarioRole !== "admin" && usuarioRole !== "vendas") return alert("Sem permissão");
+if(t=="entrada" && usuarioRole !== "admin" && !usuarioRole.includes("estoque")) return alert("Sem permissão");
+if(t=="saida" && usuarioRole !== "admin" && !usuarioRole.includes("venda")) return alert("Sem permissão");
 
 let q=+prompt("Quantidade:");
 if(!q||q<=0)return;
