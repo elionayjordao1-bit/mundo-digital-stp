@@ -102,60 +102,72 @@ const db=firebase.firestore();
 
 let usuarioRole = null;
 
+// Referências dos listeners ativos para evitar duplicações ou conflitos
+let listenerProdutos = null;
+let listenerMovimentacoes = null;
+
 function login(){
-erro.innerText = "";
+if(erro) erro.innerText = "";
 auth.signInWithEmailAndPassword(email.value,senha.value)
-.catch(e=>erro.innerText=e.message);
+.catch(e=> { if(erro) erro.innerText=e.message; });
 }
 
 function logout(){
+// Desativa os listeners ativos antes de deslogar para não dar erro de permissão no console
+if(listenerProdutos) listenerProdutos();
+if(listenerMovimentacoes) listenerMovimentacoes();
 usuarioRole = null;
 auth.signOut();
 }
 
 auth.onAuthStateChanged(u=>{
 if(u){
-loginBox.classList.add("hidden");
-app.classList.remove("hidden");
-userEmail.innerText=u.email;
-
+// Buscamos primeiro a role na coleção 'usuarios' usando o UID exato
 db.collection("usuarios").doc(u.uid).get()
 .then(doc => {
 if(doc.exists) {
-// Normaliza para letras minúsculas para evitar falhas de digitação no banco
 usuarioRole = doc.data().role.toLowerCase().trim();
 userRole.innerText = usuarioRole.toUpperCase();
+userEmail.innerText = u.email;
 
-// Controle preciso de visibilidade na Interface
+// Controla de forma estrita a exibição dos blocos na interface antes de revelar o app
 if(usuarioRole === "admin") {
 cardRelatorio.style.display = "block";
 cardNovoProduto.style.display = "block";
 cardHistorico.style.display = "block";
 btnExportarEstoque.style.display = "inline-block";
+btnExportarHistorico.style.display = "inline-block";
 } else if(usuarioRole === "vendas") {
 cardRelatorio.style.display = "none";
 cardNovoProduto.style.display = "none";
 cardHistorico.style.display = "none";
 btnExportarEstoque.style.display = "none";
+btnExportarHistorico.style.display = "none";
 } else if(usuarioRole === "estoque") {
 cardRelatorio.style.display = "none";
 cardNovoProduto.style.display = "none";
 cardHistorico.style.display = "none";
 btnExportarEstoque.style.display = "none";
+btnExportarHistorico.style.display = "none";
 }
 
+// Só agora que a interface está pronta e a role definida, ativamos o app e carregamos os dados
+loginBox.classList.add("hidden");
+app.classList.remove("hidden");
 carregar();
+
 } else {
-userRole.innerText = "SEM FUNÇÃO";
-alert("Atenção: O seu utilizador não tem uma role atribuída na coleção 'usuarios'.");
+alert("Erro crítico: Este utilizador não possui um perfil de permissões (role) configurado na coleção 'usuarios'.");
+usuarioRole = null;
 }
 })
 .catch(e => {
-console.error("Erro ao carregar permissões:", e);
-userRole.innerText = "ERRO DE LEITURA";
+console.error("Erro ao obter regras de acesso:", e);
+alert("Erro de comunicação com a base de dados ao validar permissões.");
 });
 
 }else{
+// Quando não há utilizador logado, exibe apenas a caixa de login
 loginBox.classList.remove("hidden");
 app.classList.add("hidden");
 usuarioRole = null;
@@ -164,6 +176,7 @@ userRole.innerText = "Carregando...";
 });
 
 function addProduto(){
+// Bloqueio de segurança no Console (F12)
 if(usuarioRole !== "admin") {
 return alert("Ação negada: Apenas administradores podem cadastrar produtos.");
 }
@@ -178,7 +191,11 @@ venda:+venda.value
 }
 
 function carregar(){
-db.collection("produtos").onSnapshot(s=>{
+// Cancela listeners anteriores se existirem para evitar vazamento de memória
+if(listenerProdutos) listenerProdutos();
+if(listenerMovimentacoes) listenerMovimentacoes();
+
+listenerProdutos = db.collection("produtos").onSnapshot(s=>{
 lista.innerHTML="";
 let total=0;
 s.forEach(d=>{
@@ -191,6 +208,7 @@ let botaoEntrada = "";
 let botaoVenda = "";
 let botaoExcluir = "";
 
+// Customização estrita dos botões da tabela de acordo com a Role
 if(usuarioRole === "admin") {
 botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
 botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
@@ -220,9 +238,9 @@ lista.innerHTML+=`
 </tr>`;
 });
 totalEstoque.innerText=total+" Db";
-});
+}, e => console.error("Erro no snapshot de produtos:", e));
 
-db.collection("movimentacoes").orderBy("data","desc")
+listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc")
 .onSnapshot(s=>{
 historico.innerHTML="";
 let hoje=0,mes=0;
@@ -230,6 +248,7 @@ let now=new Date();
 
 s.forEach(d=>{
 let m=d.data();
+if(!m.data) return; 
 let data=m.data.toDate();
 let valor=Number(m.valor)||0;
 
@@ -249,10 +268,11 @@ historico.innerHTML+=`
 
 vendasHoje.innerText=hoje+" Db";
 vendasMes.innerText=mes+" Db";
-});
+}, e => console.error("Erro no snapshot de movimentações:", e));
 }
 
 function mov(id,nome,atual,preco,t){
+// Validação imperativa de segurança contra chamadas via Console (F12)
 if(t=="entrada" && usuarioRole !== "admin" && usuarioRole !== "estoque") {
 return alert("Ação negada: Você não possui permissão para dar entrada de mercadoria.");
 }
@@ -277,6 +297,7 @@ data:new Date()
 }
 
 function del(id){
+// Bloqueio de segurança no Console (F12)
 if(usuarioRole !== "admin") {
 return alert("Ação negada: Apenas administradores podem excluir produtos.");
 }
@@ -287,6 +308,7 @@ db.collection("produtos").doc(id).delete();
 }
 
 function exportarEstoque(){
+// Bloqueio de segurança no Console (F12)
 if(usuarioRole !== "admin") {
 return alert("Ação negada: Você não tem permissão para exportar dados.");
 }
@@ -302,6 +324,7 @@ baixar(c,"estoque.csv");
 }
 
 function exportarHistorico(){
+// Bloqueio de segurança no Console (F12)
 if(usuarioRole !== "admin") {
 return alert("Ação negada: Você não tem permissão para exportar dados.");
 }
