@@ -129,30 +129,23 @@ app.classList.remove("hidden");
 userEmail.innerText=u.email;
 userRole.innerText = "Carregando...";
 
-// Busca o documento do utilizador na coleção do Firebase
 db.collection("usuarios").doc(u.uid).get()
 .then(doc => {
 if(doc.exists) {
 let dados = doc.data();
 let valorRole = null;
 
-// TENTATIVA 1: Tenta ler o campo de forma direta e padrão ("role")
-if (dados.role) {
-valorRole = dados.role;
-} 
-// TENTATIVA 2: Tenta ler com a string dinâmica caso o Firebase tenha mesclado os nomes
-else {
-let campoRoleDinamico = `usuarios | ${u.uid} | role`;
-if (dados[campoRoleDinamico]) {
-valorRole = dados[campoRoleDinamico];
+// Método dinâmico: varre todas as chaves do documento para encontrar a palavra "role"
+Object.keys(dados).forEach(key => {
+if(key.toLowerCase().includes("role")) {
+valorRole = dados[key];
 }
-}
+});
 
 if(valorRole) {
 usuarioRole = valorRole.toLowerCase().trim();
 userRole.innerText = usuarioRole.toUpperCase();
 
-// Aplicando as regras de acesso visual:
 if(usuarioRole === "admin") {
 cardRelatorio.style.display = "block";
 cardNovoProduto.style.display = "block";
@@ -175,18 +168,17 @@ btnExportarEstoque.style.display = "none";
 
 carregar();
 } else {
-userRole.innerText = "SEM FUNÇÃO ATRIBUÍDA";
-console.log("Dados recebidos do documento:", dados);
-alert("Aviso: O campo 'role' não foi encontrado em nenhuma das estruturas conhecidas. Verifique o console do navegador para detalhes.");
+userRole.innerText = "SEM FUNÇÃO";
+alert("Aviso: Nenhuma propriedade contendo 'role' foi achada no documento do Firestore.");
 }
 } else {
-userRole.innerText = "DOCUMENTO NÃO ENCONTRADO";
-alert("Aviso: Nenhum documento correspondente ao UID do utilizador foi achado na coleção 'usuarios'.");
+userRole.innerText = "NÃO ENCONTRADO";
+alert("Aviso: Documento do usuário não existe na coleção 'usuarios'.");
 }
 })
 .catch(e => {
 console.error("Erro ao carregar permissões:", e);
-userRole.innerText = "ERRO DE LEITURA";
+userRole.innerText = "ERRO";
 });
 
 }else{
@@ -198,11 +190,8 @@ userRole.innerText = "Carregando...";
 });
 
 function addProduto(){
-if(!usuarioRole) {
-return alert("Aguarde o carregamento completo do sistema antes de salvar.");
-}
-if(usuarioRole !== "admin") {
-return alert("Ação negada: Apenas administradores podem cadastrar produtos.");
+if(!usuarioRole || usuarioRole !== "admin") {
+return alert("Ação negada.");
 }
 db.collection("produtos").add({
 nome:nome.value,
@@ -231,12 +220,7 @@ let botaoEntrada = "";
 let botaoVenda = "";
 let botaoExcluir = "";
 
-if(!usuarioRole) {
-botaoEntrada = `<button disabled>...</button>`;
-botaoVenda = `<button disabled>...</button>`;
-botaoExcluir = `<button disabled>...</button>`;
-}
-else if(usuarioRole === "admin") {
+if(usuarioRole === "admin") {
 botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
 botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
 botaoExcluir = `<button onclick="del('${d.id}')">🗑</button>`;
@@ -301,14 +285,9 @@ vendasMes.innerText=mes+" Db";
 }
 
 function mov(id,nome,atual,preco,t){
-if(!usuarioRole) return alert("Aguarde o carregamento do sistema.");
-
-if(t=="entrada" && usuarioRole !== "admin" && usuarioRole !== "estoque") {
-return alert("Ação negada: Você não possui permissão para dar entrada de mercadoria.");
-}
-if(t=="saida" && usuarioRole !== "admin" && usuarioRole !== "vendas") {
-return alert("Ação negada: Você não possui permissão para realizar vendas.");
-}
+if(!usuarioRole) return;
+if(t=="entrada" && usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Sem permissão");
+if(t=="saida" && usuarioRole !== "admin" && usuarioRole !== "vendas") return alert("Sem permissão");
 
 let q=+prompt("Quantidade:");
 if(!q||q<=0)return;
@@ -327,11 +306,11 @@ data:new Date()
 }
 
 function del(id){
-if(usuarioRole !== "admin") return alert("Ação negada.");
+if(usuarioRole !== "admin") return;
 if(confirm("Excluir produto?")){ db.collection("produtos").doc(id).delete(); }
 }
 function exportarEstoque(){
-if(usuarioRole !== "admin") return alert("Acesso negado.");
+if(usuarioRole !== "admin") return;
 db.collection("produtos").get().then(s=>{
 let c="Produto,Qtd,Min,Compra,Venda\n";
 s.forEach(d=>{ let p=d.data(); c+=`${p.nome},${p.estoque},${p.minimo},${p.compra},${p.venda}\n`; });
@@ -339,7 +318,7 @@ baixar(c,"estoque.csv");
 });
 }
 function exportarHistorico(){
-if(usuarioRole !== "admin") return alert("Acesso negado.");
+if(usuarioRole !== "admin") return;
 db.collection("movimentacoes").get().then(s=>{
 let c="Produto,Tipo,Qtd,Valor,Usuario,Data\n";
 s.forEach(d=>{ let m=d.data(); c+=`${m.produto},${m.tipo},${m.quantidade},${m.valor},${m.usuario},${m.data.toDate()}\n`; });
