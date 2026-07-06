@@ -20,8 +20,8 @@ th{background:#2c7be5;color:#fff}
 .baixo{background:#ffcccc}
 .desativado{background:#f2f2f2;color:#999}
 button{cursor:pointer}
-.btn-status-ativo{background:#28a745;color:#fff;border:none;border-radius:4px}
-.btn-status-inativo{background:#dc3545;color:#fff;border:none;border-radius:4px}
+.btn-status-ativo{background:#28a745;color:#fff;border:none;border-radius:4px;padding:4px 8px}
+.btn-status-inativo{background:#dc3545;color:#fff;border:none;border-radius:4px;padding:4px 8px}
 </style>
 </head>
 
@@ -49,7 +49,7 @@ button{cursor:pointer}
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<!-- NOVO: Bloco de Gestão de Funcionários (Apenas Admin) -->
+<!-- Bloco de Gestão de Funcionários (Apenas Admin) -->
 <div class="card" id="cardFuncionarios">
 <h3>👥 Funcionários</h3>
 <div style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px;">
@@ -137,21 +137,9 @@ function login(){
 let erroCampo = document.getElementById("erro");
 if(erroCampo) erroCampo.innerText = "";
 
-// Antes de logar, verificamos no Firestore se esse email está desativado
-db.collection("usuarios").where("email", "==", email.value.toLowerCase().trim()).get()
-.then(snapshot => {
-  if(!snapshot.empty) {
-    let userDoc = snapshot.docs[0].data();
-    if(userDoc.status === "desativado") {
-      if(erroCampo) erroCampo.innerText = "Esta conta foi desativada pelo administrador.";
-      return;
-    }
-  }
-  // Se estiver tudo bem ou não listado ainda, faz o login clássico
-  auth.signInWithEmailAndPassword(email.value,senha.value)
-  .catch(e=> { if(erroCampo) erroCampo.innerText=e.message; });
-})
-.catch(e => { if(erroCampo) erroCampo.innerText=e.message; });
+// Login direto clássico para respeitar as regras do Firebase
+auth.signInWithEmailAndPassword(email.value, senha.value)
+.catch(e=> { if(erroCampo) erroCampo.innerText = e.message; });
 }
 
 function logout(){
@@ -174,9 +162,9 @@ db.collection("usuarios").doc(u.uid).get()
 if(doc.exists) {
 let dados = doc.data();
 
-// Validação extra caso o utilizador seja desativado enquanto logado
+// Bloqueia o acesso imediatamente se a conta estiver desativada no banco
 if(dados.status === "desativado") {
-  alert("A sua conta foi desativada.");
+  alert("Esta conta foi desativada pelo administrador.");
   logout();
   return;
 }
@@ -191,10 +179,10 @@ usuarioRole = valorRole.toLowerCase().trim();
 userRole.innerText = usuarioRole.toUpperCase();
 
 if(usuarioRole === "admin") {
-cardRelatorio.style.style.display = "block";
+cardRelatorio.style.display = "block";
 cardNovoProduto.style.display = "block";
 cardHistorico.style.display = "block";
-cardFuncionarios.style.display = "block"; // Exibe painel de funcionários
+cardFuncionarios.style.display = "block"; 
 btnExportarEstoque.style.display = "inline-block";
 btnExportarHistorico.style.display = "inline-block";
 } 
@@ -202,7 +190,7 @@ else {
 cardRelatorio.style.display = "none";
 cardNovoProduto.style.display = "none";
 cardHistorico.style.display = "none";
-cardFuncionarios.style.display = "none"; // Oculta para os demais
+cardFuncionarios.style.display = "none"; 
 btnExportarEstoque.style.display = "none";
 }
 
@@ -211,14 +199,18 @@ carregar();
 userRole.innerText = "SEM FUNÇÃO";
 }
 } else {
-// Se o doc por UID não existe, tenta buscar pelo email (para utilizadores criados manualmente)
+// Vinculo automático para novas contas criadas pelo painel
 db.collection("usuarios").where("email", "==", u.email.toLowerCase()).get()
 .then(snap => {
   if(!snap.empty) {
     let dadosEmail = snap.docs[0].data();
-    // Vincula o UID correto ao documento do Firestore para o futuro
+    if(dadosEmail.status === "desativado") {
+      alert("Esta conta foi desativada.");
+      logout();
+      return;
+    }
     db.collection("usuarios").doc(u.uid).set(dadosEmail);
-    db.collection("usuarios").collection("usuarios").doc(snap.docs[0].id).delete();
+    db.collection("usuarios").doc(snap.docs[0].id).delete();
     location.reload();
   } else {
     userRole.innerText = "NÃO ENCONTRADO";
@@ -251,7 +243,7 @@ venda:+venda.value
 nome.value=""; estoque.value=""; minimo.value=""; compra.value=""; venda.value="";
 }
 
-// --- FUNÇÕES DA GESTÃO DE FUNCIONÁRIOS ---
+// --- GESTÃO DE FUNCIONÁRIOS ---
 
 function carregarFuncionarios() {
   if(usuarioRole !== "admin") return;
@@ -281,7 +273,7 @@ function carregarFuncionarios() {
   });
 }
 
-function salvarFuncionari() {
+function salvarFuncionario() {
   let emailVal = funcEmail.value.toLowerCase().trim();
   let senhaVal = funcSenha.value;
   let roleVal = funcRole.value;
@@ -289,25 +281,22 @@ function salvarFuncionari() {
   if(!emailVal) return alert("Insira o email.");
 
   if(editandoFuncId) {
-    // Modo Edição (Altera Nome/Email e Função)
     db.collection("usuarios").doc(editandoFuncId).update({
       email: emailVal,
       role: roleVal
     }).then(() => {
-      alert("Funcionário atualizado com sucesso!");
+      alert("Funcionário atualizado!");
       cancelarEdicaoFunc();
     });
   } else {
-    // Modo Criação
     if(!senhaVal) return alert("Insira uma senha inicial.");
     
-    // Guardamos os dados no Firestore. O Firebase criará o vínculo no primeiro login
     db.collection("usuarios").add({
       email: emailVal,
       role: roleVal,
       status: "ativo"
     }).then(() => {
-      alert("Perfil de funcionário pré-criado! Use estes dados para logar no sistema.");
+      alert("Funcionário criado! Ele já pode fazer login.");
       funcEmail.value = ""; funcSenha.value = "";
     });
   }
@@ -318,7 +307,7 @@ function prepararEditarFunc(id, email, role) {
   tituloFormFunc.innerText = "Editar Funcionário:";
   funcEmail.value = email;
   funcSenha.value = "";
-  funcSenha.disabled = true; // Senha não se edita por aqui por segurança
+  funcSenha.disabled = true; 
   funcSenha.placeholder = "(Protegida)";
   funcRole.value = role;
   btnSalvarFunc.innerText = "Atualizar";
@@ -342,9 +331,9 @@ function alternarStatusFunc(id, statusAtual) {
 }
 
 function apagarFuncionario(id) {
-  if(confirm("Tem a certeza que deseja apagar permanentemente este funcionário do painel?")) {
+  if(confirm("Deseja apagar permanentemente este funcionário?")) {
     db.collection("usuarios").doc(id).delete().then(() => {
-      alert("Funcionário removido do banco de dados.");
+      alert("Funcionário removido.");
     });
   }
 }
