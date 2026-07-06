@@ -11,14 +11,17 @@
 <style>
 body{font-family:Arial;background:#f4f6f8;padding:20px}
 h1{text-align:center}
-input,button{padding:6px;margin:4px}
+input,button,select{padding:6px;margin:4px}
 table{width:100%;border-collapse:collapse;background:#fff;margin-top:10px}
 th,td{border:1px solid #ccc;padding:6px;text-align:center}
 th{background:#2c7be5;color:#fff}
 .hidden{display:none}
 .card{background:#fff;padding:15px;margin:10px 0;border-radius:6px}
 .baixo{background:#ffcccc}
+.desativado{background:#f2f2f2;color:#999}
 button{cursor:pointer}
+.btn-status-ativo{background:#28a745;color:#fff;border:none;border-radius:4px}
+.btn-status-inativo{background:#dc3545;color:#fff;border:none;border-radius:4px}
 </style>
 </head>
 
@@ -46,6 +49,32 @@ button{cursor:pointer}
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
+<!-- NOVO: Bloco de Gestão de Funcionários (Apenas Admin) -->
+<div class="card" id="cardFuncionarios">
+<h3>👥 Funcionários</h3>
+<div style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px;">
+  <b id="tituloFormFunc">Criar Novo Funcionário:</b><br>
+  <input id="funcEmail" placeholder="Email do Funcionário">
+  <input id="funcSenha" type="password" placeholder="Senha Inicial">
+  <select id="funcRole">
+    <option value="venda1">Venda 1</option>
+    <option value="venda2">Venda 2</option>
+    <option value="estoque">Estoque</option>
+    <option value="admin">Administrador</option>
+  </select>
+  <button onclick="salvarFuncionario()" id="btnSalvarFunc">Criar</button>
+  <button onclick="cancelarEdicaoFunc()" id="btnCancelarFunc" class="hidden">Cancelar</button>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>Email</th><th>Função</th><th>Estado</th><th>Ações</th>
+    </tr>
+  </thead>
+  <tbody id="listaFuncionarios"></tbody>
+</table>
+</div>
+
 <!-- Bloco de Cadastro de Novos Produtos -->
 <div class="card" id="cardNovoProduto">
 <h3>📦 Novo Produto</h3>
@@ -62,9 +91,7 @@ button{cursor:pointer}
 <h3>📋 Estoque</h3>
 <button id="btnExportarEstoque" onclick="exportarEstoque()">📤 Exportar Excel</button>
 <table id="tabelaEstoque">
-<thead id="cabecalhoTabela">
-<!-- O cabeçalho é gerado dinamicamente via JS para ocultar as colunas -->
-</thead>
+<thead id="cabecalhoTabela"></thead>
 <tbody id="lista"></tbody>
 </table>
 </div>
@@ -101,19 +128,36 @@ const auth=firebase.auth();
 const db=firebase.firestore();
 
 let usuarioRole = null;
+let editandoFuncId = null; 
 let listenerProdutos = null;
 let listenerMovimentacoes = null;
+let listenerFuncionarios = null;
 
 function login(){
 let erroCampo = document.getElementById("erro");
 if(erroCampo) erroCampo.innerText = "";
-auth.signInWithEmailAndPassword(email.value,senha.value)
-.catch(e=> { if(erroCampo) erroCampo.innerText=e.message; });
+
+// Antes de logar, verificamos no Firestore se esse email está desativado
+db.collection("usuarios").where("email", "==", email.value.toLowerCase().trim()).get()
+.then(snapshot => {
+  if(!snapshot.empty) {
+    let userDoc = snapshot.docs[0].data();
+    if(userDoc.status === "desativado") {
+      if(erroCampo) erroCampo.innerText = "Esta conta foi desativada pelo administrador.";
+      return;
+    }
+  }
+  // Se estiver tudo bem ou não listado ainda, faz o login clássico
+  auth.signInWithEmailAndPassword(email.value,senha.value)
+  .catch(e=> { if(erroCampo) erroCampo.innerText=e.message; });
+})
+.catch(e => { if(erroCampo) erroCampo.innerText=e.message; });
 }
 
 function logout(){
 if(listenerProdutos) listenerProdutos();
 if(listenerMovimentacoes) listenerMovimentacoes();
+if(listenerFuncionarios) listenerFuncionarios();
 usuarioRole = null;
 auth.signOut();
 }
@@ -129,51 +173,61 @@ db.collection("usuarios").doc(u.uid).get()
 .then(doc => {
 if(doc.exists) {
 let dados = doc.data();
-let valorRole = null;
 
-Object.keys(dados).forEach(key => {
-if(key.toLowerCase().includes("role")) {
-valorRole = dados[key];
+// Validação extra caso o utilizador seja desativado enquanto logado
+if(dados.status === "desativado") {
+  alert("A sua conta foi desativada.");
+  logout();
+  return;
 }
+
+let valorRole = null;
+Object.keys(dados).forEach(key => {
+if(key.toLowerCase().includes("role")) { valorRole = dados[key]; }
 });
 
 if(valorRole) {
 usuarioRole = valorRole.toLowerCase().trim();
 userRole.innerText = usuarioRole.toUpperCase();
 
-// Verificação inteligente flexível para esconder/mostrar blocos
 if(usuarioRole === "admin") {
-cardRelatorio.style.display = "block";
+cardRelatorio.style.style.display = "block";
 cardNovoProduto.style.display = "block";
 cardHistorico.style.display = "block";
+cardFuncionarios.style.display = "block"; // Exibe painel de funcionários
 btnExportarEstoque.style.display = "inline-block";
 btnExportarHistorico.style.display = "inline-block";
 } 
-else if(usuarioRole.includes("venda")) {
+else {
 cardRelatorio.style.display = "none";
 cardNovoProduto.style.display = "none";
 cardHistorico.style.display = "none";
-btnExportarEstoque.style.display = "none";
-} 
-else if(usuarioRole.includes("estoque")) {
-cardRelatorio.style.display = "none";
-cardNovoProduto.style.display = "none";
-cardHistorico.style.display = "none";
+cardFuncionarios.style.display = "none"; // Oculta para os demais
 btnExportarEstoque.style.display = "none";
 }
 
 carregar();
 } else {
 userRole.innerText = "SEM FUNÇÃO";
-alert("Aviso: Nenhuma propriedade contendo 'role' foi achada no documento do Firestore.");
 }
 } else {
-userRole.innerText = "NÃO ENCONTRADO";
-alert("Aviso: Documento do usuário não existe na coleção 'usuarios'.");
+// Se o doc por UID não existe, tenta buscar pelo email (para utilizadores criados manualmente)
+db.collection("usuarios").where("email", "==", u.email.toLowerCase()).get()
+.then(snap => {
+  if(!snap.empty) {
+    let dadosEmail = snap.docs[0].data();
+    // Vincula o UID correto ao documento do Firestore para o futuro
+    db.collection("usuarios").doc(u.uid).set(dadosEmail);
+    db.collection("usuarios").collection("usuarios").doc(snap.docs[0].id).delete();
+    location.reload();
+  } else {
+    userRole.innerText = "NÃO ENCONTRADO";
+  }
+});
 }
 })
 .catch(e => {
-console.error("Erro ao carregar permissões:", e);
+console.error(e);
 userRole.innerText = "ERRO";
 });
 
@@ -186,9 +240,7 @@ userRole.innerText = "Carregando...";
 });
 
 function addProduto(){
-if(!usuarioRole || usuarioRole !== "admin") {
-return alert("Ação negada.");
-}
+if(!usuarioRole || usuarioRole !== "admin") return alert("Ação negada.");
 db.collection("produtos").add({
 nome:nome.value,
 estoque:+estoque.value,
@@ -199,11 +251,110 @@ venda:+venda.value
 nome.value=""; estoque.value=""; minimo.value=""; compra.value=""; venda.value="";
 }
 
+// --- FUNÇÕES DA GESTÃO DE FUNCIONÁRIOS ---
+
+function carregarFuncionarios() {
+  if(usuarioRole !== "admin") return;
+  
+  listenerFuncionarios = db.collection("usuarios").onSnapshot(snapshot => {
+    listaFuncionarios.innerHTML = "";
+    snapshot.forEach(doc => {
+      let f = doc.data();
+      let id = doc.id;
+      let emailTxt = f.email || "Sem Email";
+      let roleTxt = (f.role || "venda1").toUpperCase();
+      let statusTxt = f.status === "desativado" ? "Inativo" : "Ativo";
+      let btnStatusClass = f.status === "desativado" ? "btn-status-inativo" : "btn-status-ativo";
+      
+      listaFuncionarios.innerHTML += `
+        <tr class="${f.status === 'desativado' ? 'desativado' : ''}">
+          <td><b>${emailTxt}</b></td>
+          <td>${roleTxt}</td>
+          <td><button class="${btnStatusClass}" onclick="alternarStatusFunc('${id}', '${f.status}')">${statusTxt}</button></td>
+          <td>
+            <button onclick="prepararEditarFunc('${id}', '${emailTxt}', '${f.role || 'venda1'}')">✏️ Editar</button>
+            <button onclick="apagarFuncionario('${id}')">🗑️ Apagar</button>
+          </td>
+        </tr>
+      `;
+    });
+  });
+}
+
+function salvarFuncionari() {
+  let emailVal = funcEmail.value.toLowerCase().trim();
+  let senhaVal = funcSenha.value;
+  let roleVal = funcRole.value;
+
+  if(!emailVal) return alert("Insira o email.");
+
+  if(editandoFuncId) {
+    // Modo Edição (Altera Nome/Email e Função)
+    db.collection("usuarios").doc(editandoFuncId).update({
+      email: emailVal,
+      role: roleVal
+    }).then(() => {
+      alert("Funcionário atualizado com sucesso!");
+      cancelarEdicaoFunc();
+    });
+  } else {
+    // Modo Criação
+    if(!senhaVal) return alert("Insira uma senha inicial.");
+    
+    // Guardamos os dados no Firestore. O Firebase criará o vínculo no primeiro login
+    db.collection("usuarios").add({
+      email: emailVal,
+      role: roleVal,
+      status: "ativo"
+    }).then(() => {
+      alert("Perfil de funcionário pré-criado! Use estes dados para logar no sistema.");
+      funcEmail.value = ""; funcSenha.value = "";
+    });
+  }
+}
+
+function prepararEditarFunc(id, email, role) {
+  editandoFuncId = id;
+  tituloFormFunc.innerText = "Editar Funcionário:";
+  funcEmail.value = email;
+  funcSenha.value = "";
+  funcSenha.disabled = true; // Senha não se edita por aqui por segurança
+  funcSenha.placeholder = "(Protegida)";
+  funcRole.value = role;
+  btnSalvarFunc.innerText = "Atualizar";
+  btnCancelarFunc.classList.remove("hidden");
+}
+
+function cancelarEdicaoFunc() {
+  editandoFuncId = null;
+  tituloFormFunc.innerText = "Criar Novo Funcionário:";
+  funcEmail.value = "";
+  funcSenha.value = "";
+  funcSenha.disabled = false;
+  funcSenha.placeholder = "Senha Inicial";
+  btnSalvarFunc.innerText = "Criar";
+  btnCancelarFunc.classList.add("hidden");
+}
+
+function alternarStatusFunc(id, statusAtual) {
+  let novoStatus = statusAtual === "desativado" ? "ativo" : "desativado";
+  db.collection("usuarios").doc(id).update({ status: novoStatus });
+}
+
+function apagarFuncionario(id) {
+  if(confirm("Tem a certeza que deseja apagar permanentemente este funcionário do painel?")) {
+    db.collection("usuarios").doc(id).delete().then(() => {
+      alert("Funcionário removido do banco de dados.");
+    });
+  }
+}
+
+// --- FIM DA GESTÃO DE FUNCIONÁRIOS ---
+
 function carregar(){
 if(listenerProdutos) listenerProdutos();
 if(listenerMovimentacoes) listenerMovimentacoes();
 
-// Monta o cabeçalho de forma dinâmica dependendo se é admin ou não
 let isAdmin = (usuarioRole === "admin");
 cabecalhoTabela.innerHTML = `
 <tr>
@@ -215,6 +366,8 @@ cabecalhoTabela.innerHTML = `
   <th>+</th><th>Vender</th><th>🗑</th>
 </tr>`;
 
+if(isAdmin) { carregarFuncionarios(); }
+
 listenerProdutos = db.collection("produtos").onSnapshot(s=>{
 lista.innerHTML="";
 let total=0;
@@ -224,9 +377,7 @@ let lucro=p.venda-p.compra;
 let totalProd=p.estoque*p.venda;
 total+=totalProd;
 
-let botaoEntrada = "";
-let botaoVenda = "";
-let botaoExcluir = "";
+let botaoEntrada = ""; let botaoVenda = ""; let botaoExcluir = "";
 
 if(usuarioRole === "admin") {
 botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
