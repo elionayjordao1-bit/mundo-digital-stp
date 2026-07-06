@@ -61,13 +61,9 @@ button{cursor:pointer}
 <div class="card" id="cardEstoque">
 <h3>📋 Estoque</h3>
 <button id="btnExportarEstoque" onclick="exportarEstoque()">📤 Exportar Excel</button>
-<table>
-<thead>
-<tr>
-<th>Produto</th><th>Qtd</th><th>Mín</th><th>Compra</th>
-<th>Venda</th><th>Lucro</th><th>Total</th>
-<th>+</th><th>Vender</th><th>🗑</th>
-</tr>
+<table id="tabelaEstoque">
+<thead id="cabecalhoTabela">
+<!-- O cabeçalho é gerado dinamicamente via JS para ocultar as colunas -->
 </thead>
 <tbody id="lista"></tbody>
 </table>
@@ -207,6 +203,18 @@ function carregar(){
 if(listenerProdutos) listenerProdutos();
 if(listenerMovimentacoes) listenerMovimentacoes();
 
+// Monta o cabeçalho de forma dinâmica dependendo se é admin ou não
+letisAdmin = (usuarioRole === "admin");
+cabecalhoTabela.innerHTML = `
+<tr>
+  <th>Produto</th><th>Qtd</th><th>Mín</th>
+  ${isAdmin ? '<th>Compra</th>' : ''}
+  <th>Venda</th>
+  ${isAdmin ? '<th>Lucro</th>' : ''}
+  <th>Total</th>
+  <th>+</th><th>Vender</th><th>🗑</th>
+</tr>`;
+
 listenerProdutos = db.collection("produtos").onSnapshot(s=>{
 lista.innerHTML="";
 let total=0;
@@ -220,7 +228,6 @@ let botaoEntrada = "";
 let botaoVenda = "";
 let botaoExcluir = "";
 
-// Validação dos botões com base nas funções flexíveis
 if(usuarioRole === "admin") {
 botaoEntrada = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
 botaoVenda = `<button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
@@ -242,9 +249,9 @@ lista.innerHTML+=`
 <td>${p.nome}</td>
 <td>${p.estoque}</td>
 <td>${p.minimo}</td>
-<td>${p.compra} Db</td>
+${isAdmin ? `<td>${p.compra} Db</td>` : ''}
 <td>${p.venda} Db</td>
-<td>${lucro} Db</td>
+${isAdmin ? `<td>${lucro} Db</td>` : ''}
 <td>${totalProd} Db</td>
 <td>${botaoEntrada}</td>
 <td>${botaoVenda}</td>
