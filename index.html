@@ -204,7 +204,7 @@ if(listenerProdutos) listenerProdutos();
 if(listenerMovimentacoes) listenerMovimentacoes();
 
 // Monta o cabeçalho de forma dinâmica dependendo se é admin ou não
-letisAdmin = (usuarioRole === "admin");
+let isAdmin = (usuarioRole === "admin");
 cabecalhoTabela.innerHTML = `
 <tr>
   <th>Produto</th><th>Qtd</th><th>Mín</th>
