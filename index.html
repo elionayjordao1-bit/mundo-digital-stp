@@ -137,7 +137,6 @@ function login(){
 let erroCampo = document.getElementById("erro");
 if(erroCampo) erroCampo.innerText = "";
 
-// Login direto clássico para respeitar as regras do Firebase
 auth.signInWithEmailAndPassword(email.value, senha.value)
 .catch(e=> { if(erroCampo) erroCampo.innerText = e.message; });
 }
@@ -162,7 +161,6 @@ db.collection("usuarios").doc(u.uid).get()
 if(doc.exists) {
 let dados = doc.data();
 
-// Bloqueia o acesso imediatamente se a conta estiver desativada no banco
 if(dados.status === "desativado") {
   alert("Esta conta foi desativada pelo administrador.");
   logout();
@@ -199,7 +197,6 @@ carregar();
 userRole.innerText = "SEM FUNÇÃO";
 }
 } else {
-// Vinculo automático para novas contas criadas pelo painel
 db.collection("usuarios").where("email", "==", u.email.toLowerCase()).get()
 .then(snap => {
   if(!snap.empty) {
@@ -253,7 +250,9 @@ function carregarFuncionarios() {
     snapshot.forEach(doc => {
       let f = doc.data();
       let id = doc.id;
-      let emailTxt = f.email || "Sem Email";
+      
+      // Inteligente: se o campo de e-mail não existir, tenta verificar se o ID do doc parece um e-mail ou põe aviso informativo
+      let emailTxt = f.email || (id.includes("@") ? id : "Defina o Email ✏️");
       let roleTxt = (f.role || "venda1").toUpperCase();
       let statusTxt = f.status === "desativado" ? "Inativo" : "Ativo";
       let btnStatusClass = f.status === "desativado" ? "btn-status-inativo" : "btn-status-ativo";
@@ -264,7 +263,7 @@ function carregarFuncionarios() {
           <td>${roleTxt}</td>
           <td><button class="${btnStatusClass}" onclick="alternarStatusFunc('${id}', '${f.status}')">${statusTxt}</button></td>
           <td>
-            <button onclick="prepararEditarFunc('${id}', '${emailTxt}', '${f.role || 'venda1'}')">✏️ Editar</button>
+            <button onclick="prepararEditarFunc('${id}', '${emailTxt === 'Defina o Email ✏️' ? '' : emailTxt}', '${f.role || 'venda1'}')">✏️ Editar</button>
             <button onclick="apagarFuncionario('${id}')">🗑️ Apagar</button>
           </td>
         </tr>
@@ -285,7 +284,7 @@ function salvarFuncionario() {
       email: emailVal,
       role: roleVal
     }).then(() => {
-      alert("Funcionário atualizado!");
+      alert("Funcionário atualizado com sucesso!");
       cancelarEdicaoFunc();
     });
   } else {
@@ -301,6 +300,8 @@ function salvarFuncionario() {
     });
   }
 }
+
+function organizarTabela() {} // Limpeza estrutural
 
 function prepararEditarFunc(id, email, role) {
   editandoFuncId = id;
