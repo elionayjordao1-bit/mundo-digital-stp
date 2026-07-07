@@ -251,21 +251,33 @@ function carregarFuncionarios() {
       let f = doc.data();
       let id = doc.id;
       
-      // Inteligente: se o campo de e-mail não existir, tenta verificar se o ID do doc parece um e-mail ou põe aviso informativo
       let emailTxt = f.email || (id.includes("@") ? id : "Defina o Email ✏️");
       let roleTxt = (f.role || "venda1").toUpperCase();
       let statusTxt = f.status === "desativado" ? "Inativo" : "Ativo";
       let btnStatusClass = f.status === "desativado" ? "btn-status-inativo" : "btn-status-ativo";
       
+      // NOVA SEGURANÇA: Se for a conta do admin principal, esconde os botões de Alternar Estado e Apagar
+      let botoesAcao = "";
+      if (emailTxt.toLowerCase() === "admin@mundodigitalstp.com") {
+        botoesAcao = `<span style="color: #999; font-size: 12px;">Dono do Sistema</span>`;
+      } else {
+        botoesAcao = `
+          <button onclick="prepararEditarFunc('${id}', '${emailTxt === 'Defina o Email ✏️' ? '' : emailTxt}', '${f.role || 'venda1'}')">✏️ Editar</button>
+          <button onclick="apagarFuncionario('${id}')">🗑️ Apagar</button>
+        `;
+      }
+
       listaFuncionarios.innerHTML += `
         <tr class="${f.status === 'desativado' ? 'desativado' : ''}">
           <td><b>${emailTxt}</b></td>
           <td>${roleTxt}</td>
-          <td><button class="${btnStatusClass}" onclick="alternarStatusFunc('${id}', '${f.status}')">${statusTxt}</button></td>
           <td>
-            <button onclick="prepararEditarFunc('${id}', '${emailTxt === 'Defina o Email ✏️' ? '' : emailTxt}', '${f.role || 'venda1'}')">✏️ Editar</button>
-            <button onclick="apagarFuncionario('${id}')">🗑️ Apagar</button>
+            ${emailTxt.toLowerCase() === "admin@mundodigitalstp.com" 
+              ? `<span class="btn-status-ativo">Ativo</span>` 
+              : `<button class="${btnStatusClass}" onclick="alternarStatusFunc('${id}', '${f.status}')">${statusTxt}</button>`
+            }
           </td>
+          <td>${botoesAcao}</td>
         </tr>
       `;
     });
@@ -289,19 +301,41 @@ function salvarFuncionario() {
     });
   } else {
     if(!senhaVal) return alert("Insira uma senha inicial.");
+    if(senhaVal.length < 6) return alert("A senha deve ter pelo menos 6 caracteres.");
+
+    // Guardamos as credenciais do Admin atual para não perder a sessão
+    let emailAdmin = auth.currentUser.email;
+    let senhaAdmin = prompt("Por segurança do Firebase, digite a sua senha de Administrador para confirmar a criação:");
     
-    db.collection("usuarios").add({
-      email: emailVal,
-      role: roleVal,
-      status: "ativo"
-    }).then(() => {
-      alert("Funcionário criado! Ele já pode fazer login.");
-      funcEmail.value = ""; funcSenha.value = "";
-    });
+    if(!senhaAdmin) return alert("Ação cancelada. É necessário confirmar a sua senha para criar utilizadores.");
+
+    // 1. Cria a conta oficialmente no Authentication
+    auth.createUserWithEmailAndPassword(emailVal, senhaVal)
+      .then((resultado) => {
+        let novoUid = resultado.user.uid;
+        
+        // 2. Cria o perfil correspondente no Firestore com o UID correto
+        return db.collection("usuarios").doc(novoUid).set({
+          email: emailVal,
+          role: roleVal,
+          status: "ativo"
+        });
+      })
+      .then(() => {
+        alert("Funcionário criado com sucesso no sistema!");
+        funcEmail.value = ""; funcSenha.value = "";
+        
+        // 3. Truque de mestre: Volta a fazer login como Admin automaticamente para não perderes o controlo do painel
+        return auth.signInWithEmailAndPassword(emailAdmin, senhaAdmin);
+      })
+      .catch(erro => {
+        console.error(erro);
+        alert("Erro ao criar: " + erro.message);
+      });
   }
 }
 
-function organizarTabela() {} // Limpeza estrutural
+function organizarTabela() {} 
 
 function prepararEditarFunc(id, email, role) {
   editandoFuncId = id;
@@ -332,9 +366,9 @@ function alternarStatusFunc(id, statusAtual) {
 }
 
 function apagarFuncionario(id) {
-  if(confirm("Deseja apagar permanentemente este funcionário?")) {
+  if(confirm("Deseja apagar permanentemente este funcionário da lista do painel? (Nota: Para remover o acesso de login, mude o estado para Inativo).")) {
     db.collection("usuarios").doc(id).delete().then(() => {
-      alert("Funcionário removido.");
+      alert("Funcionário removido da lista.");
     });
   }
 }
