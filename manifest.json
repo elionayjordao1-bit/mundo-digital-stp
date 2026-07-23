@@ -1,0 +1,16 @@
+{
+  "short_name": "MundoDigital",
+  "name": "Mundo Digital STP - Gestão",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#f4f6f8",
+  "theme_color": "#2c7be5",
+  "display": "standalone",
+  "orientation": "portrait"
+}
