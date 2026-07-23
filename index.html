@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <title>Mundo Digital STP</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2c7be5">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -513,5 +516,12 @@ let a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([c])); a.
 }
 </script>
 
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log("App PWA Pronta!"))
+      .catch(err => console.log("Erro PWA:", err));
+  }
+</script>
 </body>
 </html>
