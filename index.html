@@ -5,26 +5,34 @@
 <title>Mundo Digital STP</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2c7be5">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Meta Tag Ajustada para Evitar Desconfiguração no Telemóvel -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
-body{font-family:Arial;background:#f4f6f8;padding:20px}
-h1{text-align:center}
-input,button,select{padding:6px;margin:4px}
-table{width:100%;border-collapse:collapse;background:#fff;margin-top:10px}
-th,td{border:1px solid #ccc;padding:6px;text-align:center}
-th{background:#2c7be5;color:#fff}
-.hidden{display:none}
-.card{background:#fff;padding:15px;margin:10px 0;border-radius:6px}
-.baixo{background:#ffcccc}
-.desativado{background:#f2f2f2;color:#999}
-button{cursor:pointer}
-.btn-status-ativo{background:#28a745;color:#fff;border:none;border-radius:4px;padding:4px 8px}
-.btn-status-inativo{background:#dc3545;color:#fff;border:none;border-radius:4px;padding:4px 8px}
+/* CSS Ajustado para Responsividade e Telas Pequenas */
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #f4f6f8; padding: 15px; margin: 0; }
+h1 { text-align: center; font-size: 24px; margin-bottom: 20px; }
+input, button, select { padding: 8px; margin: 4px 2px; max-width: 100%; border: 1px solid #ccc; border-radius: 4px; }
+button { cursor: pointer; }
+
+/* Estilo dos Cartões e Correção de Overflow */
+.card { background: #fff; padding: 15px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto; max-width: 100%; }
+
+/* Tabelas Adaptáveis */
+table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 10px; min-width: 500px; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: center; font-size: 14px; }
+th { background: #2c7be5; color: #fff; }
+
+.hidden { display: none; }
+.baixo { background: #ffcccc; }
+.desativado { background: #f2f2f2; color: #999; }
+.btn-status-ativo { background: #28a745; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
+.btn-status-inativo { background: #dc3545; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
 </style>
 </head>
 
@@ -32,11 +40,12 @@ button{cursor:pointer}
 
 <h1>🏪 Mundo Digital STP</h1>
 
-<div id="loginBox">
-  <input id="email" placeholder="Email">
-  <input id="senha" type="password" placeholder="Senha">
-  <button onclick="login()">Entrar</button>
-  <p id="erro" style="color:red"></p>
+<div id="loginBox" class="card" style="max-width: 350px; margin: 20px auto;">
+  <h3>Iniciar Sessão</h3>
+  <input id="email" placeholder="Email" style="width: 100%;">
+  <input id="senha" type="password" placeholder="Senha" style="width: 100%;">
+  <button onclick="login()" style="width: 100%; background: #2c7be5; color: white; margin-top: 10px;">Entrar</button>
+  <p id="erro" style="color:red; font-size: 13px;"></p>
 </div>
 
 <div id="app" class="hidden">
@@ -86,7 +95,7 @@ button{cursor:pointer}
 <input id="minimo" type="number" placeholder="Estoque mínimo">
 <input id="compra" type="number" placeholder="Preço compra">
 <input id="venda" type="number" placeholder="Preço venda">
-<button onclick="addProduto()">Salvar</button>
+<button onclick="addProduto()" style="background: #28a745; color: white;">Salvar</button>
 </div>
 
 <!-- Tabela Geral de Estoque -->
@@ -259,7 +268,6 @@ function carregarFuncionarios() {
       let statusTxt = f.status === "desativado" ? "Inativo" : "Ativo";
       let btnStatusClass = f.status === "desativado" ? "btn-status-inativo" : "btn-status-ativo";
       
-      // NOVA SEGURANÇA: Se for a conta do admin principal, esconde os botões de Alternar Estado e Apagar
       let botoesAcao = "";
       if (emailTxt.toLowerCase() === "admin@mundodigitalstp.com") {
         botoesAcao = `<span style="color: #999; font-size: 12px;">Dono do Sistema</span>`;
@@ -306,18 +314,15 @@ function salvarFuncionario() {
     if(!senhaVal) return alert("Insira uma senha inicial.");
     if(senhaVal.length < 6) return alert("A senha deve ter pelo menos 6 caracteres.");
 
-    // Guardamos as credenciais do Admin atual para não perder a sessão
     let emailAdmin = auth.currentUser.email;
     let senhaAdmin = prompt("Por segurança do Firebase, digite a sua senha de Administrador para confirmar a criação:");
     
     if(!senhaAdmin) return alert("Ação cancelada. É necessário confirmar a sua senha para criar utilizadores.");
 
-    // 1. Cria a conta oficialmente no Authentication
     auth.createUserWithEmailAndPassword(emailVal, senhaVal)
       .then((resultado) => {
         let novoUid = resultado.user.uid;
         
-        // 2. Cria o perfil correspondente no Firestore com o UID correto
         return db.collection("usuarios").doc(novoUid).set({
           email: emailVal,
           role: roleVal,
@@ -328,7 +333,6 @@ function salvarFuncionario() {
         alert("Funcionário criado com sucesso no sistema!");
         funcEmail.value = ""; funcSenha.value = "";
         
-        // 3. Truque de mestre: Volta a fazer login como Admin automaticamente para não perderes o controlo do painel
         return auth.signInWithEmailAndPassword(emailAdmin, senhaAdmin);
       })
       .catch(erro => {
