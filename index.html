@@ -12,14 +12,12 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
-/* CSS Geral e Responsividade */
 * { box-sizing: border-box; }
 body { font-family: Arial, sans-serif; background: #f4f6f8; padding: 15px; margin: 0; }
 h1 { text-align: center; font-size: 24px; margin-bottom: 20px; }
 input, button, select { padding: 8px; margin: 4px 2px; max-width: 100%; border: 1px solid #ccc; border-radius: 4px; }
 button { cursor: pointer; }
 
-/* Estilo dos Cartões e Tabelas */
 .card { background: #fff; padding: 15px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto; max-width: 100%; }
 table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 10px; min-width: 500px; }
 th, td { border: 1px solid #ccc; padding: 8px; text-align: center; font-size: 14px; }
@@ -30,22 +28,12 @@ th { background: #2c7be5; color: #fff; }
 .btn-status-ativo { background: #28a745; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
 .btn-status-inativo { background: #dc3545; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
 
-/* --- REGRAS DO RECIBO E IMPRESSÃO (PDF) --- */
-.somente-impressao {
-    display: none;
-}
+/* REGRAS DO RECIBO E IMPRESSÃO (PDF) */
+.somente-impressao { display: none; }
 
 @media print {
-    /* Esconde todo o sistema na impressão */
-    body * {
-        visibility: hidden !important;
-    }
-
-    /* Exibe exclusivamente o recibo de venda */
-    #comprovante, #comprovante * {
-        visibility: visible !important;
-    }
-
+    body * { visibility: hidden !important; }
+    #comprovante, #comprovante * { visibility: visible !important; }
     #comprovante {
         display: block !important;
         position: absolute;
@@ -53,7 +41,7 @@ th { background: #2c7be5; color: #fff; }
         top: 0;
         transform: translateX(-50%);
         width: 100%;
-        max-width: 300px; /* Formato de Talão/Recibo */
+        max-width: 300px;
         padding: 10px;
         color: #000;
         background: #fff;
@@ -81,7 +69,7 @@ th { background: #2c7be5; color: #fff; }
     <p>Usuário: <b id="userEmail"></b> | Função: <b id="userRole" style="color:#2c7be5">Carregando...</b></p>
     <button onclick="logout()">Sair</button>
 
-    <!-- Bloco de Relatório Financeiro -->
+    <!-- Relatório Financeiro -->
     <div class="card hidden" id="cardRelatorio">
         <h3>💰 Relatório</h3>
         <p>Hoje: <b id="vendasHoje">0 Db</b></p>
@@ -113,7 +101,7 @@ th { background: #2c7be5; color: #fff; }
         </table>
     </div>
 
-    <!-- Bloco de Cadastro de Produtos -->
+    <!-- Cadastro de Produtos -->
     <div class="card hidden" id="cardNovoProduto">
         <h3 id="tituloFormProduto">📦 Novo Produto</h3>
         <input id="nome" placeholder="Produto">
@@ -126,7 +114,7 @@ th { background: #2c7be5; color: #fff; }
         <button id="btnCancelarProduto" onclick="cancelarEdicaoProduto()" class="hidden" style="background: #6c757d; color: white;">Cancelar</button>
     </div>
 
-    <!-- Tabela Geral de Estoque -->
+    <!-- Estoque -->
     <div class="card hidden" id="cardEstoque">
         <h3>📋 Estoque</h3>
         <div class="search-container">
@@ -141,7 +129,7 @@ th { background: #2c7be5; color: #fff; }
         </table>
     </div>
 
-    <!-- Histórico de Movimentações -->
+    <!-- Histórico -->
     <div class="card hidden" id="cardHistorico">
         <h3>📜 Histórico de Vendas / Entradas</h3>
         <table>
@@ -153,7 +141,7 @@ th { background: #2c7be5; color: #fff; }
     </div>
 </div>
 
-<!-- MODELO DO RECIBO / COMPROVATIVO DE VENDA (Invisível na tela, visível no PDF/Print) -->
+<!-- MODELO DO RECIBO / COMPROVATIVO -->
 <div id="comprovante" class="somente-impressao">
     <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
         <h2 style="margin: 0; font-size: 18px;">Mundo Digital STP</h2>
@@ -206,6 +194,7 @@ let editandoProdutoId = null;
 let listenerProdutos = null;
 let listenerMovimentacoes = null;
 let listenerFuncionarios = null;
+let todosProdutos = [];
 
 function login() {
     let erroCampo = document.getElementById("erro");
@@ -256,7 +245,7 @@ auth.onAuthStateChanged(u => {
             loginBox.classList.add("hidden");
             app.classList.remove("hidden");
             userEmail.innerText = u.email;
-            userRole.innerText = usuarioRole.toUpperCase();
+            userRole.innerText = usuarioRole ? usuarioRole.toUpperCase() : "PADRÃO";
             
             carregar();
         });
@@ -270,6 +259,7 @@ function carregar() {
         cardRelatorio.classList.remove("hidden");
         cardFuncionarios.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
+        carregarFuncionarios();
     }
     cardEstoque.classList.remove("hidden");
     cardHistorico.classList.remove("hidden");
@@ -281,33 +271,75 @@ function carregar() {
             <th>Venda</th>
             ${isAdmin ? '<th>Lucro</th>' : ''}
             <th>Total</th>
-            <th>+</th><th>Vender</th><th>🗑️</th>
+            <th>+</th><th>Vender</th>
+            ${isAdmin ? '<th>🗑️</th>' : ''}
         </tr>`;
 
+    // Escutar Produtos
     listenerProdutos = db.collection("produtos").onSnapshot(s => {
-        lista.innerHTML = "";
+        todosProdutos = [];
+        let totalEst = 0;
+        let categorias = new Set();
+
         s.forEach(d => {
             let p = d.data();
-            let totalProd = p.estoque * p.venda;
-            let lucro = p.venda - p.compra;
-            
-            lista.innerHTML += `
-                <tr class="${p.estoque <= p.minimo ? 'baixo' : ''}">
-                    <td>${p.nome}</td>
-                    <td>${p.estoque}</td>
-                    <td>${p.minimo}</td>
-                    ${isAdmin ? `<td>${p.compra} Db</td>` : ''}
-                    <td>${p.venda} Db</td>
-                    ${isAdmin ? `<td>${lucro} Db</td>` : ''}
-                    <td>${totalProd} Db</td>
-                    <td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
-                    <td><button onclick="mov('${d.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
-                    <td>${isAdmin ? `<button onclick="del('${d.id}')">🗑️</button>` : ''}</td>
-                </tr>`;
+            p.id = d.id;
+            todosProdutos.push(p);
+            totalEst += (p.estoque * p.venda);
+            if(p.categoria) categorias.add(p.categoria);
         });
+
+        if(isAdmin) {
+            totalEstoque.innerText = totalEst + " Db";
+        }
+
+        // Atualizar Select de Categorias
+        let catSelect = document.getElementById("selectCategoriaFiltro");
+        catSelect.innerHTML = '<option value="">Todas as Categorias</option>';
+        categorias.forEach(c => {
+            catSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+
+        renderizarProdutos(todosProdutos);
     });
 
-    carregarHistorico();
+    carregarHistoricoECalcularRelatorio();
+}
+
+function renderizarProdutos(listaProds) {
+    let isAdmin = (usuarioRole === "admin");
+    lista.innerHTML = "";
+    listaProds.forEach(p => {
+        let totalProd = p.estoque * p.venda;
+        let lucro = p.venda - p.compra;
+        
+        lista.innerHTML += `
+            <tr class="${p.estoque <= p.minimo ? 'baixo' : ''}">
+                <td>${p.nome}</td>
+                <td>${p.estoque}</td>
+                <td>${p.minimo}</td>
+                ${isAdmin ? `<td>${p.compra} Db</td>` : ''}
+                <td>${p.venda} Db</td>
+                ${isAdmin ? `<td>${lucro} Db</td>` : ''}
+                <td>${totalProd} Db</td>
+                <td><button onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button></td>
+                <td><button onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button></td>
+                ${isAdmin ? `<td><button onclick="del('${p.id}')">🗑️</button></td>` : ''}
+            </tr>`;
+    });
+}
+
+function filtrarProdutos() {
+    let busca = document.getElementById("inputBusca").value.toLowerCase();
+    let cat = document.getElementById("selectCategoriaFiltro").value;
+
+    let filtrados = todosProdutos.filter(p => {
+        let bateNome = p.nome.toLowerCase().includes(busca);
+        let bateCat = cat === "" || p.categoria === cat;
+        return bateNome && bateCat;
+    });
+
+    renderizarProdutos(filtrados);
 }
 
 function mov(id, nome, estAtual, precoVenda, tipo) {
@@ -330,7 +362,6 @@ function mov(id, nome, estAtual, precoVenda, tipo) {
             data: new Date()
         });
 
-        // Se for uma VENDA, gerar o recibo e abrir para PDF
         if(tipo === 'saida') {
             gerarReciboPDF(nome, qtd, valorTotal, auth.currentUser.email);
         }
@@ -348,27 +379,51 @@ function gerarReciboPDF(produto, qtd, valorTotal, vendedor) {
         </tr>`;
     document.getElementById('reciboTotal').innerText = valorTotal + ' Db';
 
-    // Dispara o painel de impressão (onde escolhe "Guardar como PDF")
     setTimeout(() => { window.print(); }, 300);
 }
 
-function carregarHistorico() {
-    listenerMovimentacoes = db.collection("historico").orderBy("data", "desc").limit(20).onSnapshot(s => {
+function carregarHistoricoECalcularRelatorio() {
+    listenerMovimentacoes = db.collection("historico").orderBy("data", "desc").onSnapshot(s => {
         historico.innerHTML = "";
+        let hojeSum = 0;
+        let mesSum = 0;
+        
+        let agora = new Date();
+        let hojeInicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+        let mesInicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+
+        let count = 0;
         s.forEach(d => {
             let h = d.data();
-            let dataFmt = h.data ? new Date(h.data.toDate()).toLocaleString('pt-PT') : '';
-            historico.innerHTML += `
-                <tr>
-                    <td>${h.produto}</td>
-                    <td>${h.tipo === 'entrada' ? 'Entrada' : 'Venda'}</td>
-                    <td>${h.qtd}</td>
-                    <td>${h.valorTotal} Db</td>
-                    <td>${h.usuario}</td>
-                    <td>${dataFmt}</td>
-                    <td>${h.tipo === 'saida' ? `<button onclick="reimprimirRecibo('${h.produto}', ${h.qtd}, ${h.valorTotal}, '${h.usuario}', '${dataFmt}')">📄 PDF</button>` : ''}</td>
-                </tr>`;
+            let dataObj = h.data ? h.data.toDate() : null;
+            let dataFmt = dataObj ? new Date(dataObj).toLocaleString('pt-PT') : '';
+
+            // Cálculos do Relatório (apenas para Vendas/Saídas)
+            if(dataObj && h.tipo === 'saida') {
+                if(dataObj >= hojeInicio) hojeSum += h.valorTotal;
+                if(dataObj >= mesInicio) mesSum += h.valorTotal;
+            }
+
+            // Exibir apenas os últimos 30 no histórico da tela
+            if(count < 30) {
+                historico.innerHTML += `
+                    <tr>
+                        <td>${h.produto}</td>
+                        <td>${h.tipo === 'entrada' ? 'Entrada' : 'Venda'}</td>
+                        <td>${h.qtd}</td>
+                        <td>${h.valorTotal} Db</td>
+                        <td>${h.usuario}</td>
+                        <td>${dataFmt}</td>
+                        <td>${h.tipo === 'saida' ? `<button onclick="reimprimirRecibo('${h.produto}', ${h.qtd}, ${h.valorTotal}, '${h.usuario}', '${dataFmt}')">📄 PDF</button>` : ''}</td>
+                    </tr>`;
+                count++;
+            }
         });
+
+        if(usuarioRole === "admin") {
+            vendasHoje.innerText = hojeSum + " Db";
+            vendasMes.innerText = mesSum + " Db";
+        }
     });
 }
 
@@ -385,11 +440,81 @@ function reimprimirRecibo(produto, qtd, valorTotal, vendedor, dataFmt) {
     window.print();
 }
 
+function carregarFuncionarios() {
+    listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
+        listaFuncionarios.innerHTML = "";
+        s.forEach(d => {
+            let u = d.data();
+            let id = d.id;
+            let st = u.status || 'ativo';
+            
+            listaFuncionarios.innerHTML += `
+                <tr class="${st === 'desativado' ? 'desativado' : ''}">
+                    <td>${u.email}</td>
+                    <td>${u.role ? u.role.toUpperCase() : ''}</td>
+                    <td><button class="${st === 'ativo' ? 'btn-status-ativo' : 'btn-status-inativo'}" onclick="alternarStatusFunc('${id}', '${st}')">${st.toUpperCase()}</button></td>
+                    <td><button onclick="editarFunc('${id}', '${u.email}', '${u.role}')">✏️ Edit</button></td>
+                </tr>`;
+        });
+    });
+}
+
+function salvarFuncionario() {
+    let em = funcEmail.value.toLowerCase().trim();
+    let ro = funcRole.value;
+    let se = funcSenha.value;
+
+    if(!em) return alert("Preencha o e-mail!");
+
+    if(editandoFuncId) {
+        db.collection("usuarios").doc(editandoFuncId).update({ email: em, role: ro }).then(() => {
+            cancelarEdicaoFunc();
+        });
+    } else {
+        if(!se) return alert("Preencha a senha inicial!");
+        db.collection("usuarios").add({ email: em, role: ro, status: 'ativo' }).then(() => {
+            funcEmail.value = ""; funcSenha.value = "";
+            alert("Funcionário registado no sistema!");
+        });
+    }
+}
+
+function editarFunc(id, em, ro) {
+    editandoFuncId = id;
+    funcEmail.value = em;
+    funcRole.value = ro;
+    funcSenha.placeholder = "(Inalterado)";
+    funcSenha.disabled = true;
+    tituloFormFunc.innerText = "Editar Funcionário:";
+    btnSalvarFunc.innerText = "Atualizar";
+    btnCancelarFunc.classList.remove("hidden");
+}
+
+function cancelarEdicaoFunc() {
+    editandoFuncId = null;
+    funcEmail.value = "";
+    funcSenha.value = "";
+    funcSenha.placeholder = "Senha Inicial";
+    funcSenha.disabled = false;
+    tituloFormFunc.innerText = "Criar Novo Funcionário:";
+    btnSalvarFunc.innerText = "Criar";
+    btnCancelarFunc.classList.add("hidden");
+}
+
+function alternarStatusFunc(id, statusAtual) {
+    let novo = statusAtual === 'ativo' ? 'desativado' : 'ativo';
+    db.collection("usuarios").doc(id).update({ status: novo });
+}
+
 function salvarProduto() {
-    let n = nome.value, e = parseInt(estoque.value), m = parseInt(minimo.value), c = parseFloat(compra.value), v = parseFloat(venda.value);
+    let n = nome.value, cat = categoriaInput.value, e = parseInt(estoque.value), m = parseInt(minimo.value), c = parseFloat(compra.value), v = parseFloat(venda.value);
     if(!n || isNaN(e)) return alert("Preencha os campos!");
-    db.collection("produtos").add({ nome: n, estoque: e, minimo: m || 0, compra: c || 0, venda: v || 0 });
-    nome.value = ""; estoque.value = ""; minimo.value = ""; compra.value = ""; venda.value = "";
+    
+    db.collection("produtos").add({
+        nome: n, categoria: cat || "Geral", estoque: e, minimo: m || 0, compra: c || 0, venda: v || 0
+    });
+    
+    nome.value = ""; categoriaInput.value = ""; estoque.value = ""; minimo.value = ""; compra.value = ""; venda.value = "";
 }
 
 function del(id) {
