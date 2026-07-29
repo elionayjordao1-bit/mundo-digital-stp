@@ -991,11 +991,21 @@ function carregarFuncionarios() {
   listenerFuncionarios = db.collection("usuarios").onSnapshot(snapshot => {
     listaFuncionarios.innerHTML = "";
     snapshot.forEach(doc => {
-      let f = doc.data(); let id = doc.id;
+      let f = doc.data(); 
+      let id = doc.id;
       let emailTxt = f.email || (id.includes("@") ? id : "Defina o Email ✏️");
       let statusTxt = f.status === "desativado" ? "Inativo" : "Ativo";
       
-      let botoes = emailTxt.toLowerCase() === "admin@mundodigitalstp.com" ? `<span style="color:#94a3b8;">Dono</span>` : `
+      let eDonoOuAdmin = (emailTxt.toLowerCase() === "admin@mundodigitalstp.com" || f.role === "admin");
+
+      // Se for o dono/admin, o botão de estado fica bloqueado e não clicável
+      let botaoEstado = eDonoOuAdmin 
+        ? `<span class="btn-status-ativo" style="opacity:0.7; cursor:not-allowed;" title="Conta de Administrador não pode ser desativada">Ativo 🔒</span>`
+        : `<button class="${f.status === 'desativado' ? 'btn-status-inativo' : 'btn-status-ativo'}" onclick="alternarStatusFunc('${id}', '${f.status}')">${statusTxt}</button>`;
+
+      let botoesAcoes = eDonoOuAdmin 
+        ? `<span style="color:#94a3b8; font-weight:600;">Dono</span>` 
+        : `
         <div class="acoes-cell">
           <button class="btn-acao" onclick="prepararEditarFunc('${id}', '${emailTxt}', '${f.role || 'venda1'}')">✏️</button>
           <button class="btn-danger btn-acao" onclick="apagarFuncionario('${id}')">🗑️</button>
@@ -1003,14 +1013,14 @@ function carregarFuncionarios() {
 
       listaFuncionarios.innerHTML += `
         <tr class="${f.status === 'desativado' ? 'desativado' : ''}">
-          <td><b>${emailTxt}</b></td><td>${(f.role||"venda1").toUpperCase()}</td>
-          <td><button class="${f.status === 'desativado' ? 'btn-status-inativo' : 'btn-status-ativo'}" onclick="alternarStatusFunc('${id}', '${f.status}')">${statusTxt}</button></td>
-          <td>${botoes}</td>
+          <td><b>${emailTxt}</b></td>
+          <td>${(f.role||"venda1").toUpperCase()}</td>
+          <td>${botaoEstado}</td>
+          <td>${botoesAcoes}</td>
         </tr>`;
     });
   });
 }
-
 function salvarFuncionario() {
   let emailVal = funcEmail.value.toLowerCase().trim();
   let senhaVal = funcSenha.value;
