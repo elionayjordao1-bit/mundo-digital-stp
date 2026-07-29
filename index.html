@@ -54,7 +54,7 @@ th { background: #2c7be5; color: #fff; }
 <p>Usuário: <b id="userEmail"></b> | Função: <b id="userRole" style="color:#2c7be5">Carregando...</b></p>
 <button onclick="logout()">Sair</button>
 
-<!-- Bloco de Relatório Financeiro (Strictly Hidden) -->
+<!-- Bloco de Relatório Financeiro -->
 <div class="card hidden" id="cardRelatorio">
 <h3>💰 Relatório</h3>
 <p>Hoje: <b id="vendasHoje">0 Db</b></p>
@@ -62,7 +62,7 @@ th { background: #2c7be5; color: #fff; }
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<!-- Botão Alternar e Bloco de Gestão de Funcionários (Strictly Hidden) -->
+<!-- Botão Alternar e Bloco de Gestão de Funcionários -->
 <div id="containerFuncionarios" class="hidden">
   <button class="btn-toggle" onclick="toggleFuncionarios()">👥 Gerir Funcionários</button>
   
@@ -92,7 +92,7 @@ th { background: #2c7be5; color: #fff; }
   </div>
 </div>
 
-<!-- Bloco de Cadastro / Edição de Produtos (Strictly Hidden) -->
+<!-- Bloco de Cadastro / Edição de Produtos -->
 <div class="card hidden" id="cardNovoProduto">
 <h3 id="tituloFormProduto">📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
@@ -123,7 +123,7 @@ th { background: #2c7be5; color: #fff; }
 </table>
 </div>
 
-<!-- Histórico de Movimentações (Strictly Hidden) -->
+<!-- Histórico de Movimentações -->
 <div class="card hidden" id="cardHistorico">
 <h3>📜 Histórico</h3>
 <button id="btnExportarHistorico" class="hidden" onclick="exportarHistorico()">📤 Exportar Excel</button>
@@ -170,11 +170,26 @@ auth.signInWithEmailAndPassword(email.value, senha.value)
 .catch(e=> { if(erroCampo) erroCampo.innerText = e.message; });
 }
 
+/* --- FUNÇÃO DE RESET TOTAL DA INTERFACE --- */
+function resetarInterface() {
+  cardRelatorio.classList.add("hidden");
+  cardNovoProduto.classList.add("hidden");
+  cardHistorico.classList.add("hidden");
+  containerFuncionarios.classList.add("hidden");
+  cardFuncionarios.classList.add("hidden");
+  btnExportarEstoque.classList.add("hidden");
+  btnExportarHistorico.classList.add("hidden");
+  cardEstoque.classList.add("hidden");
+}
+
 function logout(){
 if(listenerProdutos) listenerProdutos();
 if(listenerMovimentacoes) listenerMovimentacoes();
 if(listenerFuncionarios) listenerFuncionarios();
+
 usuarioRole = null;
+resetarInterface(); // Limpa todos os blocos no logout!
+
 app.classList.add("hidden");
 loginBox.classList.remove("hidden");
 auth.signOut();
@@ -187,7 +202,9 @@ function toggleFuncionarios() {
 /* --- SEGURANÇA E AUTENTICAÇÃO BLINDADA --- */
 auth.onAuthStateChanged(u=>{
 if(u){
-  // Verificar dados PRIMEIRO sem abrir a tela
+  // Antes de carregar o perfil, resetar a tela para evitar cache visual de outro usuário
+  resetarInterface();
+
   db.collection("usuarios").doc(u.uid).get()
   .then(doc => {
     if(!doc.exists) {
@@ -208,7 +225,6 @@ if(u){
 
     let dados = doc.data();
 
-    // BLOQUEIO TOTAL: Se a conta estiver inativa, expulsar imediatamente
     if(dados.status === "desativado") {
       alert("Esta conta foi desativada pelo Administrador.");
       logout();
@@ -223,7 +239,6 @@ if(u){
       return;
     }
 
-    // Se chegou até aqui, a conta é segura e está ativa!
     usuarioRole = valorRole;
     loginBox.classList.add("hidden");
     app.classList.remove("hidden");
@@ -233,7 +248,7 @@ if(u){
     // Mostrar estoque para todos os autorizados
     cardEstoque.classList.remove("hidden");
 
-    // Liberar acesso a módulos de acordo com a função
+    // Liberar acesso aos módulos de admin Apenas se for admin de fato
     if(usuarioRole === "admin") {
       cardRelatorio.classList.remove("hidden");
       cardNovoProduto.classList.remove("hidden");
@@ -252,6 +267,7 @@ if(u){
   });
 
 }else{
+  resetarInterface();
   loginBox.classList.remove("hidden");
   app.classList.add("hidden");
   usuarioRole = null;
