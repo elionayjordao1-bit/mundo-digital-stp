@@ -49,10 +49,17 @@ header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px
 }
 .card h3 { margin-top: 0; margin-bottom: 16px; color: #1e293b; font-size: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
 
-/* INPUTS E BOTÕES */
+/* GRELHA DO FORMULÁRIO (CORRIGIDA) */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  align-items: center;
+}
+
 input, select { 
-  padding: 10px 14px; 
-  margin: 4px 2px; 
+  width: 100%;
+  padding: 10px 12px; 
   border: 1px solid #cbd5e1; 
   border-radius: 8px; 
   font-size: 14px;
@@ -66,18 +73,19 @@ input:focus, select:focus {
 }
 
 button { 
-  padding: 9px 16px; 
+  padding: 8px 12px; 
   border-radius: 8px; 
-  font-size: 14px; 
+  font-size: 13px; 
   font-weight: 600; 
   border: none; 
   cursor: pointer; 
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   background: #2563eb;
   color: #ffffff;
+  white-space: nowrap;
 }
 button:hover { opacity: 0.92; transform: translateY(-1px); }
 button:active { transform: translateY(0); }
@@ -88,10 +96,23 @@ button:active { transform: translateY(0); }
 
 /* TABELAS MODERNAS */
 table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 12px; min-width: 650px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
-th, td { padding: 12px 14px; text-align: center; font-size: 14px; border-bottom: 1px solid #e2e8f0; }
+th, td { padding: 10px 12px; text-align: center; font-size: 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
 th { background: #f8fafc; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
 tr:last-child td { border-bottom: none; }
 tr:nth-child(even) { background-color: #f8fafc; }
+
+/* CONTAINER DE BOTÕES DE AÇÃO NA TABELA */
+.acoes-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+.btn-acao {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+}
 
 /* ESTADOS E MARCADORES */
 .hidden { display: none !important; }
@@ -101,7 +122,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 .btn-status-inativo { background: #ef4444; color: #fff; padding: 4px 10px; font-size: 12px; }
 
 .search-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
-.search-input { flex: 1; min-width: 200px; padding: 11px 14px; font-size: 14px; border: 1px solid #93c5fd; border-radius: 8px; }
+.search-input { flex: 1; min-width: 200px; padding: 10px 14px; font-size: 14px; border: 1px solid #93c5fd; border-radius: 8px; }
 </style>
 </head>
 
@@ -119,8 +140,8 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <div id="loginBox" class="card" style="max-width: 380px; margin: 40px auto; text-align: center;">
   <h2 style="margin-top: 0; color: #1e293b;">Iniciar Sessão</h2>
   <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">Digite suas credenciais para acessar o sistema.</p>
-  <input id="email" placeholder="E-mail" style="width: 100%; margin-bottom: 10px;">
-  <input id="senha" type="password" placeholder="Palavra-passe" style="width: 100%; margin-bottom: 15px;">
+  <input id="email" placeholder="E-mail" style="margin-bottom: 10px;">
+  <input id="senha" type="password" placeholder="Palavra-passe" style="margin-bottom: 15px;">
   <button onclick="login()" style="width: 100%; padding: 12px; font-size: 15px;">Entrar no Sistema</button>
   <p id="erro" style="color:#ef4444; font-size: 13px; margin-top: 15px;"></p>
 </div>
@@ -155,16 +176,18 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <h3>👥 Gerenciamento de Funcionários</h3>
     <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
       <b id="tituloFormFunc" style="display: block; margin-bottom: 10px; color: #1e293b;">Criar Novo Funcionário:</b>
-      <input id="funcEmail" placeholder="Email do Funcionário">
-      <input id="funcSenha" type="password" placeholder="Senha Inicial">
-      <select id="funcRole">
-        <option value="venda1">Venda 1</option>
-        <option value="venda2">Venda 2</option>
-        <option value="estoque">Estoque</option>
-        <option value="admin">Administrador</option>
-      </select>
-      <button onclick="salvarFuncionario()" id="btnSalvarFunc">Criar</button>
-      <button onclick="cancelarEdicaoFunc()" id="btnCancelarFunc" class="btn-secondary hidden">Cancelar</button>
+      <div class="form-grid">
+        <input id="funcEmail" placeholder="Email do Funcionário">
+        <input id="funcSenha" type="password" placeholder="Senha Inicial">
+        <select id="funcRole">
+          <option value="venda1">Venda 1</option>
+          <option value="venda2">Venda 2</option>
+          <option value="estoque">Estoque</option>
+          <option value="admin">Administrador</option>
+        </select>
+        <button onclick="salvarFuncionario()" id="btnSalvarFunc">Criar</button>
+        <button onclick="cancelarEdicaoFunc()" id="btnCancelarFunc" class="btn-secondary hidden">Cancelar</button>
+      </div>
     </div>
     <table>
       <thead>
@@ -180,14 +203,16 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <!-- Cadastro / Edição de Produtos -->
 <div class="card hidden" id="cardNovoProduto">
 <h3 id="tituloFormProduto">📦 Novo Produto</h3>
-<input id="nome" placeholder="Produto">
-<input id="categoriaInput" placeholder="Categoria (ex: Roupa, Eletrónicos)">
-<input id="estoque" type="number" placeholder="Qtd">
-<input id="minimo" type="number" placeholder="Estoque mínimo">
-<input id="compra" type="number" placeholder="Preço compra">
-<input id="venda" type="number" placeholder="Preço venda">
-<button id="btnSalvarProduto" onclick="salvarProduto()" class="btn-success">Salvar Produto</button>
-<button id="btnCancelarProduto" onclick="cancelarEdicaoProduto()" class="btn-secondary hidden">Cancelar</button>
+<div class="form-grid">
+  <input id="nome" placeholder="Produto">
+  <input id="categoriaInput" placeholder="Categoria (ex: Roupa, Eletrónicos)">
+  <input id="estoque" type="number" placeholder="Qtd">
+  <input id="minimo" type="number" placeholder="Estoque mínimo">
+  <input id="compra" type="number" placeholder="Preço compra">
+  <input id="venda" type="number" placeholder="Preço venda">
+  <button id="btnSalvarProduto" onclick="salvarProduto()" class="btn-success">Salvar Produto</button>
+  <button id="btnCancelarProduto" onclick="cancelarEdicaoProduto()" class="btn-secondary hidden">Cancelar</button>
+</div>
 </div>
 
 <!-- Tabela Geral de Estoque -->
@@ -196,7 +221,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 <div class="search-container">
   <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar produto..." oninput="filtrarProdutos()">
-  <select id="selectCategoriaFiltro" onchange="filtrarProdutos()" style="padding: 10px; font-size: 14px;">
+  <select id="selectCategoriaFiltro" onchange="filtrarProdutos()" style="padding: 10px; font-size: 14px; width: auto;">
     <option value="">Todas as Categorias</option>
   </select>
   <button id="btnExportarEstoque" class="btn-secondary hidden" onclick="exportarEstoque()">📤 Exportar Excel</button>
@@ -441,8 +466,10 @@ function carregarFuncionarios() {
         botoesAcao = `<span style="color: #94a3b8; font-size: 12px;">Dono do Sistema</span>`;
       } else {
         botoesAcao = `
-          <button onclick="prepararEditarFunc('${id}', '${emailTxt === 'Defina o Email ✏️' ? '' : emailTxt}', '${f.role || 'venda1'}')">✏️ Editar</button>
-          <button class="btn-danger" onclick="apagarFuncionario('${id}')">🗑️ Apagar</button>
+          <div class="acoes-cell">
+            <button class="btn-acao" onclick="prepararEditarFunc('${id}', '${emailTxt === 'Defina o Email ✏️' ? '' : emailTxt}', '${f.role || 'venda1'}')">✏️ Editar</button>
+            <button class="btn-danger btn-acao" onclick="apagarFuncionario('${id}')">🗑️ Apagar</button>
+          </div>
         `;
       }
 
@@ -646,8 +673,10 @@ if(bateTexto && bateCat) {
   let catEscapada = p.categoria.replace(/'/g, "\\'");
   
   acoesColuna = `
-    <button onclick="prepararEditarProduto('${p.id}', '${nomeEscapado}', '${catEscapada}', ${p.estoque}, ${p.minimo}, ${p.compra}, ${p.venda})">✏️</button>
-    <button class="btn-danger" onclick="del('${p.id}')">🗑</button>
+    <div class="acoes-cell">
+      <button class="btn-acao" onclick="prepararEditarProduto('${p.id}', '${nomeEscapado}', '${catEscapada}', ${p.estoque}, ${p.minimo}, ${p.compra}, ${p.venda})">✏️</button>
+      <button class="btn-danger btn-acao" onclick="del('${p.id}')">🗑</button>
+    </div>
   `;
   } 
   else if(usuarioRole && usuarioRole.includes("venda")) {
