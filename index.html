@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Mundo Digital STP</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2c7be5">
+<meta name="theme-color" content="#2563eb">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -12,64 +12,149 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
-* { box-sizing: border-box; }
-body { font-family: Arial, sans-serif; background: #f4f6f8; padding: 15px; margin: 0; }
-h1 { text-align: center; font-size: 24px; margin-bottom: 20px; }
-input, button, select { padding: 8px; margin: 4px 2px; max-width: 100%; border: 1px solid #ccc; border-radius: 4px; }
-button { cursor: pointer; }
+* { box-sizing: border-box; transition: all 0.2s ease-in-out; }
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+  background: #f1f5f9; 
+  color: #334155; 
+  padding: 20px; 
+  margin: 0; 
+}
 
-.card { background: #fff; padding: 15px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto; max-width: 100%; }
+/* CABEÇALHO DA PÁGINA */
+header {
+  background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%);
+  color: #ffffff;
+  padding: 18px 25px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
 
-table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 10px; min-width: 650px; }
-th, td { border: 1px solid #ccc; padding: 8px; text-align: center; font-size: 14px; }
-th { background: #2c7be5; color: #fff; }
+/* CARTÕES E PAINÉIS */
+.card { 
+  background: #ffffff; 
+  padding: 22px; 
+  margin-bottom: 20px; 
+  border-radius: 12px; 
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); 
+  border: 1px solid #e2e8f0;
+  overflow-x: auto; 
+}
+.card h3 { margin-top: 0; margin-bottom: 16px; color: #1e293b; font-size: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; }
 
+/* INPUTS E BOTÕES */
+input, select { 
+  padding: 10px 14px; 
+  margin: 4px 2px; 
+  border: 1px solid #cbd5e1; 
+  border-radius: 8px; 
+  font-size: 14px;
+  outline: none;
+  background-color: #f8fafc;
+}
+input:focus, select:focus {
+  border-color: #2563eb;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+button { 
+  padding: 9px 16px; 
+  border-radius: 8px; 
+  font-size: 14px; 
+  font-weight: 600; 
+  border: none; 
+  cursor: pointer; 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #2563eb;
+  color: #ffffff;
+}
+button:hover { opacity: 0.92; transform: translateY(-1px); }
+button:active { transform: translateY(0); }
+
+.btn-secondary { background: #64748b; color: #fff; }
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-success { background: #10b981; color: #fff; }
+
+/* TABELAS MODERNAS */
+table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 12px; min-width: 650px; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+th, td { padding: 12px 14px; text-align: center; font-size: 14px; border-bottom: 1px solid #e2e8f0; }
+th { background: #f8fafc; color: #475569; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) { background-color: #f8fafc; }
+
+/* ESTADOS E MARCADORES */
 .hidden { display: none !important; }
-.baixo { background: #ffcccc; }
-.desativado { background: #f2f2f2; color: #999; }
-.btn-status-ativo { background: #28a745; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
-.btn-status-inativo { background: #dc3545; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
+.baixo { background: #fef2f2 !important; color: #991b1b; }
+.desativado { background: #f1f5f9 !important; color: #94a3b8; }
+.btn-status-ativo { background: #10b981; color: #fff; padding: 4px 10px; font-size: 12px; }
+.btn-status-inativo { background: #ef4444; color: #fff; padding: 4px 10px; font-size: 12px; }
 
 .search-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
-.search-input { flex: 1; min-width: 200px; padding: 10px; font-size: 15px; border: 2px solid #2c7be5; border-radius: 6px; }
-.btn-toggle { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; margin-bottom: 10px; }
+.search-input { flex: 1; min-width: 200px; padding: 11px 14px; font-size: 14px; border: 1px solid #93c5fd; border-radius: 8px; }
 </style>
 </head>
 
 <body>
 
-<h1>🏪 Mundo Digital STP</h1>
+<header>
+  <h1>🏪 Mundo Digital STP</h1>
+  <div id="userInfoHeader" class="hidden" style="font-size: 14px;">
+    Usuário: <b id="userEmail"></b> | Função: <b id="userRole" style="color:#60a5fa">Carregando...</b>
+    <button onclick="logout()" class="btn-secondary" style="margin-left: 12px; padding: 5px 12px; font-size: 12px;">Sair</button>
+  </div>
+</header>
 
-<div id="loginBox" class="card" style="max-width: 350px; margin: 20px auto;">
-  <h3>Iniciar Sessão</h3>
-  <input id="email" placeholder="Email" style="width: 100%;">
-  <input id="senha" type="password" placeholder="Senha" style="width: 100%;">
-  <button onclick="login()" style="width: 100%; background: #2c7be5; color: white; margin-top: 10px;">Entrar</button>
-  <p id="erro" style="color:red; font-size: 13px;"></p>
+<!-- TELA DE LOGIN -->
+<div id="loginBox" class="card" style="max-width: 380px; margin: 40px auto; text-align: center;">
+  <h2 style="margin-top: 0; color: #1e293b;">Iniciar Sessão</h2>
+  <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;">Digite suas credenciais para acessar o sistema.</p>
+  <input id="email" placeholder="E-mail" style="width: 100%; margin-bottom: 10px;">
+  <input id="senha" type="password" placeholder="Palavra-passe" style="width: 100%; margin-bottom: 15px;">
+  <button onclick="login()" style="width: 100%; padding: 12px; font-size: 15px;">Entrar no Sistema</button>
+  <p id="erro" style="color:#ef4444; font-size: 13px; margin-top: 15px;"></p>
 </div>
 
 <!-- O APP TODO COMEÇA OCULTO -->
 <div id="app" class="hidden">
 
-<p>Usuário: <b id="userEmail"></b> | Função: <b id="userRole" style="color:#2c7be5">Carregando...</b></p>
-<button onclick="logout()">Sair</button>
-
-<!-- Bloco de Relatório Financeiro -->
+<!-- Relatório Financeiro -->
 <div class="card hidden" id="cardRelatorio">
-<h3>💰 Relatório</h3>
-<p>Hoje: <b id="vendasHoje">0 Db</b></p>
-<p>Mês: <b id="vendasMes">0 Db</b></p>
-<p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
+<h3>💰 Relatório de Vendas</h3>
+<div style="display: flex; gap: 20px; flex-wrap: wrap;">
+  <div style="flex: 1; background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #2563eb;">
+    <span style="font-size: 13px; color: #475569;">Hoje</span><br>
+    <b id="vendasHoje" style="font-size: 20px; color: #1e293b;">0 Db</b>
+  </div>
+  <div style="flex: 1; background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #2563eb;">
+    <span style="font-size: 13px; color: #475569;">Mês</span><br>
+    <b id="vendasMes" style="font-size: 20px; color: #1e293b;">0 Db</b>
+  </div>
+  <div style="flex: 1; background: #f0fdf4; padding: 15px; border-radius: 8px; border-left: 4px solid #10b981;">
+    <span style="font-size: 13px; color: #475569;">Total Estoque</span><br>
+    <b id="totalEstoque" style="font-size: 20px; color: #1e293b;">0 Db</b>
+  </div>
+</div>
 </div>
 
-<!-- Botão Alternar e Bloco de Gestão de Funcionários -->
+<!-- Gestão de Funcionários -->
 <div id="containerFuncionarios" class="hidden">
-  <button class="btn-toggle" onclick="toggleFuncionarios()">👥 Gerir Funcionários</button>
+  <button class="btn-secondary" onclick="toggleFuncionarios()" style="margin-bottom: 15px;">👥 Gerir Funcionários</button>
   
   <div class="card hidden" id="cardFuncionarios">
     <h3>👥 Gerenciamento de Funcionários</h3>
-    <div style="border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px;">
-      <b id="tituloFormFunc">Criar Novo Funcionário:</b><br>
+    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0;">
+      <b id="tituloFormFunc" style="display: block; margin-bottom: 10px; color: #1e293b;">Criar Novo Funcionário:</b>
       <input id="funcEmail" placeholder="Email do Funcionário">
       <input id="funcSenha" type="password" placeholder="Senha Inicial">
       <select id="funcRole">
@@ -79,7 +164,7 @@ th { background: #2c7be5; color: #fff; }
         <option value="admin">Administrador</option>
       </select>
       <button onclick="salvarFuncionario()" id="btnSalvarFunc">Criar</button>
-      <button onclick="cancelarEdicaoFunc()" id="btnCancelarFunc" class="hidden">Cancelar</button>
+      <button onclick="cancelarEdicaoFunc()" id="btnCancelarFunc" class="btn-secondary hidden">Cancelar</button>
     </div>
     <table>
       <thead>
@@ -92,7 +177,7 @@ th { background: #2c7be5; color: #fff; }
   </div>
 </div>
 
-<!-- Bloco de Cadastro / Edição de Produtos -->
+<!-- Cadastro / Edição de Produtos -->
 <div class="card hidden" id="cardNovoProduto">
 <h3 id="tituloFormProduto">📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
@@ -101,22 +186,22 @@ th { background: #2c7be5; color: #fff; }
 <input id="minimo" type="number" placeholder="Estoque mínimo">
 <input id="compra" type="number" placeholder="Preço compra">
 <input id="venda" type="number" placeholder="Preço venda">
-<button id="btnSalvarProduto" onclick="salvarProduto()" style="background: #28a745; color: white;">Salvar</button>
-<button id="btnCancelarProduto" onclick="cancelarEdicaoProduto()" class="hidden" style="background: #6c757d; color: white;">Cancelar</button>
+<button id="btnSalvarProduto" onclick="salvarProduto()" class="btn-success">Salvar Produto</button>
+<button id="btnCancelarProduto" onclick="cancelarEdicaoProduto()" class="btn-secondary hidden">Cancelar</button>
 </div>
 
 <!-- Tabela Geral de Estoque -->
 <div class="card hidden" id="cardEstoque">
-<h3>📋 Estoque</h3>
+<h3>📋 Estoque Geral</h3>
 
 <div class="search-container">
   <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar produto..." oninput="filtrarProdutos()">
   <select id="selectCategoriaFiltro" onchange="filtrarProdutos()" style="padding: 10px; font-size: 14px;">
     <option value="">Todas as Categorias</option>
   </select>
+  <button id="btnExportarEstoque" class="btn-secondary hidden" onclick="exportarEstoque()">📤 Exportar Excel</button>
 </div>
 
-<button id="btnExportarEstoque" class="hidden" onclick="exportarEstoque()">📤 Exportar Excel</button>
 <table id="tabelaEstoque">
 <thead id="cabecalhoTabela"></thead>
 <tbody id="lista"></tbody>
@@ -125,8 +210,10 @@ th { background: #2c7be5; color: #fff; }
 
 <!-- Histórico de Movimentações -->
 <div class="card hidden" id="cardHistorico">
-<h3>📜 Histórico</h3>
-<button id="btnExportarHistorico" class="hidden" onclick="exportarHistorico()">📤 Exportar Excel</button>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+  <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações</h3>
+  <button id="btnExportarHistorico" class="btn-secondary hidden" onclick="exportarHistorico()">📤 Exportar Excel</button>
+</div>
 <table>
 <thead>
 <tr>
@@ -170,7 +257,6 @@ auth.signInWithEmailAndPassword(email.value, senha.value)
 .catch(e=> { if(erroCampo) erroCampo.innerText = e.message; });
 }
 
-/* --- FUNÇÃO DE RESET TOTAL DA INTERFACE --- */
 function resetarInterface() {
   cardRelatorio.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
@@ -188,9 +274,10 @@ if(listenerMovimentacoes) listenerMovimentacoes();
 if(listenerFuncionarios) listenerFuncionarios();
 
 usuarioRole = null;
-resetarInterface(); // Limpa todos os blocos no logout!
+resetarInterface();
 
 app.classList.add("hidden");
+userInfoHeader.classList.add("hidden");
 loginBox.classList.remove("hidden");
 auth.signOut();
 }
@@ -202,7 +289,6 @@ function toggleFuncionarios() {
 /* --- SEGURANÇA E AUTENTICAÇÃO BLINDADA --- */
 auth.onAuthStateChanged(u=>{
 if(u){
-  // Antes de carregar o perfil, resetar a tela para evitar cache visual de outro usuário
   resetarInterface();
 
   db.collection("usuarios").doc(u.uid).get()
@@ -242,13 +328,12 @@ if(u){
     usuarioRole = valorRole;
     loginBox.classList.add("hidden");
     app.classList.remove("hidden");
+    userInfoHeader.classList.remove("hidden");
     userEmail.innerText=u.email;
     userRole.innerText = usuarioRole.toUpperCase();
 
-    // Mostrar estoque para todos os autorizados
     cardEstoque.classList.remove("hidden");
 
-    // Liberar acesso aos módulos de admin Apenas se for admin de fato
     if(usuarioRole === "admin") {
       cardRelatorio.classList.remove("hidden");
       cardNovoProduto.classList.remove("hidden");
@@ -270,6 +355,7 @@ if(u){
   resetarInterface();
   loginBox.classList.remove("hidden");
   app.classList.add("hidden");
+  userInfoHeader.classList.add("hidden");
   usuarioRole = null;
   userRole.innerText = "";
 }
@@ -317,7 +403,7 @@ function prepararEditarProduto(id, pNome, pCat, pEstoque, pMin, pCompra, pVenda)
   venda.value = pVenda;
   
   btnSalvarProduto.innerText = "Atualizar Produto";
-  btnSalvarProduto.style.background = "#007bff";
+  btnSalvarProduto.className = "btn-secondary";
   btnCancelarProduto.classList.remove("hidden");
   
   cardNovoProduto.scrollIntoView({ behavior: 'smooth' });
@@ -327,8 +413,8 @@ function cancelarEdicaoProduto() {
   editandoProdutoId = null;
   tituloFormProduto.innerText = "📦 Novo Produto";
   limparFormProduto();
-  btnSalvarProduto.innerText = "Salvar";
-  btnSalvarProduto.style.background = "#28a745";
+  btnSalvarProduto.innerText = "Salvar Produto";
+  btnSalvarProduto.className = "btn-success";
   btnCancelarProduto.classList.add("hidden");
 }
 
@@ -352,11 +438,11 @@ function carregarFuncionarios() {
       
       let botoesAcao = "";
       if (emailTxt.toLowerCase() === "admin@mundodigitalstp.com") {
-        botoesAcao = `<span style="color: #999; font-size: 12px;">Dono do Sistema</span>`;
+        botoesAcao = `<span style="color: #94a3b8; font-size: 12px;">Dono do Sistema</span>`;
       } else {
         botoesAcao = `
           <button onclick="prepararEditarFunc('${id}', '${emailTxt === 'Defina o Email ✏️' ? '' : emailTxt}', '${f.role || 'venda1'}')">✏️ Editar</button>
-          <button onclick="apagarFuncionario('${id}')">🗑️ Apagar</button>
+          <button class="btn-danger" onclick="apagarFuncionario('${id}')">🗑️ Apagar</button>
         `;
       }
 
@@ -519,7 +605,7 @@ if(isAdmin) {
 
   historico.innerHTML+=`
   <tr>
-  <td>${m.produto}</td>
+  <td><b>${m.produto}</b></td>
   <td>${m.tipo}</td>
   <td>${m.quantidade}</td>
   <td>${valor} Db</td>
@@ -555,18 +641,18 @@ if(bateTexto && bateCat) {
 
   if(usuarioRole === "admin") {
   botaoEntrada = `<button onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
-  botaoVenda = `<button onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
+  botaoVenda = `<button class="btn-success" onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
   let nomeEscapado = p.nome.replace(/'/g, "\\'");
   let catEscapada = p.categoria.replace(/'/g, "\\'");
   
   acoesColuna = `
     <button onclick="prepararEditarProduto('${p.id}', '${nomeEscapado}', '${catEscapada}', ${p.estoque}, ${p.minimo}, ${p.compra}, ${p.venda})">✏️</button>
-    <button onclick="del('${p.id}')">🗑</button>
+    <button class="btn-danger" onclick="del('${p.id}')">🗑</button>
   `;
   } 
   else if(usuarioRole && usuarioRole.includes("venda")) {
   botaoEntrada = `<button disabled style="opacity:0.3; cursor:not-allowed">+</button>`;
-  botaoVenda = `<button onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
+  botaoVenda = `<button class="btn-success" onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
   acoesColuna = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`;
   } 
   else if(usuarioRole && usuarioRole.includes("estoque")) {
@@ -578,7 +664,7 @@ if(bateTexto && bateCat) {
   lista.innerHTML+=`
   <tr class="${p.estoque<=p.minimo?'baixo':''}">
   <td><b>${p.nome}</b></td>
-  <td><span style="font-size:12px; background:#e9ecef; padding:2px 6px; border-radius:4px;">${p.categoria}</span></td>
+  <td><span style="font-size:12px; background:#e2e8f0; color:#334155; padding:3px 8px; border-radius:12px; font-weight:600;">${p.categoria}</span></td>
   <td>${p.estoque}</td>
   <td>${p.minimo}</td>
   ${isAdmin ? `<td>${p.compra} Db</td>` : ''}
