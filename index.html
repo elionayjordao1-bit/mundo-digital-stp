@@ -149,11 +149,26 @@ tr:nth-child(even) { background-color: #f8fafc; }
   box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
 }
 
-/* CSS IMPRESSÃO DE RECIBO */
+/* REGRAS DE IMPRESSÃO DO RECIBO / FATURA EM PDF */
+#areaImpressaoRecibo { display: none; }
+
 @media print {
-  body * { visibility: hidden; }
-  #areaImpressaoRecibo, #areaImpressaoRecibo * { visibility: visible; }
-  #areaImpressaoRecibo { position: absolute; left: 0; top: 0; width: 100%; font-family: monospace; font-size: 12px; color: #000; }
+  body * { visibility: hidden !important; }
+  #areaImpressaoRecibo, #areaImpressaoRecibo * { visibility: visible !important; }
+  #areaImpressaoRecibo { 
+    display: block !important;
+    position: absolute; 
+    left: 50%; 
+    top: 0; 
+    transform: translateX(-50%);
+    width: 100%; 
+    max-width: 300px; 
+    padding: 10px;
+    font-family: monospace, sans-serif; 
+    font-size: 12px; 
+    color: #000;
+    background: #fff;
+  }
   .no-print { display: none !important; }
 }
 </style>
@@ -340,7 +355,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <thead>
 <tr>
 <th>Produto</th><th>Tipo</th><th>Qtd</th><th>Pagamento</th>
-<th>Valor</th><th>Usuário</th><th>Data</th>
+<th>Valor</th><th>Usuário</th><th>Data</th><th>Recibo</th>
 </tr>
 </thead>
 <tbody id="historico"></tbody>
@@ -389,27 +404,49 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
-<!-- ÁREA DE IMPRESSÃO DO RECIBO -->
-<div id="areaImpressaoRecibo" class="hidden">
-  <div style="text-align: center; margin-bottom: 10px;">
-    <h2 style="margin:0;">Mundo Digital STP</h2>
-    <p style="margin:2px 0;">São Tomé e Príncipe</p>
-    <p style="margin:2px 0;">Comprovativo de Venda</p>
-    <p>--------------------------------</p>
+<!-- ÁREA DE IMPRESSÃO DO RECIBO FORMATADA -->
+<div id="areaImpressaoRecibo">
+  <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
+    <h2 style="margin: 0; font-size: 16px;">Mundo Digital STP</h2>
+    <p style="margin: 2px 0; font-size: 11px;">São Tomé e Príncipe</p>
+    <p style="margin: 2px 0; font-size: 12px; font-weight: bold;">Comprovativo de Venda</p>
   </div>
-  <p><b>Data:</b> <span id="reciboData"></span></p>
-  <p><b>Cliente:</b> <span id="reciboCliente"></span></p>
-  <p><b>Vendedor:</b> <span id="reciboVendedor"></span></p>
-  <p>--------------------------------</p>
-  <p><b>Item:</b> <span id="reciboItem"></span></p>
-  <p><b>Qtd:</b> <span id="reciboQtd"></span> x <span id="reciboPrecoUnit"></span> Db</p>
-  <p>--------------------------------</p>
-  <h3 style="margin:5px 0;">TOTAL: <span id="reciboTotal"></span> Db</h3>
-  <p><b>Pagamento:</b> <span id="reciboPagamento"></span></p>
-  <p id="reciboTrocoRow"><b>Troco:</b> <span id="reciboTroco"></span> Db</p>
-  <div style="text-align: center; margin-top: 15px;">
-    <p>--------------------------------</p>
-    <p>Obrigado pela sua preferência!</p>
+
+  <div style="font-size: 11px; margin-bottom: 8px;">
+    <p style="margin: 2px 0;"><b>Data:</b> <span id="reciboData"></span></p>
+    <p style="margin: 2px 0;"><b>Cliente:</b> <span id="reciboCliente"></span></p>
+    <p style="margin: 2px 0;"><b>Vendedor:</b> <span id="reciboVendedor"></span></p>
+  </div>
+
+  <table style="width: 100%; font-size: 11px; border-collapse: collapse; margin-bottom: 8px; min-width: 100%; border: none;">
+    <thead>
+      <tr style="border-bottom: 1px solid #000; text-align: left;">
+        <th style="background:none; color:#000; border:none; text-align:left; padding:2px 0;">Item</th>
+        <th style="background:none; color:#000; border:none; text-align:center; padding:2px 0;">Qtd</th>
+        <th style="background:none; color:#000; border:none; text-align:right; padding:2px 0;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border:none; text-align:left; padding:4px 0;" id="reciboItem"></td>
+        <td style="border:none; text-align:center; padding:4px 0;"><span id="reciboQtd"></span> x <span id="reciboPrecoUnit"></span></td>
+        <td style="border:none; text-align:right; padding:4px 0;"><span id="reciboTotalItem"></span> Db</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="border-top: 1px dashed #000; padding-top: 6px; font-size: 12px;">
+    <p style="display: flex; justify-content: space-between; font-weight: bold; margin: 4px 0;">
+      <span>TOTAL:</span>
+      <span><span id="reciboTotal"></span> Db</span>
+    </p>
+    <p style="margin: 2px 0; font-size: 11px;"><b>Pagamento:</b> <span id="reciboPagamento"></span></p>
+    <p id="reciboTrocoRow" style="margin: 2px 0; font-size: 11px;"><b>Troco:</b> <span id="reciboTroco"></span> Db</p>
+  </div>
+
+  <div style="text-align: center; margin-top: 15px; font-size: 10px; border-top: 1px solid #ccc; padding-top: 6px;">
+    <p style="margin: 0;">Obrigado pela preferência!</p>
+    <p style="margin: 2px 0;">Mundo Digital STP</p>
   </div>
 </div>
 
@@ -656,29 +693,46 @@ function confirmarVendaModal() {
     usuario: auth.currentUser.email,
     data: new Date()
   }).then(() => {
-    // Gerar Recibo Impresso
-    reciboData.innerText = new Date().toLocaleString();
-    reciboCliente.innerText = clienteVal;
-    reciboVendedor.innerText = auth.currentUser.email;
-    reciboItem.innerText = produtoVendaAtual.nome;
-    reciboQtd.innerText = q;
-    reciboPrecoUnit.innerText = produtoVendaAtual.precoVenda;
-    reciboTotal.innerText = totalVal;
-    reciboPagamento.innerText = formaPag;
-    
-    if(formaPag === "Dinheiro") {
-      reciboTrocoRow.style.display = "block";
-      reciboTroco.innerText = (trocoVal > 0 ? trocoVal : 0);
-    } else {
-      reciboTrocoRow.style.display = "none";
-    }
+    preencherEImprimirRecibo(
+      new Date().toLocaleString('pt-PT'),
+      clienteVal,
+      auth.currentUser.email,
+      produtoVendaAtual.nome,
+      q,
+      produtoVendaAtual.precoVenda,
+      totalVal,
+      formaPag,
+      trocoVal
+    );
 
     fecharModalVenda();
-    
-    if(confirm("Venda concluída com sucesso! Deseja imprimir o comprovativo?")) {
-      window.print();
-    }
   });
+}
+
+function preencherEImprimirRecibo(dataStr, cliente, vendedor, produto, qtd, precoUnit, total, formaPag, troco) {
+  reciboData.innerText = dataStr;
+  reciboCliente.innerText = cliente;
+  reciboVendedor.innerText = vendedor;
+  reciboItem.innerText = produto;
+  reciboQtd.innerText = qtd;
+  reciboPrecoUnit.innerText = precoUnit;
+  reciboTotalItem.innerText = total;
+  reciboTotal.innerText = total;
+  reciboPagamento.innerText = formaPag;
+  
+  if(formaPag === "Dinheiro") {
+    reciboTrocoRow.style.display = "block";
+    reciboTroco.innerText = (troco > 0 ? troco : 0);
+  } else {
+    reciboTrocoRow.style.display = "none";
+  }
+
+  setTimeout(() => { window.print(); }, 200);
+}
+
+function reimprimirReciboHistorico(produto, qtd, valorTotal, formaPag, cliente, usuario, dataFmt) {
+  let precoUnit = qtd > 0 ? (valorTotal / qtd) : valorTotal;
+  preencherEImprimirRecibo(dataFmt, cliente || 'Consumidor Final', usuario, produto, qtd, precoUnit, valorTotal, formaPag, 0);
 }
 
 /* --- PILAR C: GESTÃO DE DESPESAS --- */
@@ -822,8 +876,11 @@ function renderizarHistorico(listaMovs) {
   listaMovs.forEach(m => {
     if(!m.data) return;
     let data = m.data.toDate();
+    let dataFmt = data.toLocaleString('pt-PT');
     let valor = Number(m.valor) || 0;
     let fPag = m.formaPagamento || "Dinheiro";
+
+    let btnRecibo = (m.tipo === 'saida') ? `<button class="btn-secondary btn-acao" onclick="reimprimirReciboHistorico('${m.produto.replace(/'/g, "\\'")}', ${m.quantidade}, ${valor}, '${fPag}', '${(m.cliente||'').replace(/'/g, "\\'")}', '${m.usuario}', '${dataFmt}')">📄 PDF</button>` : '';
 
     historico.innerHTML += `
       <tr>
@@ -833,7 +890,8 @@ function renderizarHistorico(listaMovs) {
         <td><span style="font-size:11px; background:#e2e8f0; padding:2px 6px; border-radius:10px;">${fPag}</span></td>
         <td>${valor} Db</td>
         <td>${m.usuario}</td>
-        <td>${data.toLocaleString()}</td>
+        <td>${dataFmt}</td>
+        <td>${btnRecibo}</td>
       </tr>
     `;
   });
@@ -895,7 +953,6 @@ if(bateTexto && bateCat) {
   </tr>`;
 }
 });
-totalEstoque.innerText=total+" Db";
 }
 
 function movEntrada(id,nome,atual,preco){
