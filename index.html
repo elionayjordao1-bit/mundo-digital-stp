@@ -20,21 +20,18 @@ button { cursor: pointer; }
 
 .card { background: #fff; padding: 15px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto; max-width: 100%; }
 
-table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 10px; min-width: 600px; }
+table { width: 100%; border-collapse: collapse; background: #fff; margin-top: 10px; min-width: 650px; }
 th, td { border: 1px solid #ccc; padding: 8px; text-align: center; font-size: 14px; }
 th { background: #2c7be5; color: #fff; }
 
-.hidden { display: none; }
+.hidden { display: none !important; }
 .baixo { background: #ffcccc; }
 .desativado { background: #f2f2f2; color: #999; }
 .btn-status-ativo { background: #28a745; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
 .btn-status-inativo { background: #dc3545; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
 
-/* Estilos para o Filtro de Categorias e Barra de Busca */
 .search-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
 .search-input { flex: 1; min-width: 200px; padding: 10px; font-size: 15px; border: 2px solid #2c7be5; border-radius: 6px; }
-.category-badge { background: #e9ecef; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 13px; font-weight: bold; border: 1px solid #ddd; }
-.category-badge.active { background: #2c7be5; color: white; border-color: #2c7be5; }
 .btn-toggle { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; margin-bottom: 10px; }
 </style>
 </head>
@@ -56,15 +53,15 @@ th { background: #2c7be5; color: #fff; }
 <p>Usuário: <b id="userEmail"></b> | Função: <b id="userRole" style="color:#2c7be5">Carregando...</b></p>
 <button onclick="logout()">Sair</button>
 
-<!-- Bloco de Relatório Financeiro -->
-<div class="card" id="cardRelatorio">
+<!-- Bloco de Relatório Financeiro (Escondido por padrão) -->
+<div class="card hidden" id="cardRelatorio">
 <h3>💰 Relatório</h3>
 <p>Hoje: <b id="vendasHoje">0 Db</b></p>
 <p>Mês: <b id="vendasMes">0 Db</b></p>
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<!-- Botão Alternar e Bloco de Gestão de Funcionários (Apenas Admin) -->
+<!-- Botão Alternar e Bloco de Gestão de Funcionários (Escondido por padrão) -->
 <div id="containerFuncionarios" class="hidden">
   <button class="btn-toggle" onclick="toggleFuncionarios()">👥 Gerir Funcionários</button>
   
@@ -94,41 +91,41 @@ th { background: #2c7be5; color: #fff; }
   </div>
 </div>
 
-<!-- Bloco de Cadastro de Novos Produtos -->
-<div class="card" id="cardNovoProduto">
-<h3>📦 Novo Produto</h3>
+<!-- Bloco de Cadastro / Edição de Produtos (Escondido por padrão) -->
+<div class="card hidden" id="cardNovoProduto">
+<h3 id="tituloFormProduto">📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
 <input id="categoriaInput" placeholder="Categoria (ex: Roupa, Eletrónicos)">
 <input id="estoque" type="number" placeholder="Qtd">
 <input id="minimo" type="number" placeholder="Estoque mínimo">
 <input id="compra" type="number" placeholder="Preço compra">
 <input id="venda" type="number" placeholder="Preço venda">
-<button onclick="addProduto()" style="background: #28a745; color: white;">Salvar</button>
+<button id="btnSalvarProduto" onclick="salvarProduto()" style="background: #28a745; color: white;">Salvar</button>
+<button id="btnCancelarProduto" onclick="cancelarEdicaoProduto()" class="hidden" style="background: #6c757d; color: white;">Cancelar</button>
 </div>
 
 <!-- Tabela Geral de Estoque -->
 <div class="card" id="cardEstoque">
 <h3>📋 Estoque</h3>
 
-<!-- Barra de Pesquisa e Filtros de Categoria -->
 <div class="search-container">
-  <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar produto (ex: auricular, saia)..." oninput="filtrarProdutos()">
+  <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar produto..." oninput="filtrarProdutos()">
   <select id="selectCategoriaFiltro" onchange="filtrarProdutos()" style="padding: 10px; font-size: 14px;">
     <option value="">Todas as Categorias</option>
   </select>
 </div>
 
-<button id="btnExportarEstoque" onclick="exportarEstoque()">📤 Exportar Excel</button>
+<button id="btnExportarEstoque" class="hidden" onclick="exportarEstoque()">📤 Exportar Excel</button>
 <table id="tabelaEstoque">
 <thead id="cabecalhoTabela"></thead>
 <tbody id="lista"></tbody>
 </table>
 </div>
 
-<!-- Histórico de Movimentações -->
-<div class="card" id="cardHistorico">
+<!-- Histórico de Movimentações (Escondido por padrão) -->
+<div class="card hidden" id="cardHistorico">
 <h3>📜 Histórico</h3>
-<button id="btnExportarHistorico" onclick="exportarHistorico()">📤 Exportar Excel</button>
+<button id="btnExportarHistorico" class="hidden" onclick="exportarHistorico()">📤 Exportar Excel</button>
 <table>
 <thead>
 <tr>
@@ -158,6 +155,7 @@ const db=firebase.firestore();
 
 let usuarioRole = null;
 let editandoFuncId = null; 
+let editandoProdutoId = null; 
 let listenerProdutos = null;
 let listenerMovimentacoes = null;
 let listenerFuncionarios = null;
@@ -183,100 +181,149 @@ function toggleFuncionarios() {
   cardFuncionarios.classList.toggle("hidden");
 }
 
+/* --- AUTENTICAÇÃO E VERIFICAÇÃO DE SEGURANÇA REFORÇADA --- */
 auth.onAuthStateChanged(u=>{
 if(u){
 loginBox.classList.add("hidden");
 app.classList.remove("hidden");
 userEmail.innerText=u.email;
-userRole.innerText = "Carregando...";
+userRole.innerText = "Verificando...";
 
 db.collection("usuarios").doc(u.uid).get()
 .then(doc => {
-if(doc.exists) {
-let dados = doc.data();
-
-if(dados.status === "desativado") {
-  alert("Esta conta foi desativada pelo administrador.");
-  logout();
-  return;
-}
-
-let valorRole = null;
-Object.keys(dados).forEach(key => {
-if(key.toLowerCase().includes("role")) { valorRole = dados[key]; }
-});
-
-if(valorRole) {
-usuarioRole = valorRole.toLowerCase().trim();
-userRole.innerText = usuarioRole.toUpperCase();
-
-if(usuarioRole === "admin") {
-cardRelatorio.style.display = "block";
-cardNovoProduto.style.display = "block";
-cardHistorico.style.display = "block";
-containerFuncionarios.classList.remove("hidden");
-btnExportarEstoque.style.display = "inline-block";
-btnExportarHistorico.style.display = "inline-block";
-} 
-else {
-cardRelatorio.style.display = "none";
-cardNovoProduto.style.display = "none";
-cardHistorico.style.display = "none";
-containerFuncionarios.classList.add("hidden");
-btnExportarEstoque.style.display = "none";
-}
-
-carregar();
-} else {
-userRole.innerText = "SEM FUNÇÃO";
-}
-} else {
-db.collection("usuarios").where("email", "==", u.email.toLowerCase()).get()
-.then(snap => {
-  if(!snap.empty) {
-    let dadosEmail = snap.docs[0].data();
-    if(dadosEmail.status === "desativado") {
-      alert("Esta conta foi desativada.");
-      logout();
-      return;
-    }
-    db.collection("usuarios").doc(u.uid).set(dadosEmail);
-    db.collection("usuarios").doc(snap.docs[0].id).delete();
-    location.reload();
-  } else {
-    userRole.innerText = "NÃO ENCONTRADO";
+  if(!doc.exists) {
+    // Tenta encontrar por Email caso o ID não coincida
+    return db.collection("usuarios").where("email", "==", u.email.toLowerCase()).get()
+    .then(snap => {
+      if(snap.empty) {
+        // SEGURANÇA: Se não existe na base de dados, expulsar o utilizador
+        alert("Acesso Negado: A sua conta foi removida pelo Administrador.");
+        logout();
+        return null;
+      }
+      return snap.docs[0];
+    });
   }
-});
-}
+  return doc;
+})
+.then(doc => {
+  if(!doc || !doc.exists) return;
+
+  let dados = doc.data();
+
+  // SEGURANÇA: Se a conta estiver desativada, expulsar
+  if(dados.status === "desativado") {
+    alert("Esta conta foi desativada pelo Administrador.");
+    logout();
+    return;
+  }
+
+  let valorRole = dados.role ? dados.role.toLowerCase().trim() : null;
+
+  if(!valorRole) {
+    alert("Erro: Conta sem permissões atribuídas.");
+    logout();
+    return;
+  }
+
+  usuarioRole = valorRole;
+  userRole.innerText = usuarioRole.toUpperCase();
+
+  // Resetar visualização de módulos seguros
+  cardRelatorio.classList.add("hidden");
+  cardNovoProduto.classList.add("hidden");
+  cardHistorico.classList.add("hidden");
+  containerFuncionarios.classList.add("hidden");
+  btnExportarEstoque.classList.add("hidden");
+  btnExportarHistorico.classList.add("hidden");
+
+  // Libertar acesso com base na função confirmada
+  if(usuarioRole === "admin") {
+    cardRelatorio.classList.remove("hidden");
+    cardNovoProduto.classList.remove("hidden");
+    cardHistorico.classList.remove("hidden");
+    containerFuncionarios.classList.remove("hidden");
+    btnExportarEstoque.classList.remove("hidden");
+    btnExportarHistorico.classList.remove("hidden");
+  } 
+
+  carregar();
 })
 .catch(e => {
-console.error(e);
-userRole.innerText = "ERRO";
+  console.error(e);
+  alert("Erro de autenticação.");
+  logout();
 });
 
 }else{
 loginBox.classList.remove("hidden");
 app.classList.add("hidden");
 usuarioRole = null;
-userRole.innerText = "Carregando...";
+userRole.innerText = "";
 }
 });
 
-function addProduto(){
+function salvarProduto(){
 if(!usuarioRole || usuarioRole !== "admin") return alert("Ação negada.");
-let cat = categoriaInput.value.trim() || "Geral";
-db.collection("produtos").add({
-nome:nome.value,
-categoria:cat,
-estoque:+estoque.value,
-minimo:+minimo.value,
-compra:+compra.value,
-venda:+venda.value
-});
-nome.value=""; categoriaInput.value=""; estoque.value=""; minimo.value=""; compra.value=""; venda.value="";
+
+let nomeVal = nome.value.trim();
+let catVal = categoriaInput.value.trim() || "Geral";
+
+if(!nomeVal) return alert("Insira o nome do produto.");
+
+let dadosProduto = {
+  nome: nomeVal,
+  categoria: catVal,
+  estoque: +estoque.value,
+  minimo: +minimo.value,
+  compra: +compra.value,
+  venda: +venda.value
+};
+
+if(editandoProdutoId) {
+  db.collection("produtos").doc(editandoProdutoId).update(dadosProduto)
+  .then(() => {
+    alert("Produto atualizado com sucesso!");
+    cancelarEdicaoProduto();
+  });
+} else {
+  db.collection("produtos").add(dadosProduto)
+  .then(() => {
+    limparFormProduto();
+  });
+}
 }
 
-// --- GESTÃO DE FUNCIONÁRIOS ---
+function prepararEditarProduto(id, pNome, pCat, pEstoque, pMin, pCompra, pVenda) {
+  editandoProdutoId = id;
+  tituloFormProduto.innerText = "✏️ Editar Produto";
+  nome.value = pNome;
+  categoriaInput.value = pCat;
+  estoque.value = pEstoque;
+  minimo.value = pMin;
+  compra.value = pCompra;
+  venda.value = pVenda;
+  
+  btnSalvarProduto.innerText = "Atualizar Produto";
+  btnSalvarProduto.style.background = "#007bff";
+  btnCancelarProduto.classList.remove("hidden");
+  
+  cardNovoProduto.scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelarEdicaoProduto() {
+  editandoProdutoId = null;
+  tituloFormProduto.innerText = "📦 Novo Produto";
+  limparFormProduto();
+  btnSalvarProduto.innerText = "Salvar";
+  btnSalvarProduto.style.background = "#28a745";
+  btnCancelarProduto.classList.add("hidden");
+}
+
+function limparFormProduto() {
+  nome.value=""; categoriaInput.value=""; estoque.value=""; minimo.value=""; compra.value=""; venda.value="";
+}
+
 function carregarFuncionarios() {
   if(usuarioRole !== "admin") return;
   
@@ -397,8 +444,6 @@ function apagarFuncionario(id) {
   }
 }
 
-// --- CARREGAMENTO DE DADOS E PESQUISA ---
-
 function carregar(){
 if(listenerProdutos) listenerProdutos();
 if(listenerMovimentacoes) listenerMovimentacoes();
@@ -416,7 +461,7 @@ cabecalhoTabela.innerHTML = `
   <th>Total</th>
   <th>+</th>
   <th>Vender</th>
-  <th>🗑</th>
+  ${isAdmin ? '<th>Ações</th>' : '<th>🗑</th>'}
 </tr>`;
 
 if(isAdmin) { carregarFuncionarios(); }
@@ -433,7 +478,6 @@ s.forEach(d=>{
   categoriasSet.add(p.categoria);
 });
 
-// Atualizar lista visual de categorias no Dropdown
 let catSelect = document.getElementById("selectCategoriaFiltro");
 let valAtual = catSelect.value;
 catSelect.innerHTML = '<option value="">Todas as Categorias</option>';
@@ -445,35 +489,37 @@ catSelect.value = valAtual;
 renderizarTabelaEstoque();
 });
 
-listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc")
-.onSnapshot(s=>{
-historico.innerHTML="";
-let hoje=0,mes=0;
-let now=new Date();
+if(isAdmin) {
+  listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc")
+  .onSnapshot(s=>{
+  historico.innerHTML="";
+  let hoje=0,mes=0;
+  let now=new Date();
 
-s.forEach(d=>{
-let m=d.data();
-if(!m.data) return;
-let data=m.data.toDate();
-let valor=Number(m.valor)||0;
+  s.forEach(d=>{
+  let m=d.data();
+  if(!m.data) return;
+  let data=m.data.toDate();
+  let valor=Number(m.valor)||0;
 
-if(data.toDateString()==now.toDateString()) hoje+=valor;
-if(data.getMonth()==now.getMonth() && data.getFullYear()==now.getFullYear()) mes+=valor;
+  if(data.toDateString()==now.toDateString()) hoje+=valor;
+  if(data.getMonth()==now.getMonth() && data.getFullYear()==now.getFullYear()) mes+=valor;
 
-historico.innerHTML+=`
-<tr>
-<td>${m.produto}</td>
-<td>${m.tipo}</td>
-<td>${m.quantidade}</td>
-<td>${valor} Db</td>
-<td>${m.usuario}</td>
-<td>${data.toLocaleString()}</td>
-</tr>`;
-});
+  historico.innerHTML+=`
+  <tr>
+  <td>${m.produto}</td>
+  <td>${m.tipo}</td>
+  <td>${m.quantidade}</td>
+  <td>${valor} Db</td>
+  <td>${m.usuario}</td>
+  <td>${data.toLocaleString()}</td>
+  </tr>`;
+  });
 
-vendasHoje.innerText=hoje+" Db";
-vendasMes.innerText=mes+" Db";
-});
+  vendasHoje.innerText=hoje+" Db";
+  vendasMes.innerText=mes+" Db";
+  });
+}
 }
 
 function renderizarTabelaEstoque() {
@@ -485,7 +531,6 @@ lista.innerHTML="";
 let total=0;
 
 todosProdutos.forEach(p=>{
-// Aplicar Filtros (Busca por Texto + Categoria)
 let bateTexto = p.nome.toLowerCase().includes(busca) || p.categoria.toLowerCase().includes(busca);
 let bateCat = (catFiltro === "" || p.categoria === catFiltro);
 
@@ -494,22 +539,28 @@ if(bateTexto && bateCat) {
   let totalProd = p.estoque * p.venda;
   total += totalProd;
 
-  let botaoEntrada = ""; let botaoVenda = ""; let botaoExcluir = "";
+  let botaoEntrada = ""; let botaoVenda = ""; let acoesColuna = "";
 
   if(usuarioRole === "admin") {
   botaoEntrada = `<button onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
   botaoVenda = `<button onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
-  botaoExcluir = `<button onclick="del('${p.id}')">🗑</button>`;
+  let nomeEscapado = p.nome.replace(/'/g, "\\'");
+  let catEscapada = p.categoria.replace(/'/g, "\\'");
+  
+  acoesColuna = `
+    <button onclick="prepararEditarProduto('${p.id}', '${nomeEscapado}', '${catEscapada}', ${p.estoque}, ${p.minimo}, ${p.compra}, ${p.venda})">✏️</button>
+    <button onclick="del('${p.id}')">🗑</button>
+  `;
   } 
-  else if(usuarioRole.includes("venda")) {
+  else if(usuarioRole && usuarioRole.includes("venda")) {
   botaoEntrada = `<button disabled style="opacity:0.3; cursor:not-allowed">+</button>`;
   botaoVenda = `<button onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'saida')">Vender</button>`;
-  botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`;
+  acoesColuna = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`;
   } 
-  else if(usuarioRole.includes("estoque")) {
+  else if(usuarioRole && usuarioRole.includes("estoque")) {
   botaoEntrada = `<button onclick="mov('${p.id}','${p.nome}',${p.estoque},${p.venda},'entrada')">+</button>`;
   botaoVenda = `<button disabled style="opacity:0.3; cursor:not-allowed">Vender</button>`;
-  botaoExcluir = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`;
+  acoesColuna = `<button disabled style="opacity:0.3; cursor:not-allowed">🗑</button>`;
   }
 
   lista.innerHTML+=`
@@ -524,7 +575,7 @@ if(bateTexto && bateCat) {
   <td>${totalProd} Db</td>
   <td>${botaoEntrada}</td>
   <td>${botaoVenda}</td>
-  <td>${botaoExcluir}</td>
+  <td>${acoesColuna}</td>
   </tr>`;
 }
 });
@@ -560,6 +611,7 @@ function del(id){
 if(usuarioRole !== "admin") return;
 if(confirm("Excluir produto?")){ db.collection("produtos").doc(id).delete(); }
 }
+
 function exportarEstoque(){
 if(usuarioRole !== "admin") return;
 db.collection("produtos").get().then(s=>{
@@ -568,6 +620,7 @@ s.forEach(d=>{ let p=d.data(); c+=`${p.nome},${p.categoria||'Geral'},${p.estoque
 baixar(c,"estoque.csv");
 });
 }
+
 function exportarHistorico(){
 if(usuarioRole !== "admin") return;
 db.collection("movimentacoes").get().then(s=>{
@@ -576,6 +629,7 @@ s.forEach(d=>{ let m=d.data(); c+=`${m.produto},${m.tipo},${m.quantidade},${m.va
 baixar(c,"historico.csv");
 });
 }
+
 function baixar(c,n){
 let a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([c])); a.download=n; a.click();
 }
