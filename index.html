@@ -48,12 +48,13 @@ th { background: #2c7be5; color: #fff; }
   <p id="erro" style="color:red; font-size: 13px;"></p>
 </div>
 
+<!-- O APP TODO COMEÇA OCULTO -->
 <div id="app" class="hidden">
 
 <p>Usuário: <b id="userEmail"></b> | Função: <b id="userRole" style="color:#2c7be5">Carregando...</b></p>
 <button onclick="logout()">Sair</button>
 
-<!-- Bloco de Relatório Financeiro (Escondido por padrão) -->
+<!-- Bloco de Relatório Financeiro (Strictly Hidden) -->
 <div class="card hidden" id="cardRelatorio">
 <h3>💰 Relatório</h3>
 <p>Hoje: <b id="vendasHoje">0 Db</b></p>
@@ -61,7 +62,7 @@ th { background: #2c7be5; color: #fff; }
 <p>Total Estoque: <b id="totalEstoque">0 Db</b></p>
 </div>
 
-<!-- Botão Alternar e Bloco de Gestão de Funcionários (Escondido por padrão) -->
+<!-- Botão Alternar e Bloco de Gestão de Funcionários (Strictly Hidden) -->
 <div id="containerFuncionarios" class="hidden">
   <button class="btn-toggle" onclick="toggleFuncionarios()">👥 Gerir Funcionários</button>
   
@@ -91,7 +92,7 @@ th { background: #2c7be5; color: #fff; }
   </div>
 </div>
 
-<!-- Bloco de Cadastro / Edição de Produtos (Escondido por padrão) -->
+<!-- Bloco de Cadastro / Edição de Produtos (Strictly Hidden) -->
 <div class="card hidden" id="cardNovoProduto">
 <h3 id="tituloFormProduto">📦 Novo Produto</h3>
 <input id="nome" placeholder="Produto">
@@ -105,7 +106,7 @@ th { background: #2c7be5; color: #fff; }
 </div>
 
 <!-- Tabela Geral de Estoque -->
-<div class="card" id="cardEstoque">
+<div class="card hidden" id="cardEstoque">
 <h3>📋 Estoque</h3>
 
 <div class="search-container">
@@ -122,7 +123,7 @@ th { background: #2c7be5; color: #fff; }
 </table>
 </div>
 
-<!-- Histórico de Movimentações (Escondido por padrão) -->
+<!-- Histórico de Movimentações (Strictly Hidden) -->
 <div class="card hidden" id="cardHistorico">
 <h3>📜 Histórico</h3>
 <button id="btnExportarHistorico" class="hidden" onclick="exportarHistorico()">📤 Exportar Excel</button>
@@ -174,6 +175,8 @@ if(listenerProdutos) listenerProdutos();
 if(listenerMovimentacoes) listenerMovimentacoes();
 if(listenerFuncionarios) listenerFuncionarios();
 usuarioRole = null;
+app.classList.add("hidden");
+loginBox.classList.remove("hidden");
 auth.signOut();
 }
 
@@ -181,85 +184,78 @@ function toggleFuncionarios() {
   cardFuncionarios.classList.toggle("hidden");
 }
 
-/* --- AUTENTICAÇÃO E VERIFICAÇÃO DE SEGURANÇA REFORÇADA --- */
+/* --- SEGURANÇA E AUTENTICAÇÃO BLINDADA --- */
 auth.onAuthStateChanged(u=>{
 if(u){
-loginBox.classList.add("hidden");
-app.classList.remove("hidden");
-userEmail.innerText=u.email;
-userRole.innerText = "Verificando...";
+  // Verificar dados PRIMEIRO sem abrir a tela
+  db.collection("usuarios").doc(u.uid).get()
+  .then(doc => {
+    if(!doc.exists) {
+      return db.collection("usuarios").where("email", "==", u.email.toLowerCase()).get()
+      .then(snap => {
+        if(snap.empty) {
+          alert("Acesso Negado: A sua conta foi removida pelo Administrador.");
+          logout();
+          return null;
+        }
+        return snap.docs[0];
+      });
+    }
+    return doc;
+  })
+  .then(doc => {
+    if(!doc || !doc.exists) return;
 
-db.collection("usuarios").doc(u.uid).get()
-.then(doc => {
-  if(!doc.exists) {
-    // Tenta encontrar por Email caso o ID não coincida
-    return db.collection("usuarios").where("email", "==", u.email.toLowerCase()).get()
-    .then(snap => {
-      if(snap.empty) {
-        // SEGURANÇA: Se não existe na base de dados, expulsar o utilizador
-        alert("Acesso Negado: A sua conta foi removida pelo Administrador.");
-        logout();
-        return null;
-      }
-      return snap.docs[0];
-    });
-  }
-  return doc;
-})
-.then(doc => {
-  if(!doc || !doc.exists) return;
+    let dados = doc.data();
 
-  let dados = doc.data();
+    // BLOQUEIO TOTAL: Se a conta estiver inativa, expulsar imediatamente
+    if(dados.status === "desativado") {
+      alert("Esta conta foi desativada pelo Administrador.");
+      logout();
+      return;
+    }
 
-  // SEGURANÇA: Se a conta estiver desativada, expulsar
-  if(dados.status === "desativado") {
-    alert("Esta conta foi desativada pelo Administrador.");
+    let valorRole = dados.role ? dados.role.toLowerCase().trim() : null;
+
+    if(!valorRole) {
+      alert("Erro: Conta sem permissões válidas.");
+      logout();
+      return;
+    }
+
+    // Se chegou até aqui, a conta é segura e está ativa!
+    usuarioRole = valorRole;
+    loginBox.classList.add("hidden");
+    app.classList.remove("hidden");
+    userEmail.innerText=u.email;
+    userRole.innerText = usuarioRole.toUpperCase();
+
+    // Mostrar estoque para todos os autorizados
+    cardEstoque.classList.remove("hidden");
+
+    // Liberar acesso a módulos de acordo com a função
+    if(usuarioRole === "admin") {
+      cardRelatorio.classList.remove("hidden");
+      cardNovoProduto.classList.remove("hidden");
+      cardHistorico.classList.remove("hidden");
+      containerFuncionarios.classList.remove("hidden");
+      btnExportarEstoque.classList.remove("hidden");
+      btnExportarHistorico.classList.remove("hidden");
+    } 
+
+    carregar();
+  })
+  .catch(e => {
+    console.error(e);
+    alert("Erro de autenticação.");
     logout();
-    return;
-  }
-
-  let valorRole = dados.role ? dados.role.toLowerCase().trim() : null;
-
-  if(!valorRole) {
-    alert("Erro: Conta sem permissões atribuídas.");
-    logout();
-    return;
-  }
-
-  usuarioRole = valorRole;
-  userRole.innerText = usuarioRole.toUpperCase();
-
-  // Resetar visualização de módulos seguros
-  cardRelatorio.classList.add("hidden");
-  cardNovoProduto.classList.add("hidden");
-  cardHistorico.classList.add("hidden");
-  containerFuncionarios.classList.add("hidden");
-  btnExportarEstoque.classList.add("hidden");
-  btnExportarHistorico.classList.add("hidden");
-
-  // Libertar acesso com base na função confirmada
-  if(usuarioRole === "admin") {
-    cardRelatorio.classList.remove("hidden");
-    cardNovoProduto.classList.remove("hidden");
-    cardHistorico.classList.remove("hidden");
-    containerFuncionarios.classList.remove("hidden");
-    btnExportarEstoque.classList.remove("hidden");
-    btnExportarHistorico.classList.remove("hidden");
-  } 
-
-  carregar();
-})
-.catch(e => {
-  console.error(e);
-  alert("Erro de autenticação.");
-  logout();
-});
+  });
 
 }else{
-loginBox.classList.remove("hidden");
-app.classList.add("hidden");
-usuarioRole = null;
-userRole.innerText = "";
+  loginBox.classList.remove("hidden");
+  app.classList.add("hidden");
+  usuarioRole = null;
+  userRole.innerText = "";
 }
 });
 
