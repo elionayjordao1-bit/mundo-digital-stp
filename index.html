@@ -154,7 +154,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
 .search-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
 .search-input { flex: 1; min-width: 200px; padding: 10px 14px; font-size: 14px; border: 1px solid #93c5fd; border-radius: 8px; }
 
-/* CONTROLES DE PAGINAÇÃO */
 .paginacao-container {
   display: flex;
   justify-content: space-between;
@@ -163,7 +162,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
   padding: 10px 0 0 0;
 }
 
-/* MINIATURAS DE IMAGENS */
 .img-thumb {
   width: 42px;
   height: 42px;
@@ -178,7 +176,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
   gap: 10px;
 }
 
-/* MODAL DE VENDA & RECIBO */
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
@@ -189,7 +186,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
   box-shadow: 0 20px 25px 5px rgba(0,0,0,0.2);
 }
 
-/* IMPRESSÃO DO RECIBO */
 #areaImpressaoRecibo { display: none; }
 @media print {
   body { visibility: hidden !important; }
@@ -282,7 +278,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <div class="kpi-card red">
         <span class="kpi-title" id="tituloDespesasPeriodo">Despesas (Mês)</span>
         <span id="despesasMes" class="kpi-value">0 Db</span>
-        <span style="font-size: 11px; color:#ef4444;">Custos Operacionais</span>
+        <span style="font-size: 11px; color:#ef4444;">Custos Operacionais (Luz/Renda)</span>
       </div>
 
       <div class="kpi-card green">
@@ -321,10 +317,29 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <div class="card hidden" id="cardDespesas">
-    <h3>💸 Registo de Despesas Operacionais</h3>
+  <!-- MÓDULO NOVO: ENTRADA DE COMPRAS / FORNECEDORES -->
+  <div class="card hidden" id="cardCompras">
+    <h3 style="color:#2563eb;">🛒 Registar Compra de Produtos (Fornecedor / Reabastecimento)</h3>
     <div class="form-grid">
-      <input id="despDescricao" placeholder="Descrição (ex: Renda da Loja, Luz)">
+      <select id="compraSelectProduto" style="grid-column: span 2;">
+        <option value="">-- Selecionar Produto a Reabastecer --</option>
+      </select>
+      <input id="compraQtd" type="number" placeholder="Quantidade Comprada">
+      <input id="compraCustoTotal" type="number" placeholder="Custo Total Pago (Db)">
+      <input id="compraFornecedor" placeholder="Fornecedor / Origem (Ex: Loja X, Importação)">
+      <select id="compraFormaPag">
+        <option value="Dinheiro">Dinheiro (Caixa)</option>
+        <option value="Transferencia">Transferência Bancária</option>
+      </select>
+      <button onclick="registrarCompraProduto()" class="btn-success" style="grid-column: span 2;">📦 Dar Entrada & Gravar Compra</button>
+    </div>
+  </div>
+
+  <!-- DESPESAS OPERACIONAIS (ADMIN) -->
+  <div class="card hidden" id="cardDespesas">
+    <h3>💸 Registo de Despesas Operacionais (Custos Fixos/Variáveis)</h3>
+    <div class="form-grid">
+      <input id="despDescricao" placeholder="Descrição (ex: Renda da Loja, Luz, Net)">
       <input id="despValor" type="number" placeholder="Valor (Db)">
       <select id="despCategoria">
         <option value="Renda">Renda / Aluguer</option>
@@ -342,10 +357,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div class="form-grid">
       <input id="nome" placeholder="Nome do Produto">
       <input id="categoriaInput" placeholder="Categoria">
-      <input id="estoque" type="number" placeholder="Qtd Estoque">
+      <input id="estoque" type="number" placeholder="Qtd Estoque Inicial">
       <input id="minimo" type="number" placeholder="Estoque Mínimo">
-      <input id="compra" type="number" placeholder="Preço Compra">
-      <input id="venda" type="number" placeholder="Preço Venda">
+      <input id="compra" type="number" placeholder="Preço Compra Unitário">
+      <input id="venda" type="number" placeholder="Preço Venda Unitário">
       
       <div class="img-preview-box" style="grid-column: span 2;">
         <input type="file" id="fotoInput" accept="image/*" onchange="processarFotoOtimizada(event)" style="font-size: 12px;">
@@ -381,7 +396,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
   <div class="card hidden" id="cardHistorico">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-      <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações</h3>
+      <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações (Vendas, Entradas & Compras)</h3>
       
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
         <label style="font-size: 12px; font-weight: 600;">De:</label>
@@ -397,8 +412,8 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <table>
       <thead>
         <tr>
-          <th>Foto</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Pagamento</th>
-          <th>Valor</th><th>Usuário</th><th>Data</th><th>Recibo</th>
+          <th>Foto</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Pag/Origem</th>
+          <th>Valor Total</th><th>Usuário</th><th>Data</th><th>Ação</th>
         </tr>
       </thead>
       <tbody id="historico"></tbody>
@@ -517,7 +532,6 @@ let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
 let dataFiltroFimDash = null;
 
-// VARIÁVEIS DE PAGINAÇÃO
 let paginaAtual = 1;
 const itensPorPagina = 10;
 
@@ -531,6 +545,7 @@ function login(){
 function resetarInterface() {
   cardRelatorio.classList.add("hidden");
   cardDespesas.classList.add("hidden");
+  cardCompras.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
   containerFuncionarios.classList.add("hidden");
@@ -555,7 +570,6 @@ function logout(){
 
 function toggleFuncionarios() { cardFuncionarios.classList.toggle("hidden"); }
 
-/* AUTENTICAÇÃO E PERMISSÕES */
 auth.onAuthStateChanged(u => {
   if(u){
     loginBox.classList.add("hidden");
@@ -578,12 +592,14 @@ auth.onAuthStateChanged(u => {
       if(usuarioRole === "admin") {
         cardRelatorio.classList.remove("hidden");
         cardDespesas.classList.remove("hidden");
+        cardCompras.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         containerFuncionarios.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
         btnExportarHistorico.classList.remove("hidden");
       } else if(usuarioRole === "estoque") {
+        cardCompras.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
@@ -599,7 +615,6 @@ auth.onAuthStateChanged(u => {
   }
 });
 
-/* CARREGAMENTO DE DADOS */
 function carregar(){
   if(listenerProdutos) listenerProdutos();
   if(listenerMovimentacoes) listenerMovimentacoes();
@@ -627,12 +642,20 @@ function carregar(){
   listenerProdutos = db.collection("produtos").onSnapshot(s => {
     todosProdutos = [];
     let categoriasSet = new Set();
+    let selectComp = document.getElementById("compraSelectProduto");
+    
+    if(selectComp) selectComp.innerHTML = '<option value="">-- Selecionar Produto a Reabastecer --</option>';
+
     s.forEach(d => {
       let p = d.data();
       p.id = d.id;
       if(!p.categoria) p.categoria = "Geral";
       todosProdutos.push(p);
       categoriasSet.add(p.categoria);
+
+      if(selectComp) {
+        selectComp.innerHTML += `<option value="${p.id}">${p.nome} (Estoque atual: ${p.estoque})</option>`;
+      }
     });
 
     let catSelect = document.getElementById("selectCategoriaFiltro");
@@ -663,7 +686,6 @@ function carregarDespesas() {
   });
 }
 
-/* OTIMIZAÇÃO: COMPRESSÃO DE IMAGENS AUTOMÁTICA EM CANVAS */
 function processarFotoOtimizada(event) {
   let file = event.target.files[0];
   if(!file) return;
@@ -675,7 +697,7 @@ function processarFotoOtimizada(event) {
       let canvas = document.createElement("canvas");
       let ctx = canvas.getContext("2d");
 
-      let maxDimension = 300; // Tamanho máximo ideal para ícone de produto
+      let maxDimension = 300;
       let width = img.width;
       let height = img.height;
 
@@ -695,7 +717,6 @@ function processarFotoOtimizada(event) {
       canvas.height = height;
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Converte imagem pesada num WebP super leve de ~20KB
       let base64Otimizada = canvas.toDataURL("image/webp", 0.7);
 
       fotoBase64.value = base64Otimizada;
@@ -707,7 +728,6 @@ function processarFotoOtimizada(event) {
   reader.readAsDataURL(file);
 }
 
-/* DASHBOARD */
 function processarDashboard() {
   if(usuarioRole !== "admin") return;
 
@@ -836,7 +856,6 @@ function limparFiltroDashboard() {
   processarDashboard();
 }
 
-/* RENDERING DA TABELA COM PAGINAÇÃO RÁPIDA */
 function renderizarTabelaEstoque() {
   let busca = inputBusca.value.toLowerCase();
   let catFiltro = selectCategoriaFiltro.value;
@@ -846,7 +865,6 @@ function renderizarTabelaEstoque() {
   let podeAdicionarEstoque = (isAdmin || isEstoque);
   let podeVender = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
 
-  // Filtrar
   let produtosFiltrados = todosProdutos.filter(p => {
     let nomeMatch = p.nome.toLowerCase().includes(busca);
     let catMatch = catFiltro === "" || p.categoria === catFiltro;
@@ -907,7 +925,6 @@ function renderizarTabelaEstoque() {
 
   lista.innerHTML = htmlBuffer || '<tr><td colspan="12" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>';
   
-  // Atualizar Paginação
   infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas} (${produtosFiltrados.length} itens)`;
   btnPagAnt.disabled = (paginaAtual === 1);
   btnPagProx.disabled = (paginaAtual === totalPaginas);
@@ -993,6 +1010,7 @@ function cancelarEdicaoProduto() {
   btnCancelarProduto.classList.add("hidden");
 }
 
+/* REGISTRO RÁPIDO (+ ESTOQUE) */
 function entradaEstoque(id, atual) {
   let add = prompt("Quantidade a adicionar ao estoque:");
   if(add && !isNaN(add) && Number(add) > 0) {
@@ -1010,7 +1028,48 @@ function entradaEstoque(id, atual) {
   }
 }
 
-/* HISTÓRICO DE MOVIMENTAÇÕES */
+/* NOVO MÓDULO: REGISTRO DE COMPRAS DE PRODUTOS */
+function registrarCompraProduto() {
+  let pId = compraSelectProduto.value;
+  let q = Number(compraQtd.value) || 0;
+  let custoTotal = Number(compraCustoTotal.value) || 0;
+  let forn = compraFornecedor.value.trim() || "Não Especificado";
+  let fPag = compraFormaPag.value;
+
+  if(!pId) return alert("Selecione um produto para reabastecer!");
+  if(q <= 0) return alert("Informe a quantidade comprada!");
+  if(custoTotal <= 0) return alert("Informe o custo total pago pela compra!");
+
+  let prod = todosProdutos.find(item => item.id === pId);
+  if(!prod) return;
+
+  let novoEstoque = Number(prod.estoque || 0) + q;
+  let novoCustoUnitario = Math.round(custoTotal / q);
+
+  // Atualizar Estoque e Custo Unitário no Produto
+  db.collection("produtos").doc(pId).update({
+    estoque: novoEstoque,
+    compra: novoCustoUnitario
+  });
+
+  // Registrar na Tabela de Movimentações Financeiras como "compra"
+  db.collection("movimentacoes").add({
+    produto: prod.nome,
+    tipo: "compra",
+    quantidade: q,
+    valor: custoTotal,
+    formaPagamento: fPag + " (Fornecedor: " + forn + ")",
+    usuario: auth.currentUser.email,
+    data: new Date()
+  }).then(() => {
+    compraSelectProduto.value = "";
+    compraQtd.value = "";
+    compraCustoTotal.value = "";
+    compraFornecedor.value = "";
+    alert(`Compra registada com sucesso!\n${q} unidades adicionadas ao estoque do produto "${prod.nome}".`);
+  });
+}
+
 function renderizarHistorico(listaMovs) {
   let htmlBuffer = "";
   let prodLookup = {};
@@ -1025,15 +1084,19 @@ function renderizarHistorico(listaMovs) {
     let ft = prodLookup[m.produto] ? prodLookup[m.produto].foto : "";
     let fotoSrc = ft || "https://via.placeholder.com/40?text=Sem+Foto";
 
+    let tipoCor = "#10b981";
+    if(m.tipo === "saida") tipoCor = "#ef4444";
+    if(m.tipo === "compra") tipoCor = "#2563eb";
+
     let btnRecibo = (m.tipo === 'saida') ? `
       <button class="btn-secondary btn-acao" onclick="reimprimirReciboHistorico('${m.produto.replace(/'/g, "\\'")}', ${m.quantidade}, ${valor}, '${fPag}', '${(m.cliente || "Consumidor Final").replace(/'/g, "\\'")}', '${m.usuario}', '${dataFmt}')">PDF</button>
-    ` : '';
+    ` : '-';
 
     htmlBuffer += `
       <tr>
         <td><img src="${fotoSrc}" class="img-thumb" loading="lazy" alt="Foto"></td>
         <td><b>${m.produto}</b></td>
-        <td><span style="color:${m.tipo==='saida'?'#ef4444':'#10b981'}; font-weight:bold;">${m.tipo.toUpperCase()}</span></td>
+        <td><span style="color:${tipoCor}; font-weight:bold;">${m.tipo.toUpperCase()}</span></td>
         <td><b>${m.quantidade}</b></td>
         <td><small>${fPag}</small></td>
         <td><b>${valor} Db</b></td>
@@ -1076,7 +1139,6 @@ function limparFiltroHistorico() {
   renderizarHistorico(todasMovimentacoes);
 }
 
-/* POS & MODAL DE VENDA */
 function abrirModalVenda(id, nome, estoque, precoVenda) {
   if(estoque <= 0) return alert("Produto sem estoque disponível!");
   produtoVendaAtual = { id, nome, estoque, precoVenda };
@@ -1182,7 +1244,6 @@ function reimprimirReciboHistorico(produto, qtd, total, formaPag, cliente, vende
   preencherEImprimirRecibo(dataFmt, cliente, vendedor, produto, qtd, pUnit, total, formaPag, 0);
 }
 
-/* GESTÃO DE DESPESAS */
 function salvarDespesa() {
   let d = despDescricao.value.trim();
   let v = Number(despValor.value) || 0;
@@ -1203,7 +1264,6 @@ function salvarDespesa() {
   });
 }
 
-/* GESTÃO DE FUNCIONÁRIOS */
 function carregarFuncionarios() {
   listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
     let htmlBuffer = "";
