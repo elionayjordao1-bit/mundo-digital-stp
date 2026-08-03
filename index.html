@@ -66,6 +66,7 @@ header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px
 .kpi-card.purple { border-left-color: #8b5cf6; background: #f5f3ff; }
 .kpi-card.red { border-left-color: #ef4444; background: #fef2f2; }
 .kpi-card.orange { border-left-color: #f59e0b; background: #fffbe6; }
+.kpi-card.teal { border-left-color: #0d9488; background: #f0fdfa; }
 
 .kpi-title { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .kpi-value { font-size: 20px; color: #1e293b; font-weight: 700; margin-top: 4px; display: block; }
@@ -176,6 +177,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
   gap: 10px;
 }
 
+.badge-em-transito { background: #fef3c7; color: #d97706; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
+.badge-concluido { background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
+
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
@@ -275,6 +279,12 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <span id="lucroMes" class="kpi-sub">Lucro Produtos: 0 Db</span>
       </div>
 
+      <div class="kpi-card teal">
+        <span class="kpi-title">Encomendas / Importação</span>
+        <span id="lucroEncomendasKpi" class="kpi-value">0 Db</span>
+        <span id="subEncomendasKpi" style="font-size: 11px; color:#0d9488;">0 ativas em trânsito</span>
+      </div>
+
       <div class="kpi-card purple">
         <span class="kpi-title">Lucro Câmbio / Remessas</span>
         <span id="lucroCambioKpi" class="kpi-value">0 Db</span>
@@ -284,13 +294,13 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <div class="kpi-card red">
         <span class="kpi-title" id="tituloDespesasPeriodo">Despesas (Mês)</span>
         <span id="despesasMes" class="kpi-value">0 Db</span>
-        <span style="font-size: 11px; color:#ef4444;">Custos Operacionais (Luz/Renda)</span>
+        <span style="font-size: 11px; color:#ef4444;">Custos Operacionais</span>
       </div>
 
       <div class="kpi-card green">
         <span class="kpi-title">Lucro Líquido Real</span>
         <span id="lucroLiquidoReal" class="kpi-value">0 Db</span>
-        <span style="font-size: 11px; color:#10b981;">(Produtos + Câmbio - Despesas)</span>
+        <span style="font-size: 11px; color:#10b981;">(Vendas + Import + Câmbio - Desp)</span>
       </div>
     </div>
 
@@ -323,6 +333,32 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
+  <!-- MÓDULO NOVO: ENCOMENDAS & IMPORTAÇÃO (SINAL 50% + ENTREGA) -->
+  <div class="card hidden" id="cardEncomendas">
+    <h3 style="color:#0d9488;">🚚 Encomendas & Importações (Sinal 50% + Entrega)</h3>
+    <div class="form-grid" style="margin-bottom: 15px;">
+      <input id="encCliente" placeholder="Nome do Cliente">
+      <input id="encTelefone" placeholder="Telefone / WhatsApp (ex: 23999...)">
+      <input id="encProduto" placeholder="Produto Encomendado (ex: Redmi Note 12)">
+      <input id="encValorTotal" type="number" placeholder="Valor Venda Total (Db)" oninput="calcularSinalAutomatico()">
+      <input id="encSinalPago" type="number" placeholder="Sinal Pago Hoje (Db)">
+      <input id="encCustoCompra" type="number" placeholder="Custo de Compra em PT (Db)">
+      <button onclick="registrarNovaEncomenda()" class="btn-success" style="grid-column: span 2; background: #0d9488;">📦 Registrar Encomenda & Receber Sinal</button>
+    </div>
+
+    <h4>📋 Acompanhamento de Encomendas em Trânsito</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Cliente</th><th>Produto</th><th>Valor Total</th><th>Sinal (Pago)</th><th>Falta Pagar</th>
+          <th>Estado</th><th>Contacto</th><th>Ação / Concluir</th>
+        </tr>
+      </thead>
+      <tbody id="listaEncomendas"></tbody>
+    </table>
+  </div>
+
+  <!-- MÓDULO: CÂMBIO & TRANSFERÊNCIAS / REMESSAS -->
   <div class="card hidden" id="cardCambio">
     <h3 style="color:#8b5cf6;">💱 Remessas & Câmbio de Moeda (PT ⇄ STP)</h3>
     <div class="form-grid">
@@ -345,6 +381,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
+  <!-- MÓDULO: ENTRADA DE COMPRAS / FORNECEDORES -->
   <div class="card hidden" id="cardCompras">
     <h3 style="color:#2563eb;">🛒 Registar Compra de Produtos (Fornecedor / Reabastecimento)</h3>
     <div class="form-grid">
@@ -362,6 +399,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
+  <!-- DESPESAS OPERACIONAIS (ADMIN) -->
   <div class="card hidden" id="cardDespesas">
     <h3>💸 Registo de Despesas Operacionais (Custos Fixos/Variáveis)</h3>
     <div class="form-grid">
@@ -422,7 +460,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
   <div class="card hidden" id="cardHistorico">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-      <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações (Vendas, Câmbios & Compras)</h3>
+      <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações (Vendas, Câmbios, Importações & Compras)</h3>
       
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
         <label style="font-size: 12px; font-weight: 600;">De:</label>
@@ -549,10 +587,12 @@ let listenerProdutos = null;
 let listenerMovimentacoes = null;
 let listenerFuncionarios = null;
 let listenerDespesas = null;
+let listenerEncomendas = null;
 
 let todosProdutos = [];
 let todasMovimentacoes = [];
 let todasDespesas = [];
+let todasEncomendas = [];
 
 let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
@@ -573,6 +613,7 @@ function resetarInterface() {
   cardDespesas.classList.add("hidden");
   cardCompras.classList.add("hidden");
   cardCambio.classList.add("hidden");
+  cardEncomendas.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
   containerFuncionarios.classList.add("hidden");
@@ -587,6 +628,7 @@ function logout(){
   if(listenerMovimentacoes) listenerMovimentacoes();
   if(listenerFuncionarios) listenerFuncionarios();
   if(listenerDespesas) listenerDespesas();
+  if(listenerEncomendas) listenerEncomendas();
   usuarioRole = null;
   resetarInterface();
   app.classList.add("hidden");
@@ -621,6 +663,7 @@ auth.onAuthStateChanged(u => {
         cardDespesas.classList.remove("hidden");
         cardCompras.classList.remove("hidden");
         cardCambio.classList.remove("hidden");
+        cardEncomendas.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         containerFuncionarios.classList.remove("hidden");
@@ -632,8 +675,9 @@ auth.onAuthStateChanged(u => {
         cardHistorico.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
       } else {
-        // Venda 1 / Venda 2 também pode fazer câmbio
+        // Venda 1 / Venda 2 podem gerir Câmbio e Encomendas
         cardCambio.classList.remove("hidden");
+        cardEncomendas.classList.remove("hidden");
       }
 
       cardEstoque.classList.remove("hidden");
@@ -650,6 +694,7 @@ function carregar(){
   if(listenerProdutos) listenerProdutos();
   if(listenerMovimentacoes) listenerMovimentacoes();
   if(listenerDespesas) listenerDespesas();
+  if(listenerEncomendas) listenerEncomendas();
 
   let isAdmin = (usuarioRole === "admin");
   let isEstoque = (usuarioRole === "estoque");
@@ -669,6 +714,8 @@ function carregar(){
   `;
 
   if(isAdmin) { carregarFuncionarios(); carregarDespesas(); }
+
+  carregarEncomendas();
 
   listenerProdutos = db.collection("produtos").onSnapshot(s => {
     todosProdutos = [];
@@ -713,6 +760,119 @@ function carregarDespesas() {
     s.forEach(d => { let desp = d.data(); desp.id = d.id; todasDespesas.push(desp); });
     processarDashboard();
   });
+}
+
+function carregarEncomendas() {
+  listenerEncomendas = db.collection("encomendas").orderBy("data","desc").onSnapshot(s => {
+    todasEncomendas = [];
+    let htmlBuffer = "";
+    let pendentesContador = 0;
+
+    s.forEach(d => {
+      let enc = d.data();
+      enc.id = d.id;
+      todasEncomendas.push(enc);
+
+      if(enc.estado === "EM_TRANSITO") pendentesContador++;
+
+      let faltaPagar = (Number(enc.valorTotal) || 0) - (Number(enc.sinalPago) || 0);
+      let btnWhatsApp = enc.telefone ? 
+        `<a href="https://wa.me/${enc.telefone.replace(/[^0-9]/g, '')}" target="_blank" style="text-decoration:none;"><button class="btn-success btn-acao" style="background:#25d366;">📲 WA</button></a>` : '-';
+
+      let btnAcao = (enc.estado === "EM_TRANSITO") ? 
+        `<button class="btn-success btn-acao" onclick="concluirEncomendaModal('${enc.id}', '${enc.cliente.replace(/'/g, "\\'")}', '${enc.produto.replace(/'/g, "\\'")}', ${faltaPagar}, ${enc.valorTotal}, ${enc.custoCompra||0})">✅ Concluir & Entregar</button>` :
+        `<span class="badge-concluido">Entregue</span>`;
+
+      htmlBuffer += `
+        <tr>
+          <td><b>${enc.cliente}</b></td>
+          <td><b>${enc.produto}</b></td>
+          <td>${enc.valorTotal} Db</td>
+          <td style="color:#10b981; font-weight:bold;">${enc.sinalPago} Db</td>
+          <td style="color:#ef4444; font-weight:bold;">${faltaPagar} Db</td>
+          <td><span class="${enc.estado === 'EM_TRANSITO' ? 'badge-em-transito' : 'badge-concluido'}">${enc.estado === 'EM_TRANSITO' ? 'EM TRÂNSITO' : 'CONCLUÍDO'}</span></td>
+          <td>${btnWhatsApp}</td>
+          <td>${btnAcao}</td>
+        </tr>
+      `;
+    });
+
+    listaEncomendas.innerHTML = htmlBuffer || '<tr><td colspan="8" style="color:#94a3b8;">Nenhuma encomenda registada.</td></tr>';
+    processarDashboard();
+  });
+}
+
+function calcularSinalAutomatico() {
+  let total = Number(encValorTotal.value) || 0;
+  if(total > 0 && (!encSinalPago.value || encSinalPago.value === "")) {
+    encSinalPago.value = Math.round(total / 2);
+  }
+}
+
+function registrarNovaEncomenda() {
+  let cli = encCliente.value.trim();
+  let tel = encTelefone.value.trim();
+  let prod = encProduto.value.trim();
+  let vTotal = Number(encValorTotal.value) || 0;
+  let sPago = Number(encSinalPago.value) || 0;
+  let cCompra = Number(encCustoCompra.value) || 0;
+
+  if(!cli || !prod || vTotal <= 0 || sPago <= 0) {
+    return alert("Preencha o nome do cliente, produto, valor total e o sinal pago!");
+  }
+
+  let payload = {
+    cliente: cli,
+    telefone: tel,
+    produto: prod,
+    valorTotal: vTotal,
+    sinalPago: sPago,
+    custoCompra: cCompra,
+    estado: "EM_TRANSITO",
+    usuario: auth.currentUser.email,
+    data: new Date()
+  };
+
+  db.collection("encomendas").add(payload).then(() => {
+    // Lança entrada de caixa referente ao Sinal Pago
+    return db.collection("movimentacoes").add({
+      produto: `Sinal Encomenda: ${prod}`,
+      tipo: "saida", // Conta como entrada de caixa por venda parcial
+      quantidade: 1,
+      valor: sPago,
+      formaPagamento: "Sinal 50% (Encomenda)",
+      cliente: cli,
+      usuario: auth.currentUser.email,
+      data: new Date()
+    });
+  }).then(() => {
+    encCliente.value = ""; encTelefone.value = ""; encProduto.value = "";
+    encValorTotal.value = ""; encSinalPago.value = ""; encCustoCompra.value = "";
+    alert("Encomenda registada com sucesso! O sinal já deu entrada na caixa.");
+  });
+}
+
+function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, custoCompra) {
+  if(confirm(`Confirmar a entrega do produto "${produto}" ao cliente ${cliente}?\n\nValor restante a receber: ${faltaPagar} Db.`)) {
+    db.collection("encomendas").doc(id).update({
+      estado: "CONCLUIDO",
+      dataConclusao: new Date()
+    }).then(() => {
+      // Registra a quitação dos restantes 50% na caixa
+      return db.collection("movimentacoes").add({
+        produto: `Quitação Importação: ${produto}`,
+        tipo: "saida",
+        quantidade: 1,
+        valor: faltaPagar,
+        formaPagamento: "Quitação 50% (Entrega Encomenda)",
+        cliente: cliente,
+        usuario: auth.currentUser.email,
+        data: new Date()
+      });
+    }).then(() => {
+      alert("Encomenda concluída e entregue! Faturamento registrado com sucesso.");
+    });
+  }
 }
 
 function processarFotoOtimizada(event) {
@@ -811,9 +971,10 @@ function processarDashboard() {
         totalLucroVendasPeriodo += lucroItem;
 
         let fPag = m.formaPagamento || "Dinheiro";
-        if(fPag === "Dinheiro") pagDin += val;
-        else if(fPag === "Transferencia") pagTrans += val;
-        else if(fPag === "Cartao") pagCart += val;
+        if(fPag.includes("Dinheiro")) pagDin += val;
+        else if(fPag.includes("Transferencia")) pagTrans += val;
+        else if(fPag.includes("Cartao")) pagCart += val;
+        else pagDin += val;
 
         if(!mapaProdutos[m.produto]) mapaProdutos[m.produto] = { qtd: 0, faturamento: 0 };
         mapaProdutos[m.produto].qtd += qtd;
@@ -829,6 +990,20 @@ function processarDashboard() {
     }
   });
 
+  let totalLucroEncomendas = 0;
+  let emTransitoQtd = 0;
+  todasEncomendas.forEach(enc => {
+    if(enc.estado === "EM_TRANSITO") emTransitoQtd++;
+    if(enc.estado === "CONCLUIDO" && enc.dataConclusao) {
+      let dEnc = enc.dataConclusao.toDate();
+      if(dEnc >= dataInicio && dEnc <= dataFim) {
+        let vTot = Number(enc.valorTotal) || 0;
+        let cComp = Number(enc.custoCompra) || 0;
+        totalLucroEncomendas += (vTot - cComp);
+      }
+    }
+  });
+
   let totalDespesasPeriodo = 0;
   todasDespesas.forEach(dp => {
     if(!dp.data) return;
@@ -838,13 +1013,16 @@ function processarDashboard() {
     }
   });
 
-  let lucroLiquidoFinal = (totalLucroVendasPeriodo + totalLucroCambioPeriodo) - totalDespesasPeriodo;
+  let lucroLiquidoFinal = (totalLucroVendasPeriodo + totalLucroCambioPeriodo + totalLucroEncomendas) - totalDespesasPeriodo;
 
   vendasHoje.innerText = totalVendasHoje.toLocaleString('pt-PT') + " Db";
   qtdVendasHoje.innerText = `${qtdVendasHojeVal} transações`;
 
   vendasMes.innerText = totalVendasPeriodo.toLocaleString('pt-PT') + " Db";
   lucroMes.innerText = `Lucro Produtos: ${totalLucroVendasPeriodo.toLocaleString('pt-PT')} Db`;
+
+  lucroEncomendasKpi.innerText = totalLucroEncomendas.toLocaleString('pt-PT') + " Db";
+  subEncomendasKpi.innerText = `${emTransitoQtd} ativas em trânsito`;
 
   lucroCambioKpi.innerText = totalLucroCambioPeriodo.toLocaleString('pt-PT') + " Db";
   despesasMes.innerText = totalDespesasPeriodo.toLocaleString('pt-PT') + " Db";
@@ -1044,7 +1222,6 @@ function cancelarEdicaoProduto() {
   btnCancelarProduto.classList.add("hidden");
 }
 
-/* REGISTRO RÁPIDO (+ ESTOQUE) */
 function entradaEstoque(id, atual) {
   let add = prompt("Quantidade a adicionar ao estoque:");
   if(add && !isNaN(add) && Number(add) > 0) {
@@ -1062,7 +1239,6 @@ function entradaEstoque(id, atual) {
   }
 }
 
-/* MÓDULO: REGISTRO DE COMPRAS DE PRODUTOS */
 function registrarCompraProduto() {
   let pId = compraSelectProduto.value;
   let q = Number(compraQtd.value) || 0;
@@ -1102,7 +1278,6 @@ function registrarCompraProduto() {
   });
 }
 
-/* LÓGICA DO MÓDULO DE CÂMBIO & REMESSAS */
 function atualizarRotulosCambio() {
   let dir = cambioDirecao.value;
   if(dir === "PT_STP") {
@@ -1150,8 +1325,8 @@ function registrarOperacaoCambio() {
   db.collection("movimentacoes").add({
     produto: `Câmbio (${dir === 'PT_STP' ? 'PT ➔ STP' : 'STP ➔ PT'})`,
     tipo: "cambio",
-    quantidade: eur, // Guarda a qtd de Euros
-    valor: totalDb,  // Total em Dobras
+    quantidade: eur,
+    valor: totalDb,
     lucroCambio: lucroCalculado,
     formaPagamento: `Remessa (${eur}€ @ ${taxa}Db)`,
     cliente: cli,
@@ -1177,7 +1352,7 @@ function renderizarHistorico(listaMovs) {
     let valor = Number(m.valor) || 0;
     let fPag = m.formaPagamento || "Dinheiro";
     let ft = prodLookup[m.produto] ? prodLookup[m.produto].foto : "";
-    let fotoSrc = ft || "https://via.placeholder.com/40?text=Câmbio";
+    let fotoSrc = ft || "https://via.placeholder.com/40?text=Serviço";
 
     let tipoCor = "#10b981";
     if(m.tipo === "saida") tipoCor = "#ef4444";
