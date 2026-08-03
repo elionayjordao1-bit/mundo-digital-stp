@@ -10,7 +10,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
-* { box-sizing: border-box; transition: all 0.2s ease-in-out; }
+* { box-sizing: border-box; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: #f1f5f9;
@@ -112,7 +112,7 @@ button {
   color: #ffffff;
   white-space: nowrap;
 }
-button:hover { opacity: 0.92; transform: translateY(-1px); }
+button:hover { opacity: 0.92; }
 .btn-secondary { background: #64748b; color: #fff; }
 .btn-danger { background: #ef4444; color: #fff; }
 .btn-success { background: #10b981; color: #fff; }
@@ -153,6 +153,15 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 .search-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
 .search-input { flex: 1; min-width: 200px; padding: 10px 14px; font-size: 14px; border: 1px solid #93c5fd; border-radius: 8px; }
+
+/* CONTROLES DE PAGINAÇÃO */
+.paginacao-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+  padding: 10px 0 0 0;
+}
 
 /* MINIATURAS DE IMAGENS */
 .img-thumb {
@@ -211,12 +220,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 <div id="app" class="hidden no-print">
 
-  <!-- BOTÃO DE ATALHO GERIR FUNCIONÁRIOS (ADMIN) -->
   <div id="containerFuncionarios" class="hidden" style="margin-bottom: 15px; display: flex; justify-content: flex-end;">
     <button onclick="toggleFuncionarios()" class="btn-secondary">👥 Gerir Equipa / Funcionários</button>
   </div>
 
-  <!-- PAINEL GESTÃO DE FUNCIONÁRIOS -->
   <div class="card hidden" id="cardFuncionarios">
     <h3>👥 Gestão de Funcionários</h3>
     <div class="form-grid" style="margin-bottom: 15px;">
@@ -239,7 +246,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </table>
   </div>
 
-  <!-- PAINEL EXECUTIVO & FINANCEIRO -->
   <div class="card hidden" id="cardRelatorio">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
       <h3 style="margin: 0; border: none;">📊 Dashboard Executivo & Financeiro</h3>
@@ -315,7 +321,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <!-- DESPESAS OPERACIONAIS (ADMIN) -->
   <div class="card hidden" id="cardDespesas">
     <h3>💸 Registo de Despesas Operacionais</h3>
     <div class="form-grid">
@@ -332,7 +337,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <!-- CADASTRO / EDIÇÃO DE PRODUTO (ADMIN E ESTOQUE) -->
   <div class="card hidden" id="cardNovoProduto">
     <h3 id="tituloFormProduto">📦 Novo Produto</h3>
     <div class="form-grid">
@@ -344,7 +348,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <input id="venda" type="number" placeholder="Preço Venda">
       
       <div class="img-preview-box" style="grid-column: span 2;">
-        <input type="file" id="fotoInput" accept="image/*" onchange="processarFoto(event)" style="font-size: 12px;">
+        <input type="file" id="fotoInput" accept="image/*" onchange="processarFotoOtimizada(event)" style="font-size: 12px;">
         <input type="hidden" id="fotoBase64">
         <img id="previewFoto" src="" class="img-thumb hidden" alt="Preview">
       </div>
@@ -354,12 +358,11 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <!-- TABELA GERAL DE ESTOQUE -->
   <div class="card hidden" id="cardEstoque">
     <h3>📋 Estoque Geral</h3>
     <div class="search-container">
-      <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar produto..." oninput="filtrarProdutos()">
-      <select id="selectCategoriaFiltro" onchange="filtrarProdutos()" style="padding: 10px; font-size: 14px; width: auto;">
+      <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar produto..." oninput="mudarFiltroOuBusca()">
+      <select id="selectCategoriaFiltro" onchange="mudarFiltroOuBusca()" style="padding: 10px; font-size: 14px; width: auto;">
         <option value="">Todas as Categorias</option>
       </select>
       <button id="btnExportarEstoque" class="btn-secondary hidden" onclick="exportarEstoque()">📥 Exportar Excel</button>
@@ -368,9 +371,14 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <thead id="cabecalhoTabela"></thead>
       <tbody id="lista"></tbody>
     </table>
+
+    <div class="paginacao-container">
+      <button onclick="paginaAnterior()" class="btn-secondary" id="btnPagAnt">⬅️ Anterior</button>
+      <span id="infoPaginacao" style="font-size: 13px; font-weight: 600; color: #64748b;">Página 1</span>
+      <button onclick="proximaPagina()" class="btn-secondary" id="btnPagProx">Próxima ➡️</button>
+    </div>
   </div>
 
-  <!-- HISTÓRICO DE MOVIMENTAÇÕES -->
   <div class="card hidden" id="cardHistorico">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
       <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações</h3>
@@ -399,7 +407,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 </div>
 
-<!-- MODAL POS (REGISTRAR VENDA) -->
 <div id="modalVenda" class="modal-overlay hidden">
   <div class="modal-content">
     <h3 style="margin-top:0; color:#1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">🛒 Registrar Venda (POS)</h3>
@@ -438,7 +445,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
-<!-- IMPRESSÃO DO RECIBO -->
 <div id="areaImpressaoRecibo">
   <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
     <h2 style="margin: 0; font-size: 16px;">Mundo Digital STP</h2>
@@ -481,7 +487,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
 </div>
 
 <script>
-// CONFIGURAÇÃO FIREBASE 100% CORRETA
 const firebaseConfig = {
   apiKey: "AIzaSyBCw8qEFmYrBbRnDM4OFCgx-44FUtSbqts",
   authDomain: "mundo-digital-stp.firebaseapp.com",
@@ -511,6 +516,10 @@ let todasDespesas = [];
 let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
 let dataFiltroFimDash = null;
+
+// VARIÁVEIS DE PAGINAÇÃO
+let paginaAtual = 1;
+const itensPorPagina = 10;
 
 function login(){
   let erroCampo = document.getElementById("erro");
@@ -557,7 +566,6 @@ auth.onAuthStateChanged(u => {
     db.collection("usuarios").doc(u.uid).get().then(doc => {
       let dados = doc.data() || {};
       
-      // Se a conta estiver desativada, impede o acesso
       if(dados.status === "desativado") {
         alert("Esta conta está desativada. Entre em contacto com o Administrador.");
         logout();
@@ -567,7 +575,6 @@ auth.onAuthStateChanged(u => {
       usuarioRole = dados.role || "venda1";
       userRoleSpan.innerText = usuarioRole;
 
-      // CONFIGURAÇÃO DE PERMISSÕES POR PERFIL:
       if(usuarioRole === "admin") {
         cardRelatorio.classList.remove("hidden");
         cardDespesas.classList.remove("hidden");
@@ -577,7 +584,6 @@ auth.onAuthStateChanged(u => {
         btnExportarEstoque.classList.remove("hidden");
         btnExportarHistorico.classList.remove("hidden");
       } else if(usuarioRole === "estoque") {
-        // Quem é do stock pode adicionar/editar produtos
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
@@ -657,7 +663,51 @@ function carregarDespesas() {
   });
 }
 
-/* PROCESSAR DASHBOARD E CALCULAR ESTATÍSTICAS */
+/* OTIMIZAÇÃO: COMPRESSÃO DE IMAGENS AUTOMÁTICA EM CANVAS */
+function processarFotoOtimizada(event) {
+  let file = event.target.files[0];
+  if(!file) return;
+
+  let reader = new FileReader();
+  reader.onload = function(e) {
+    let img = new Image();
+    img.onload = function() {
+      let canvas = document.createElement("canvas");
+      let ctx = canvas.getContext("2d");
+
+      let maxDimension = 300; // Tamanho máximo ideal para ícone de produto
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxDimension) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        }
+      } else {
+        if (height > maxDimension) {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Converte imagem pesada num WebP super leve de ~20KB
+      let base64Otimizada = canvas.toDataURL("image/webp", 0.7);
+
+      fotoBase64.value = base64Otimizada;
+      previewFoto.src = base64Otimizada;
+      previewFoto.classList.remove("hidden");
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* DASHBOARD */
 function processarDashboard() {
   if(usuarioRole !== "admin") return;
 
@@ -786,26 +836,7 @@ function limparFiltroDashboard() {
   processarDashboard();
 }
 
-/* PROCESSAR FOTO (BASE64) */
-function processarFoto(event) {
-  let file = event.target.files[0];
-  if(file) {
-    if(file.size > 1000000) {
-      alert("A foto escolhida é muito grande! Escolha uma imagem com menos de 1MB.");
-      event.target.value = "";
-      return;
-    }
-    let reader = new FileReader();
-    reader.onload = function(e) {
-      fotoBase64.value = e.target.result;
-      previewFoto.src = e.target.result;
-      previewFoto.classList.remove("hidden");
-    };
-    reader.readAsDataURL(file);
-  }
-}
-
-/* RENDERING DA TABELA DE ESTOQUE */
+/* RENDERING DA TABELA COM PAGINAÇÃO RÁPIDA */
 function renderizarTabelaEstoque() {
   let busca = inputBusca.value.toLowerCase();
   let catFiltro = selectCategoriaFiltro.value;
@@ -815,56 +846,88 @@ function renderizarTabelaEstoque() {
   let podeAdicionarEstoque = (isAdmin || isEstoque);
   let podeVender = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
 
-  lista.innerHTML = "";
-
-  todosProdutos.forEach(p => {
+  // Filtrar
+  let produtosFiltrados = todosProdutos.filter(p => {
     let nomeMatch = p.nome.toLowerCase().includes(busca);
     let catMatch = catFiltro === "" || p.categoria === catFiltro;
-
-    if(nomeMatch && catMatch) {
-      let est = Number(p.estoque) || 0;
-      let min = Number(p.minimo) || 0;
-      let comp = Number(p.compra) || 0;
-      let vend = Number(p.venda) || 0;
-      let lucro = vend - comp;
-      let totalItem = est * vend;
-      let fotoSrc = p.foto || "https://via.placeholder.com/40?text=Sem+Foto";
-
-      let classeEst = (est <= min) ? 'class="baixo"' : '';
-
-      lista.innerHTML += `
-        <tr ${classeEst}>
-          <td><img src="${fotoSrc}" class="img-thumb" alt="Foto"></td>
-          <td><b>${p.nome}</b></td>
-          <td><small>${p.categoria}</small></td>
-          <td><b>${est}</b></td>
-          <td>${min}</td>
-          ${isAdmin ? `<td>${comp} Db</td>` : ''}
-          <td><b>${vend} Db</b></td>
-          ${isAdmin ? `<td style="color:${lucro>=0?'#10b981':'#ef4444'}">${lucro} Db</td>` : ''}
-          <td><b>${totalItem} Db</b></td>
-          ${podeAdicionarEstoque ? `
-            <td>
-              <button class="btn-success btn-acao" onclick="entradaEstoque('${p.id}', ${est})">+</button>
-            </td>
-          ` : ''}
-          ${podeVender ? `
-            <td>
-              <button class="btn-secondary btn-acao" onclick="abrirModalVenda('${p.id}', '${p.nome.replace(/'/g, "\\'")}', ${est}, ${vend})">🛒 Vender</button>
-            </td>
-          ` : ''}
-          ${isAdmin ? `
-            <td>
-              <div class="acoes-cell">
-                <button class="btn-secondary btn-acao" onclick="prepararEditarProduto('${p.id}')">✏️ Edit</button>
-                <button class="btn-danger btn-acao" onclick="del('${p.id}')">🗑️</button>
-              </div>
-            </td>
-          ` : ''}
-        </tr>
-      `;
-    }
+    return nomeMatch && catMatch;
   });
+
+  let totalPaginas = Math.ceil(produtosFiltrados.length / itensPorPagina) || 1;
+  if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+  let inicio = (paginaAtual - 1) * itensPorPagina;
+  let paginaProdutos = produtosFiltrados.slice(inicio, inicio + itensPorPagina);
+
+  let htmlBuffer = "";
+
+  paginaProdutos.forEach(p => {
+    let est = Number(p.estoque) || 0;
+    let min = Number(p.minimo) || 0;
+    let comp = Number(p.compra) || 0;
+    let vend = Number(p.venda) || 0;
+    let lucro = vend - comp;
+    let totalItem = est * vend;
+    let fotoSrc = p.foto || "https://via.placeholder.com/40?text=Sem+Foto";
+
+    let classeEst = (est <= min) ? 'class="baixo"' : '';
+
+    htmlBuffer += `
+      <tr ${classeEst}>
+        <td><img src="${fotoSrc}" class="img-thumb" loading="lazy" alt="Foto"></td>
+        <td><b>${p.nome}</b></td>
+        <td><small>${p.categoria}</small></td>
+        <td><b>${est}</b></td>
+        <td>${min}</td>
+        ${isAdmin ? `<td>${comp} Db</td>` : ''}
+        <td><b>${vend} Db</b></td>
+        ${isAdmin ? `<td style="color:${lucro>=0?'#10b981':'#ef4444'}">${lucro} Db</td>` : ''}
+        <td><b>${totalItem} Db</b></td>
+        ${podeAdicionarEstoque ? `
+          <td>
+            <button class="btn-success btn-acao" onclick="entradaEstoque('${p.id}', ${est})">+</button>
+          </td>
+        ` : ''}
+        ${podeVender ? `
+          <td>
+            <button class="btn-secondary btn-acao" onclick="abrirModalVenda('${p.id}', '${p.nome.replace(/'/g, "\\'")}', ${est}, ${vend})">🛒 Vender</button>
+          </td>
+        ` : ''}
+        ${isAdmin ? `
+          <td>
+            <div class="acoes-cell">
+              <button class="btn-secondary btn-acao" onclick="prepararEditarProduto('${p.id}')">✏️ Edit</button>
+              <button class="btn-danger btn-acao" onclick="del('${p.id}')">🗑️</button>
+            </div>
+          </td>
+        ` : ''}
+      </tr>
+    `;
+  });
+
+  lista.innerHTML = htmlBuffer || '<tr><td colspan="12" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>';
+  
+  // Atualizar Paginação
+  infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas} (${produtosFiltrados.length} itens)`;
+  btnPagAnt.disabled = (paginaAtual === 1);
+  btnPagProx.disabled = (paginaAtual === totalPaginas);
+}
+
+function mudarFiltroOuBusca() {
+  paginaAtual = 1;
+  renderizarTabelaEstoque();
+}
+
+function paginaAnterior() {
+  if(paginaAtual > 1) {
+    paginaAtual--;
+    renderizarTabelaEstoque();
+  }
+}
+
+function proximaPagina() {
+  paginaAtual++;
+  renderizarTabelaEstoque();
 }
 
 function salvarProduto() {
@@ -949,7 +1012,7 @@ function entradaEstoque(id, atual) {
 
 /* HISTÓRICO DE MOVIMENTAÇÕES */
 function renderizarHistorico(listaMovs) {
-  historico.innerHTML = "";
+  let htmlBuffer = "";
   let prodLookup = {};
   todosProdutos.forEach(p => { prodLookup[p.nome] = p; });
 
@@ -966,9 +1029,9 @@ function renderizarHistorico(listaMovs) {
       <button class="btn-secondary btn-acao" onclick="reimprimirReciboHistorico('${m.produto.replace(/'/g, "\\'")}', ${m.quantidade}, ${valor}, '${fPag}', '${(m.cliente || "Consumidor Final").replace(/'/g, "\\'")}', '${m.usuario}', '${dataFmt}')">PDF</button>
     ` : '';
 
-    historico.innerHTML += `
+    htmlBuffer += `
       <tr>
-        <td><img src="${fotoSrc}" class="img-thumb" alt="Foto"></td>
+        <td><img src="${fotoSrc}" class="img-thumb" loading="lazy" alt="Foto"></td>
         <td><b>${m.produto}</b></td>
         <td><span style="color:${m.tipo==='saida'?'#ef4444':'#10b981'}; font-weight:bold;">${m.tipo.toUpperCase()}</span></td>
         <td><b>${m.quantidade}</b></td>
@@ -980,6 +1043,7 @@ function renderizarHistorico(listaMovs) {
       </tr>
     `;
   });
+  historico.innerHTML = htmlBuffer;
 }
 
 function filtrarHistoricoIntervalo() {
@@ -1139,10 +1203,10 @@ function salvarDespesa() {
   });
 }
 
-/* GESTÃO DE FUNCIONÁRIOS (COM TODAS AS FUNÇÕES E PROTEÇÃO ADMIN) */
+/* GESTÃO DE FUNCIONÁRIOS */
 function carregarFuncionarios() {
   listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
-    listaFuncionarios.innerHTML = "";
+    let htmlBuffer = "";
     s.forEach(d => {
       let f = d.data();
       let id = d.id;
@@ -1153,7 +1217,7 @@ function carregarFuncionarios() {
         `<button class="btn-status-inativo btn-acao" onclick="alternarStatusFunc('${id}', '${statusAtual}', '${emailTxt}')">Inativo</button>` :
         `<button class="btn-status-ativo btn-acao" onclick="alternarStatusFunc('${id}', '${statusAtual}', '${emailTxt}')">Ativo</button>`;
 
-      listaFuncionarios.innerHTML += `
+      htmlBuffer += `
         <tr class="${statusAtual === 'desativado' ? 'desativado' : ''}">
           <td><b>${emailTxt}</b></td>
           <td><b>${(f.role || 'venda1').toUpperCase()}</b></td>
@@ -1167,6 +1231,7 @@ function carregarFuncionarios() {
         </tr>
       `;
     });
+    listaFuncionarios.innerHTML = htmlBuffer;
   });
 }
 
@@ -1228,8 +1293,6 @@ function apagarFuncionario(id, emailFunc) {
   }
 }
 
-/* OUTRAS UTILITIES */
-function filtrarProdutos() { renderizarTabelaEstoque(); }
 function del(id){ if(usuarioRole === "admin" && confirm("Excluir produto do estoque?")) db.collection("produtos").doc(id).delete(); }
 
 function exportarEstoque(){
