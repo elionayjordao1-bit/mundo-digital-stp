@@ -154,7 +154,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 .search-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
 .search-input { flex: 1; min-width: 200px; padding: 10px 14px; font-size: 14px; border: 1px solid #93c5fd; border-radius: 8px; }
 
-/* MINIATURAS E IMAGENS */
+/* MINIATURAS DE IMAGENS */
 .img-thumb {
   width: 42px;
   height: 42px;
@@ -254,7 +254,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
 
     <div class="kpi-grid">
-      <!-- NOVO CARD: VALOR TOTAL EM ESTOQUE -->
+      <!-- CARD: VALOR TOTAL EM ESTOQUE -->
       <div class="kpi-card orange">
         <span class="kpi-title">Valor Total em Estoque</span>
         <span id="valorTotalEstoqueKpi" class="kpi-value">0 Db</span>
@@ -286,7 +286,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
-    <!-- DISCRIMINAÇÃO POR FORMA DE PAGAMENTO -->
+    <!-- FORMAS DE PAGAMENTO -->
     <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center; font-size: 14px;">
       <div><b>Dinheiro:</b> <span id="pagDinheiro">0 Db</span></div>
       <div><b>Transferência:</b> <span id="pagTransf">0 Db</span></div>
@@ -316,7 +316,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <!-- REGISTO DE DESPESAS OPERACIONAIS (ADMIN) -->
+  <!-- DESPESAS OPERACIONAIS (ADMIN) -->
   <div class="card hidden" id="cardDespesas">
     <h3>💸 Registo de Despesas Operacionais</h3>
     <div class="form-grid">
@@ -333,7 +333,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <!-- FORMULÁRIO CADASTRO / EDIÇÃO DE PRODUTO -->
+  <!-- CADASTRO / EDIÇÃO DE PRODUTO -->
   <div class="card hidden" id="cardNovoProduto">
     <h3 id="tituloFormProduto">📦 Novo Produto</h3>
     <div class="form-grid">
@@ -377,7 +377,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
       <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações</h3>
       
-      <!-- FILTRO DE PERÍODO / INTERVALO DE DATAS (EX: DIA 1 AO 15) -->
+      <!-- FILTRO DE PERÍODO -->
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
         <label style="font-size: 12px; font-weight: 600;">De:</label>
         <input type="date" id="histDataInicio" style="padding: 5px; font-size: 12px; width: auto;">
@@ -441,7 +441,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
-<!-- ÁREA DE IMPRESSÃO DO RECIBO -->
+<!-- IMPRESSÃO DO RECIBO -->
 <div id="areaImpressaoRecibo">
   <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
     <h2 style="margin: 0; font-size: 16px;">Mundo Digital STP</h2>
@@ -484,8 +484,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
 </div>
 
 <script>
+// ATENÇÃO: SUBSTITUI 'AQUI_A_TUA_API_KEY_REAL' PELA TUA CHAVE OBTIDA NO FIREBASE CONSOLE!
 const firebaseConfig = {
-  apiKey: "AlzaSyBCw8qEFmYrBbRnDM4OFCgx-44FUtSbqts",
+  apiKey: "AQUI_A_TUA_API_KEY_REAL", 
   authDomain: "mundo-digital-stp.firebaseapp.com",
   projectId: "mundo-digital-stp",
   storageBucket: "mundo-digital-stp.appspot.com",
@@ -643,7 +644,7 @@ function carregarDespesas() {
 function processarDashboard() {
   if(usuarioRole !== "admin") return;
 
-  // 1. CALCULAR VALOR TOTAL DO ESTOQUE
+  // 1. VALOR TOTAL EM ESTOQUE
   let totalValorEstoque = 0;
   let totalQtdEstoque = 0;
   todosProdutos.forEach(p => {
@@ -655,7 +656,7 @@ function processarDashboard() {
   valorTotalEstoqueKpi.innerText = totalValorEstoque.toLocaleString('pt-PT') + " Db";
   qtdTotalEstoqueKpi.innerText = `${totalQtdEstoque} unidades (${todosProdutos.length} produtos)`;
 
-  // 2. DEFINIR DATAS PARA FILTRO FINANCEIRO
+  // 2. FILTROS DE DATA
   let agora = new Date();
   let hojeStr = agora.toISOString().split('T')[0];
   let anoAtual = agora.getFullYear();
@@ -671,7 +672,6 @@ function processarDashboard() {
   let mapaProdutos = {};
   let mapaEquipe = {};
 
-  // Mapeia produtos para calcular lucro com precisão
   let prodLookup = {};
   todosProdutos.forEach(p => { prodLookup[p.nome] = p; });
 
@@ -683,13 +683,11 @@ function processarDashboard() {
     let dStr = d.toISOString().split('T')[0];
 
     if(m.tipo === "saida") {
-      // Vendas Hoje
       if(dStr === hojeStr) {
         totalVendasHoje += val;
         qtdVendasHojeVal++;
       }
 
-      // Vendas do Período Filtrado
       if(d >= dataInicio && d <= dataFim) {
         totalVendasPeriodo += val;
 
@@ -702,12 +700,10 @@ function processarDashboard() {
         else if(fPag === "Transferencia") pagTrans += val;
         else if(fPag === "Cartao") pagCart += val;
 
-        // Top Produtos
         if(!mapaProdutos[m.produto]) mapaProdutos[m.produto] = { qtd: 0, faturamento: 0 };
         mapaProdutos[m.produto].qtd += qtd;
         mapaProdutos[m.produto].faturamento += val;
 
-        // Desempenho Equipe
         let usr = m.usuario || "Desconhecido";
         if(!mapaEquipe[usr]) mapaEquipe[usr] = { vendas: 0, total: 0 };
         mapaEquipe[usr].vendas++;
@@ -716,7 +712,6 @@ function processarDashboard() {
     }
   });
 
-  // Calculo Despesas no Período
   let totalDespesasPeriodo = 0;
   todasDespesas.forEach(dp => {
     if(!dp.data) return;
@@ -742,7 +737,6 @@ function processarDashboard() {
   pagTransf.innerText = pagTrans.toLocaleString('pt-PT') + " Db";
   pagCartao.innerText = pagCart.toLocaleString('pt-PT') + " Db";
 
-  // Tabelas do Dashboard
   let arrayTop = Object.keys(mapaProdutos).map(k => ({ nome: k, qtd: mapaProdutos[k].qtd, faturamento: mapaProdutos[k].faturamento })).sort((a,b) => b.qtd - a.qtd).slice(0, 5);
   let htmlTop = "";
   arrayTop.forEach(item => { htmlTop += `<tr><td style="text-align:left;"><b>${item.nome}</b></td><td>${item.qtd}</td><td><b>${item.faturamento} Db</b></td></tr>`; });
@@ -777,11 +771,11 @@ function limparFiltroDashboard() {
   processarDashboard();
 }
 
-/* PROCESSAR FOTO DO PRODUTO (BASE64) */
+/* PROCESSAR FOTO (BASE64) */
 function processarFoto(event) {
   let file = event.target.files[0];
   if(file) {
-    if(file.size > 1000000) { // Limit de ~1MB
+    if(file.size > 1000000) {
       alert("A foto escolhida é muito grande! Escolha uma imagem com menos de 1MB.");
       event.target.value = "";
       return;
