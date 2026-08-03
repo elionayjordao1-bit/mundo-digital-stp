@@ -272,7 +272,13 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <div class="kpi-card blue">
         <span class="kpi-title" id="tituloVendasPeriodo">Vendas do Mês</span>
         <span id="vendasMes" class="kpi-value">0 Db</span>
-        <span id="lucroMes" class="kpi-sub">Lucro Vendas: 0 Db</span>
+        <span id="lucroMes" class="kpi-sub">Lucro Produtos: 0 Db</span>
+      </div>
+
+      <div class="kpi-card purple">
+        <span class="kpi-title">Lucro Câmbio / Remessas</span>
+        <span id="lucroCambioKpi" class="kpi-value">0 Db</span>
+        <span style="font-size: 11px; color:#8b5cf6;">Comissões de Câmbio</span>
       </div>
 
       <div class="kpi-card red">
@@ -284,7 +290,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <div class="kpi-card green">
         <span class="kpi-title">Lucro Líquido Real</span>
         <span id="lucroLiquidoReal" class="kpi-value">0 Db</span>
-        <span style="font-size: 11px; color:#10b981;">(Lucro Vendas - Despesas)</span>
+        <span style="font-size: 11px; color:#10b981;">(Produtos + Câmbio - Despesas)</span>
       </div>
     </div>
 
@@ -317,7 +323,28 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <!-- MÓDULO NOVO: ENTRADA DE COMPRAS / FORNECEDORES -->
+  <div class="card hidden" id="cardCambio">
+    <h3 style="color:#8b5cf6;">💱 Remessas & Câmbio de Moeda (PT ⇄ STP)</h3>
+    <div class="form-grid">
+      <select id="cambioDirecao" onchange="atualizarRotulosCambio()" style="grid-column: span 2;">
+        <option value="PT_STP">Entrada: Portugal ➔ São Tomé (Recebe EUR / Entrega STN)</option>
+        <option value="STP_PT">Saída: São Tomé ➔ Portugal (Recebe STN / Entrega EUR)</option>
+      </select>
+      
+      <input id="cambioQtdEur" type="number" placeholder="Quantidade em Euros (€)" oninput="calcularCalculoCambioSimulado()">
+      <input id="cambioTaxa" type="number" step="0.1" value="26.0" placeholder="Taxa/Cotação (Ex: 26.0 ou 27.5)" oninput="calcularCalculoCambioSimulado()">
+      <input id="cambioCliente" placeholder="Nome do Cliente / Remetente">
+      
+      <div style="grid-column: span 2; background: #f5f3ff; padding: 12px; border-radius: 8px; border: 1px solid #ddd6fe; text-align: center;">
+        <span style="font-size: 12px; color: #6b21a8; font-weight: 600;">RESUMO DA OPERAÇÃO:</span>
+        <h3 id="cambioResumoTxt" style="margin: 4px 0; color: #7c3aed;">0 € = 0 Db</h3>
+        <small id="cambioLucroEstimadoTxt" style="color: #059669; font-weight: 600;">Lucro estimado: 0 Db</small>
+      </div>
+
+      <button onclick="registrarOperacaoCambio()" class="btn-success" style="grid-column: span 2; background: #8b5cf6;">✅ Registrar Transferência & Gravar Caixa</button>
+    </div>
+  </div>
+
   <div class="card hidden" id="cardCompras">
     <h3 style="color:#2563eb;">🛒 Registar Compra de Produtos (Fornecedor / Reabastecimento)</h3>
     <div class="form-grid">
@@ -335,7 +362,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <!-- DESPESAS OPERACIONAIS (ADMIN) -->
   <div class="card hidden" id="cardDespesas">
     <h3>💸 Registo de Despesas Operacionais (Custos Fixos/Variáveis)</h3>
     <div class="form-grid">
@@ -396,7 +422,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
   <div class="card hidden" id="cardHistorico">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-      <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações (Vendas, Entradas & Compras)</h3>
+      <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações (Vendas, Câmbios & Compras)</h3>
       
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
         <label style="font-size: 12px; font-weight: 600;">De:</label>
@@ -412,7 +438,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <table>
       <thead>
         <tr>
-          <th>Foto</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Pag/Origem</th>
+          <th>Foto</th><th>Produto/Serviço</th><th>Tipo</th><th>Qtd</th><th>Pag/Detalhes</th>
           <th>Valor Total</th><th>Usuário</th><th>Data</th><th>Ação</th>
         </tr>
       </thead>
@@ -546,6 +572,7 @@ function resetarInterface() {
   cardRelatorio.classList.add("hidden");
   cardDespesas.classList.add("hidden");
   cardCompras.classList.add("hidden");
+  cardCambio.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
   containerFuncionarios.classList.add("hidden");
@@ -593,6 +620,7 @@ auth.onAuthStateChanged(u => {
         cardRelatorio.classList.remove("hidden");
         cardDespesas.classList.remove("hidden");
         cardCompras.classList.remove("hidden");
+        cardCambio.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         containerFuncionarios.classList.remove("hidden");
@@ -603,6 +631,9 @@ auth.onAuthStateChanged(u => {
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
+      } else {
+        // Venda 1 / Venda 2 também pode fazer câmbio
+        cardCambio.classList.remove("hidden");
       }
 
       cardEstoque.classList.remove("hidden");
@@ -668,14 +699,12 @@ function carregar(){
     processarDashboard();
   });
 
-  if(isAdmin || isEstoque) {
-    listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc").onSnapshot(s => {
-      todasMovimentacoes = [];
-      s.forEach(d => { let m = d.data(); m.id = d.id; todasMovimentacoes.push(m); });
-      renderizarHistorico(todasMovimentacoes);
-      processarDashboard();
-    });
-  }
+  listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc").onSnapshot(s => {
+    todasMovimentacoes = [];
+    s.forEach(d => { let m = d.data(); m.id = d.id; todasMovimentacoes.push(m); });
+    renderizarHistorico(todasMovimentacoes);
+    processarDashboard();
+  });
 }
 
 function carregarDespesas() {
@@ -752,6 +781,7 @@ function processarDashboard() {
 
   let totalVendasHoje = 0, qtdVendasHojeVal = 0;
   let totalVendasPeriodo = 0, totalLucroVendasPeriodo = 0;
+  let totalLucroCambioPeriodo = 0;
   let pagDin = 0, pagTrans = 0, pagCart = 0;
 
   let mapaProdutos = {};
@@ -794,6 +824,8 @@ function processarDashboard() {
         mapaEquipe[usr].vendas++;
         mapaEquipe[usr].total += val;
       }
+    } else if(m.tipo === "cambio" && d >= dataInicio && d <= dataFim) {
+      totalLucroCambioPeriodo += Number(m.lucroCambio) || 0;
     }
   });
 
@@ -806,15 +838,17 @@ function processarDashboard() {
     }
   });
 
-  let lucroLiquidoFinal = totalLucroVendasPeriodo - totalDespesasPeriodo;
+  let lucroLiquidoFinal = (totalLucroVendasPeriodo + totalLucroCambioPeriodo) - totalDespesasPeriodo;
 
   vendasHoje.innerText = totalVendasHoje.toLocaleString('pt-PT') + " Db";
   qtdVendasHoje.innerText = `${qtdVendasHojeVal} transações`;
 
   vendasMes.innerText = totalVendasPeriodo.toLocaleString('pt-PT') + " Db";
-  lucroMes.innerText = `Lucro Vendas: ${totalLucroVendasPeriodo.toLocaleString('pt-PT')} Db`;
+  lucroMes.innerText = `Lucro Produtos: ${totalLucroVendasPeriodo.toLocaleString('pt-PT')} Db`;
 
+  lucroCambioKpi.innerText = totalLucroCambioPeriodo.toLocaleString('pt-PT') + " Db";
   despesasMes.innerText = totalDespesasPeriodo.toLocaleString('pt-PT') + " Db";
+  
   lucroLiquidoReal.innerText = lucroLiquidoFinal.toLocaleString('pt-PT') + " Db";
   lucroLiquidoReal.style.color = lucroLiquidoFinal >= 0 ? "#10b981" : "#ef4444";
 
@@ -1028,7 +1062,7 @@ function entradaEstoque(id, atual) {
   }
 }
 
-/* NOVO MÓDULO: REGISTRO DE COMPRAS DE PRODUTOS */
+/* MÓDULO: REGISTRO DE COMPRAS DE PRODUTOS */
 function registrarCompraProduto() {
   let pId = compraSelectProduto.value;
   let q = Number(compraQtd.value) || 0;
@@ -1046,13 +1080,11 @@ function registrarCompraProduto() {
   let novoEstoque = Number(prod.estoque || 0) + q;
   let novoCustoUnitario = Math.round(custoTotal / q);
 
-  // Atualizar Estoque e Custo Unitário no Produto
   db.collection("produtos").doc(pId).update({
     estoque: novoEstoque,
     compra: novoCustoUnitario
   });
 
-  // Registrar na Tabela de Movimentações Financeiras como "compra"
   db.collection("movimentacoes").add({
     produto: prod.nome,
     tipo: "compra",
@@ -1070,6 +1102,69 @@ function registrarCompraProduto() {
   });
 }
 
+/* LÓGICA DO MÓDULO DE CÂMBIO & REMESSAS */
+function atualizarRotulosCambio() {
+  let dir = cambioDirecao.value;
+  if(dir === "PT_STP") {
+    cambioTaxa.value = "26.0";
+  } else {
+    cambioTaxa.value = "27.5";
+  }
+  calcularCalculoCambioSimulado();
+}
+
+function calcularCalculoCambioSimulado() {
+  let dir = cambioDirecao.value;
+  let eur = Number(cambioQtdEur.value) || 0;
+  let taxa = Number(cambioTaxa.value) || 26.0;
+
+  if(dir === "PT_STP") {
+    let dbEntregar = eur * taxa;
+    cambioResumoTxt.innerText = `${eur} € ➔ ${dbEntregar.toLocaleString('pt-PT')} Db`;
+    cambioLucroEstimadoTxt.innerText = "Recebe em € / Entregas em Dobras em STP";
+  } else {
+    let dbCobrar = eur * taxa;
+    let custoBaseDb = eur * 26.0;
+    let lucro = dbCobrar - custoBaseDb;
+    cambioResumoTxt.innerText = `Envia ${eur} € ➔ Cliente Paga: ${dbCobrar.toLocaleString('pt-PT')} Db`;
+    cambioLucroEstimadoTxt.innerText = `Lucro Líquido de Câmbio: ${lucro.toLocaleString('pt-PT')} Db`;
+  }
+}
+
+function registrarOperacaoCambio() {
+  let dir = cambioDirecao.value;
+  let eur = Number(cambioQtdEur.value) || 0;
+  let taxa = Number(cambioTaxa.value) || 26.0;
+  let cli = cambioCliente.value.trim() || "Cliente Remessa";
+
+  if(eur <= 0) return alert("Informe a quantidade de Euros!");
+
+  let totalDb = eur * taxa;
+  let lucroCalculado = 0;
+
+  if(dir === "STP_PT") {
+    let custoBase = eur * 26.0;
+    lucroCalculado = totalDb - custoBase;
+  }
+
+  db.collection("movimentacoes").add({
+    produto: `Câmbio (${dir === 'PT_STP' ? 'PT ➔ STP' : 'STP ➔ PT'})`,
+    tipo: "cambio",
+    quantidade: eur, // Guarda a qtd de Euros
+    valor: totalDb,  // Total em Dobras
+    lucroCambio: lucroCalculado,
+    formaPagamento: `Remessa (${eur}€ @ ${taxa}Db)`,
+    cliente: cli,
+    usuario: auth.currentUser.email,
+    data: new Date()
+  }).then(() => {
+    cambioQtdEur.value = "";
+    cambioCliente.value = "";
+    calcularCalculoCambioSimulado();
+    alert("Operação de câmbio registada com sucesso!");
+  });
+}
+
 function renderizarHistorico(listaMovs) {
   let htmlBuffer = "";
   let prodLookup = {};
@@ -1082,11 +1177,12 @@ function renderizarHistorico(listaMovs) {
     let valor = Number(m.valor) || 0;
     let fPag = m.formaPagamento || "Dinheiro";
     let ft = prodLookup[m.produto] ? prodLookup[m.produto].foto : "";
-    let fotoSrc = ft || "https://via.placeholder.com/40?text=Sem+Foto";
+    let fotoSrc = ft || "https://via.placeholder.com/40?text=Câmbio";
 
     let tipoCor = "#10b981";
     if(m.tipo === "saida") tipoCor = "#ef4444";
     if(m.tipo === "compra") tipoCor = "#2563eb";
+    if(m.tipo === "cambio") tipoCor = "#8b5cf6";
 
     let btnRecibo = (m.tipo === 'saida') ? `
       <button class="btn-secondary btn-acao" onclick="reimprimirReciboHistorico('${m.produto.replace(/'/g, "\\'")}', ${m.quantidade}, ${valor}, '${fPag}', '${(m.cliente || "Consumidor Final").replace(/'/g, "\\'")}', '${m.usuario}', '${dataFmt}')">PDF</button>
@@ -1097,7 +1193,7 @@ function renderizarHistorico(listaMovs) {
         <td><img src="${fotoSrc}" class="img-thumb" loading="lazy" alt="Foto"></td>
         <td><b>${m.produto}</b></td>
         <td><span style="color:${tipoCor}; font-weight:bold;">${m.tipo.toUpperCase()}</span></td>
-        <td><b>${m.quantidade}</b></td>
+        <td><b>${m.quantidade} ${m.tipo === 'cambio' ? '€' : ''}</b></td>
         <td><small>${fPag}</small></td>
         <td><b>${valor} Db</b></td>
         <td><small>${m.usuario}</small></td>
