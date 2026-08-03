@@ -223,7 +223,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <input id="funcEmail" placeholder="E-mail do Funcionário">
       <input id="funcSenha" type="password" placeholder="Senha Inicial">
       <select id="funcRole">
-        <option value="venda1">Vendedor (Apenas POS)</option>
+        <option value="venda1">Venda 1 (Apenas POS)</option>
+        <option value="venda2">Venda 2 (Apenas POS)</option>
+        <option value="estoque">Estoque (Gestão de Produtos)</option>
         <option value="admin">Administrador (Acesso Total)</option>
       </select>
       <button id="btnSalvarFunc" onclick="salvarFuncionario()" class="btn-success">Criar Funcionário</button>
@@ -242,7 +244,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
       <h3 style="margin: 0; border: none;">📊 Dashboard Executivo & Financeiro</h3>
       
-      <!-- FILTRO DE DATAS DO DASHBOARD -->
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0;">
         <label style="font-size: 12px; font-weight: 600;">Filtrar de:</label>
         <input type="date" id="dashDataInicio" style="padding: 5px 8px; font-size: 12px; width: auto;">
@@ -254,7 +255,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
 
     <div class="kpi-grid">
-      <!-- CARD: VALOR TOTAL EM ESTOQUE -->
       <div class="kpi-card orange">
         <span class="kpi-title">Valor Total em Estoque</span>
         <span id="valorTotalEstoqueKpi" class="kpi-value">0 Db</span>
@@ -286,7 +286,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
-    <!-- FORMAS DE PAGAMENTO -->
     <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center; font-size: 14px;">
       <div><b>Dinheiro:</b> <span id="pagDinheiro">0 Db</span></div>
       <div><b>Transferência:</b> <span id="pagTransf">0 Db</span></div>
@@ -333,7 +332,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <!-- CADASTRO / EDIÇÃO DE PRODUTO -->
+  <!-- CADASTRO / EDIÇÃO DE PRODUTO (ADMIN E ESTOQUE) -->
   <div class="card hidden" id="cardNovoProduto">
     <h3 id="tituloFormProduto">📦 Novo Produto</h3>
     <div class="form-grid">
@@ -344,7 +343,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <input id="compra" type="number" placeholder="Preço Compra">
       <input id="venda" type="number" placeholder="Preço Venda">
       
-      <!-- UPLOAD DE IMAGEM -->
       <div class="img-preview-box" style="grid-column: span 2;">
         <input type="file" id="fotoInput" accept="image/*" onchange="processarFoto(event)" style="font-size: 12px;">
         <input type="hidden" id="fotoBase64">
@@ -377,7 +375,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
       <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações</h3>
       
-      <!-- FILTRO DE PERÍODO -->
       <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
         <label style="font-size: 12px; font-weight: 600;">De:</label>
         <input type="date" id="histDataInicio" style="padding: 5px; font-size: 12px; width: auto;">
@@ -559,9 +556,18 @@ auth.onAuthStateChanged(u => {
 
     db.collection("usuarios").doc(u.uid).get().then(doc => {
       let dados = doc.data() || {};
+      
+      // Se a conta estiver desativada, impede o acesso
+      if(dados.status === "desativado") {
+        alert("Esta conta está desativada. Entre em contacto com o Administrador.");
+        logout();
+        return;
+      }
+
       usuarioRole = dados.role || "venda1";
       userRoleSpan.innerText = usuarioRole;
 
+      // CONFIGURAÇÃO DE PERMISSÕES POR PERFIL:
       if(usuarioRole === "admin") {
         cardRelatorio.classList.remove("hidden");
         cardDespesas.classList.remove("hidden");
@@ -570,7 +576,13 @@ auth.onAuthStateChanged(u => {
         containerFuncionarios.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
         btnExportarHistorico.classList.remove("hidden");
+      } else if(usuarioRole === "estoque") {
+        // Quem é do stock pode adicionar/editar produtos
+        cardNovoProduto.classList.remove("hidden");
+        cardHistorico.classList.remove("hidden");
+        btnExportarEstoque.classList.remove("hidden");
       }
+
       cardEstoque.classList.remove("hidden");
       carregar();
     });
@@ -588,14 +600,19 @@ function carregar(){
   if(listenerDespesas) listenerDespesas();
 
   let isAdmin = (usuarioRole === "admin");
+  let isEstoque = (usuarioRole === "estoque");
+  let podeAdicionarEstoque = (isAdmin || isEstoque);
+  let podeVender = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
+
   cabecalhoTabela.innerHTML = `
     <tr>
       <th>Foto</th>
       <th>Produto</th><th>Categoria</th><th>Qtd</th><th>Min</th>
       ${isAdmin ? '<th>Compra</th>' : ''}<th>Venda</th>
       ${isAdmin ? '<th>Lucro</th>' : ''}<th>Total</th>
-      <th>+</th><th>Vender</th>
-      ${isAdmin ? '<th>Ações</th>' : '<th>|||</th>'}
+      ${podeAdicionarEstoque ? '<th>+</th>' : ''}
+      ${podeVender ? '<th>Vender</th>' : ''}
+      ${isAdmin ? '<th>Ações</th>' : ''}
     </tr>
   `;
 
@@ -622,7 +639,7 @@ function carregar(){
     processarDashboard();
   });
 
-  if(isAdmin) {
+  if(isAdmin || isEstoque) {
     listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc").onSnapshot(s => {
       todasMovimentacoes = [];
       s.forEach(d => { let m = d.data(); m.id = d.id; todasMovimentacoes.push(m); });
@@ -644,7 +661,6 @@ function carregarDespesas() {
 function processarDashboard() {
   if(usuarioRole !== "admin") return;
 
-  // 1. VALOR TOTAL EM ESTOQUE
   let totalValorEstoque = 0;
   let totalQtdEstoque = 0;
   todosProdutos.forEach(p => {
@@ -656,7 +672,6 @@ function processarDashboard() {
   valorTotalEstoqueKpi.innerText = totalValorEstoque.toLocaleString('pt-PT') + " Db";
   qtdTotalEstoqueKpi.innerText = `${totalQtdEstoque} unidades (${todosProdutos.length} produtos)`;
 
-  // 2. FILTROS DE DATA
   let agora = new Date();
   let hojeStr = agora.toISOString().split('T')[0];
   let anoAtual = agora.getFullYear();
@@ -794,7 +809,11 @@ function processarFoto(event) {
 function renderizarTabelaEstoque() {
   let busca = inputBusca.value.toLowerCase();
   let catFiltro = selectCategoriaFiltro.value;
+  
   let isAdmin = (usuarioRole === "admin");
+  let isEstoque = (usuarioRole === "estoque");
+  let podeAdicionarEstoque = (isAdmin || isEstoque);
+  let podeVender = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
 
   lista.innerHTML = "";
 
@@ -824,12 +843,16 @@ function renderizarTabelaEstoque() {
           <td><b>${vend} Db</b></td>
           ${isAdmin ? `<td style="color:${lucro>=0?'#10b981':'#ef4444'}">${lucro} Db</td>` : ''}
           <td><b>${totalItem} Db</b></td>
-          <td>
-            <button class="btn-success btn-acao" onclick="entradaEstoque('${p.id}', ${est})">+</button>
-          </td>
-          <td>
-            <button class="btn-secondary btn-acao" onclick="abrirModalVenda('${p.id}', '${p.nome.replace(/'/g, "\\'")}', ${est}, ${vend})">🛒 Vender</button>
-          </td>
+          ${podeAdicionarEstoque ? `
+            <td>
+              <button class="btn-success btn-acao" onclick="entradaEstoque('${p.id}', ${est})">+</button>
+            </td>
+          ` : ''}
+          ${podeVender ? `
+            <td>
+              <button class="btn-secondary btn-acao" onclick="abrirModalVenda('${p.id}', '${p.nome.replace(/'/g, "\\'")}', ${est}, ${vend})">🛒 Vender</button>
+            </td>
+          ` : ''}
           ${isAdmin ? `
             <td>
               <div class="acoes-cell">
@@ -837,7 +860,7 @@ function renderizarTabelaEstoque() {
                 <button class="btn-danger btn-acao" onclick="del('${p.id}')">🗑️</button>
               </div>
             </td>
-          ` : '<td>-</td>'}
+          ` : ''}
         </tr>
       `;
     }
@@ -924,7 +947,7 @@ function entradaEstoque(id, atual) {
   }
 }
 
-/* HISTÓRICO E FILTROS DE INTERVALO DE DATAS */
+/* HISTÓRICO DE MOVIMENTAÇÕES */
 function renderizarHistorico(listaMovs) {
   historico.innerHTML = "";
   let prodLookup = {};
@@ -1116,7 +1139,7 @@ function salvarDespesa() {
   });
 }
 
-/* GESTÃO DE FUNCIONÁRIOS */
+/* GESTÃO DE FUNCIONÁRIOS (COM TODAS AS FUNÇÕES E PROTEÇÃO ADMIN) */
 function carregarFuncionarios() {
   listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
     listaFuncionarios.innerHTML = "";
@@ -1124,19 +1147,21 @@ function carregarFuncionarios() {
       let f = d.data();
       let id = d.id;
       let emailTxt = f.email || "Sem E-mail";
-      let statusBtn = (f.status === "desativado") ? 
-        `<button class="btn-status-inativo btn-acao" onclick="alternarStatusFunc('${id}', '${f.status}')">Inativo</button>` :
-        `<button class="btn-status-ativo btn-acao" onclick="alternarStatusFunc('${id}', '${f.status}')">Ativo</button>`;
+      let statusAtual = f.status || "ativo";
+      
+      let statusBtn = (statusAtual === "desativado") ? 
+        `<button class="btn-status-inativo btn-acao" onclick="alternarStatusFunc('${id}', '${statusAtual}', '${emailTxt}')">Inativo</button>` :
+        `<button class="btn-status-ativo btn-acao" onclick="alternarStatusFunc('${id}', '${statusAtual}', '${emailTxt}')">Ativo</button>`;
 
       listaFuncionarios.innerHTML += `
-        <tr class="${f.status === 'desativado' ? 'desativado' : ''}">
+        <tr class="${statusAtual === 'desativado' ? 'desativado' : ''}">
           <td><b>${emailTxt}</b></td>
-          <td>${(f.role || 'venda1').toUpperCase()}</td>
+          <td><b>${(f.role || 'venda1').toUpperCase()}</b></td>
           <td>${statusBtn}</td>
           <td>
             <div class="acoes-cell">
               <button class="btn-secondary btn-acao" onclick="prepararEditarFunc('${id}', '${emailTxt}', '${f.role || 'venda1'}')">✏️ Edit</button>
-              <button class="btn-danger btn-acao" onclick="apagarFuncionario('${id}')">🗑️</button>
+              <button class="btn-danger btn-acao" onclick="apagarFuncionario('${id}', '${emailTxt}')">🗑️</button>
             </div>
           </td>
         </tr>
@@ -1187,11 +1212,17 @@ function cancelarEdicaoFunc() {
   btnCancelarFunc.classList.add("hidden");
 }
 
-function alternarStatusFunc(id, status) {
+function alternarStatusFunc(id, status, emailFunc) {
+  if(emailFunc === auth.currentUser.email) {
+    return alert("Ação bloqueada: Não pode desativar a sua própria conta de Administrador!");
+  }
   db.collection("usuarios").doc(id).update({ status: status === "desativado" ? "ativo" : "desativado" });
 }
 
-function apagarFuncionario(id) {
+function apagarFuncionario(id, emailFunc) {
+  if(emailFunc === auth.currentUser.email) {
+    return alert("Ação bloqueada: Não pode excluir a sua própria conta!");
+  }
   if(confirm("Deseja realmente excluir este funcionário?")) {
     db.collection("usuarios").doc(id).delete();
   }
