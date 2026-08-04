@@ -342,7 +342,8 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <input id="encProduto" placeholder="Produto Encomendado (ex: Redmi Note 12)">
       <input id="encValorTotal" type="number" placeholder="Valor Venda Total (Db)" oninput="calcularSinalAutomatico()">
       <input id="encSinalPago" type="number" placeholder="Sinal Pago Hoje (Db)">
-      <input id="encCustoCompra" type="number" placeholder="Custo de Compra em PT (Db)">
+      <!-- Oculto para vendedores, visível para admin -->
+      <input id="encCustoCompra" type="number" placeholder="Custo de Compra em PT (Db)" class="hidden">
       <button onclick="registrarNovaEncomenda()" class="btn-success" style="grid-column: span 2; background: #0d9488;">📦 Registrar Encomenda & Receber Sinal</button>
     </div>
 
@@ -434,6 +435,17 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
       <button id="btnSalvarProduto" onclick="salvarProduto()" class="btn-success">Salvar Produto</button>
       <button id="btnCancelarProduto" onclick="cancelarEdicaoProduto()" class="btn-secondary hidden">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- CARD RESTAURADO: PAINEL DE PRODUTOS EM FALTA / ALERTA DE ESTOQUE -->
+  <div class="card" id="cardAlertaEstoque" style="border-left: 5px solid #ef4444;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <h3 style="color:#ef4444; margin:0; border:none;">⚠️ Alerta: Produtos em Falta ou Estoque Crítico</h3>
+      <button onclick="toggleApenasBaixoEstoque()" class="btn-secondary" id="btnFiltroEstoqueBaixo" style="background:#ef4444;">🚨 Ver Apenas Produtos em Falta</button>
+    </div>
+    <div id="containerProdutosEmFalta" style="margin-top: 15px; font-size: 13px;">
+      <p style="color:#64748b;">A carregar verificação de estoque...</p>
     </div>
   </div>
 
@@ -597,6 +609,7 @@ let todasEncomendas = [];
 let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
 let dataFiltroFimDash = null;
+let filtrarApenasBaixoEstoque = false;
 
 let paginaAtual = 1;
 const itensPorPagina = 10;
@@ -658,6 +671,7 @@ auth.onAuthStateChanged(u => {
       usuarioRole = dados.role || "venda1";
       userRoleSpan.innerText = usuarioRole;
 
+      // Garantir que a coluna/input de custo de compra só aparece para Admin
       if(usuarioRole === "admin") {
         cardRelatorio.classList.remove("hidden");
         cardDespesas.classList.remove("hidden");
@@ -669,15 +683,18 @@ auth.onAuthStateChanged(u => {
         containerFuncionarios.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
         btnExportarHistorico.classList.remove("hidden");
+        encCustoCompra.classList.remove("hidden"); // Custo compra visível apenas para admin
       } else if(usuarioRole === "estoque") {
         cardCompras.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
+        encCustoCompra.classList.add("hidden");
       } else {
-        // Venda 1 / Venda 2 podem gerir Câmbio e Encomendas
+        // Vendedores não vêem preço de compra nem custos
         cardCambio.classList.remove("hidden");
         cardEncomendas.classList.remove("hidden");
+        encCustoCompra.classList.add("hidden");
       }
 
       cardEstoque.classList.remove("hidden");
@@ -742,6 +759,7 @@ function carregar(){
     categoriasSet.forEach(c => { catSelect.innerHTML += `<option value="${c}">${c}</option>`; });
     catSelect.value = valAtual;
 
+    verificarAlertaEstoqueBaixo();
     renderizarTabelaEstoque();
     processarDashboard();
   });
@@ -752,6 +770,42 @@ function carregar(){
     renderizarHistorico(todasMovimentacoes);
     processarDashboard();
   });
+}
+
+// RESTAURAÇÃO DE FUNÇÃO DE PRODUTOS EM FALTA / ALERTA DE ESTOQUE
+function verificarAlertaEstoqueBaixo() {
+  let emFalta = todosProdutos.filter(p => (Number(p.estoque) || 0) <= 0);
+  let estoqueBaixo = todosProdutos.filter(p => {
+    let q = Number(p.estoque) || 0;
+    let m = Number(p.minimo) || 0;
+    return q > 0 && q <= m;
+  });
+
+  let htmlBox = "";
+
+  if(emFalta.length === 0 && estoqueBaixo.length === 0) {
+    htmlBox = `<p style="color:#10b981; font-weight:bold; margin:0;">✅ Todos os produtos têm estoque adequado.</p>`;
+  } else {
+    if(emFalta.length > 0) {
+      htmlBox += `<div style="margin-bottom:8px;"><b style="color:#ef4444;">❌ Produtos Esgotados (${emFalta.length}):</b> `;
+      htmlBox += emFalta.map(p => `<span style="background:#fef2f2; border:1px solid #fca5a5; padding:2px 6px; border-radius:4px; margin-right:4px;"><b>${p.nome}</b> (0 un)</span>`).join(" ");
+      htmlBox += `</div>`;
+    }
+    if(estoqueBaixo.length > 0) {
+      htmlBox += `<div><b style="color:#f59e0b;">⚠️ Produtos Acabando / Estoque Mínimo (${estoqueBaixo.length}):</b> `;
+      htmlBox += estoqueBaixo.map(p => `<span style="background:#fffbe6; border:1px solid #fde68a; padding:2px 6px; border-radius:4px; margin-right:4px;"><b>${p.nome}</b> (${p.estoque} un / min: ${p.minimo})</span>`).join(" ");
+      htmlBox += `</div>`;
+    }
+  }
+
+  containerProdutosEmFalta.innerHTML = htmlBox;
+}
+
+function toggleApenasBaixoEstoque() {
+  filtrarApenasBaixoEstoque = !filtrarApenasBaixoEstoque;
+  btnFiltroEstoqueBaixo.innerText = filtrarApenasBaixoEstoque ? "📋 Ver Todos os Produtos" : "🚨 Ver Apenas Produtos em Falta";
+  paginaAtual = 1;
+  renderizarTabelaEstoque();
 }
 
 function carregarDespesas() {
@@ -783,7 +837,6 @@ function carregarEncomendas() {
         `<button class="btn-success btn-acao" onclick="concluirEncomendaModal('${enc.id}', '${enc.cliente.replace(/'/g, "\\'")}', '${enc.produto.replace(/'/g, "\\'")}', ${faltaPagar}, ${enc.valorTotal}, ${enc.custoCompra||0})">✅ Concluir & Entregar</button>` :
         `<span class="badge-concluido">Entregue</span>`;
 
-      // Botão de Apagar adicionado aqui:
       let btnApagar = (usuarioRole === "admin") ? 
         `<button class="btn-danger btn-acao" onclick="apagarEncomenda('${enc.id}')">🗑️</button>` : '';
 
@@ -810,6 +863,7 @@ function carregarEncomendas() {
     processarDashboard();
   });
 }
+
 function calcularSinalAutomatico() {
   let total = Number(encValorTotal.value) || 0;
   if(total > 0 && (!encSinalPago.value || encSinalPago.value === "")) {
@@ -842,10 +896,9 @@ function registrarNovaEncomenda() {
   };
 
   db.collection("encomendas").add(payload).then(() => {
-    // Lança entrada de caixa referente ao Sinal Pago
     return db.collection("movimentacoes").add({
       produto: `Sinal Encomenda: ${prod}`,
-      tipo: "saida", // Conta como entrada de caixa por venda parcial
+      tipo: "saida",
       quantidade: 1,
       valor: sPago,
       formaPagamento: "Sinal 50% (Encomenda)",
@@ -866,7 +919,6 @@ function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, cu
       estado: "CONCLUIDO",
       dataConclusao: new Date()
     }).then(() => {
-      // Registra a quitação dos restantes 50% na caixa
       return db.collection("movimentacoes").add({
         produto: `Quitação Importação: ${produto}`,
         tipo: "saida",
@@ -882,6 +934,7 @@ function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, cu
     });
   }
 }
+
 function apagarEncomenda(id) {
   if(confirm("Tens a certeza que desejas apagar esta encomenda do sistema?")) {
     db.collection("encomendas").doc(id).delete().then(() => {
@@ -1097,7 +1150,8 @@ function renderizarTabelaEstoque() {
   let produtosFiltrados = todosProdutos.filter(p => {
     let nomeMatch = p.nome.toLowerCase().includes(busca);
     let catMatch = catFiltro === "" || p.categoria === catFiltro;
-    return nomeMatch && catMatch;
+    let filtroBaixoMatch = !filtrarApenasBaixoEstoque || (Number(p.estoque) <= Number(p.minimo));
+    return nomeMatch && catMatch && filtroBaixoMatch;
   });
 
   let totalPaginas = Math.ceil(produtosFiltrados.length / itensPorPagina) || 1;
