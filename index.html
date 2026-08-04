@@ -23,7 +23,7 @@ header {
   color: #ffffff;
   padding: 18px 25px;
   border-radius: 12px;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
   box-shadow: 0 10px 15px -3px rgba(30, 58, 138, 0.2);
   display: flex;
   justify-content: space-between;
@@ -32,6 +32,38 @@ header {
   gap: 10px;
 }
 header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+
+/* MENU DE NAVEGAÇÃO ENTRE PÁGINAS / ABAS */
+.main-nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  background: #ffffff;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+.nav-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.nav-btn:hover { background: #f1f5f9; color: #0f172a; }
+.nav-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+}
+
 .card {
   background: #ffffff;
   padding: 22px;
@@ -50,7 +82,7 @@ header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px
   padding-bottom: 8px;
 }
 
-/* BARRA DE BOTÕES DE AÇÃO NO TOPO */
+/* BARRA DE BOTÕES DE AÇÃO NO TOPO DO DASHBOARD */
 .top-action-bar {
   display: flex;
   justify-content: flex-end;
@@ -84,61 +116,17 @@ header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px
 .kpi-sub { font-size: 11px; color: #10b981; font-weight: 600; margin-top: 2px; display: block; }
 
 /* PAINEL DE ALERTA MODERNO */
-.alerta-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.alerta-grupo {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.alerta-titulo {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  min-width: 160px;
-  padding-top: 4px;
-}
+.alerta-container { display: flex; flex-direction: column; gap: 12px; }
+.alerta-grupo { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.alerta-titulo { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; min-width: 160px; padding-top: 4px; }
 .alerta-titulo.esgotado { color: #dc2626; }
 .alerta-titulo.critico { color: #d97706; }
 
-.alerta-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex: 1;
-}
-.badge-alerta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid transparent;
-}
-.badge-alerta.esgotado {
-  background: #fef2f2;
-  color: #991b1b;
-  border-color: #fecaca;
-}
-.badge-alerta.critico {
-  background: #fffbe6;
-  color: #92400e;
-  border-color: #fde68a;
-}
-.badge-alerta .qtd-tag {
-  font-weight: 700;
-  background: rgba(0,0,0,0.06);
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 11px;
-}
+.alerta-badges { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.badge-alerta { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid transparent; }
+.badge-alerta.esgotado { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.badge-alerta.critico { background: #fffbe6; color: #92400e; border-color: #fde68a; }
+.badge-alerta .qtd-tag { font-weight: 700; background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 10px; font-size: 11px; }
 
 .dash-columns {
   display: grid;
@@ -289,286 +277,353 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 <div id="app" class="hidden no-print">
 
-  <!-- BARRA SUPERIOR DE BOTÕES -->
-  <div class="top-action-bar">
-    <button onclick="toggleAlertasEstoque()" class="btn-warning" id="btnToggleAlertas">⚠️ Alertas de Estoque (0)</button>
-    <button id="btnToggleFunc" onclick="toggleFuncionarios()" class="btn-secondary hidden">👥 Gerir Equipa / Funcionários</button>
-  </div>
+  <!-- NAVEGAÇÃO ENTRE PÁGINAS PRINCIPAIS -->
+  <nav class="main-nav">
+    <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas STP</button>
+    <button class="nav-btn" id="btnPageArmazem" onclick="navegarPara('paginaArmazemPT')">🇵🇹 Armazém Portugal & Lotes</button>
+  </nav>
 
-  <!-- PAINEL DE ALERTAS DE ESTOQUE -->
-  <div class="card hidden" id="cardAlertaEstoque" style="border-top: 4px solid #ef4444;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
-      <h3 style="color:#dc2626; margin:0; border:none; font-size:16px;">⚠️ Painel de Controle: Alertas de Estoque</h3>
-      <button onclick="toggleApenasBaixoEstoque()" class="btn-secondary" id="btnFiltroEstoqueBaixo" style="background:#ef4444; font-size:12px; padding:6px 12px;">🚨 Ver Apenas Produtos Críticos na Tabela</button>
+  <!-- PÁGINA PRINCIPAL (DASHBOARD, ESTOQUE STP E OPERAÇÕES) -->
+  <div id="paginaPrincipal">
+
+    <!-- BARRA SUPERIOR DE BOTÕES -->
+    <div class="top-action-bar">
+      <button onclick="toggleAlertasEstoque()" class="btn-warning" id="btnToggleAlertas">⚠️ Alertas de Estoque (0)</button>
+      <button id="btnToggleFunc" onclick="toggleFuncionarios()" class="btn-secondary hidden">👥 Gerir Equipa / Funcionários</button>
     </div>
 
-    <div id="containerProdutosEmFalta" class="alerta-container">
-      <p style="color:#64748b; margin:0; font-size:13px;">A carregar verificação de estoque...</p>
-    </div>
-  </div>
+    <!-- PAINEL DE ALERTAS DE ESTOQUE -->
+    <div class="card hidden" id="cardAlertaEstoque" style="border-top: 4px solid #ef4444;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+        <h3 style="color:#dc2626; margin:0; border:none; font-size:16px;">⚠️ Painel de Controle: Alertas de Estoque</h3>
+        <button onclick="toggleApenasBaixoEstoque()" class="btn-secondary" id="btnFiltroEstoqueBaixo" style="background:#ef4444; font-size:12px; padding:6px 12px;">🚨 Ver Apenas Produtos Críticos na Tabela</button>
+      </div>
 
-  <div class="card hidden" id="cardFuncionarios">
-    <h3>👥 Gestão de Funcionários</h3>
-    <div class="form-grid" style="margin-bottom: 15px;">
-      <input id="funcEmail" placeholder="E-mail do Funcionário">
-      <input id="funcSenha" type="password" placeholder="Senha Inicial">
-      <select id="funcRole">
-        <option value="venda1">Venda 1 (Apenas POS)</option>
-        <option value="venda2">Venda 2 (Apenas POS)</option>
-        <option value="estoque">Estoque (Gestão de Produtos)</option>
-        <option value="admin">Administrador (Acesso Total)</option>
-      </select>
-      <button id="btnSalvarFunc" onclick="salvarFuncionario()" class="btn-success">Criar Funcionário</button>
-      <button id="btnCancelarFunc" onclick="cancelarEdicaoFunc()" class="btn-secondary hidden">Cancelar</button>
+      <div id="containerProdutosEmFalta" class="alerta-container">
+        <p style="color:#64748b; margin:0; font-size:13px;">A carregar verificação de estoque...</p>
+      </div>
     </div>
-    <table>
-      <thead>
-        <tr><th>E-mail</th><th>Função</th><th>Estado</th><th>Ações</th></tr>
-      </thead>
-      <tbody id="listaFuncionarios"></tbody>
-    </table>
-  </div>
 
-  <div class="card hidden" id="cardRelatorio">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-      <h3 style="margin: 0; border: none;">📊 Dashboard Executivo & Financeiro</h3>
+    <div class="card hidden" id="cardFuncionarios">
+      <h3>👥 Gestão de Funcionários</h3>
+      <div class="form-grid" style="margin-bottom: 15px;">
+        <input id="funcEmail" placeholder="E-mail do Funcionário">
+        <input id="funcSenha" type="password" placeholder="Senha Inicial">
+        <select id="funcRole">
+          <option value="venda1">Venda 1 (Apenas POS)</option>
+          <option value="venda2">Venda 2 (Apenas POS)</option>
+          <option value="estoque">Estoque (Gestão de Produtos)</option>
+          <option value="admin">Administrador (Acesso Total)</option>
+        </select>
+        <button id="btnSalvarFunc" onclick="salvarFuncionario()" class="btn-success">Criar Funcionário</button>
+        <button id="btnCancelarFunc" onclick="cancelarEdicaoFunc()" class="btn-secondary hidden">Cancelar</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>E-mail</th><th>Função</th><th>Estado</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="listaFuncionarios"></tbody>
+      </table>
+    </div>
+
+    <div class="card hidden" id="cardRelatorio">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+        <h3 style="margin: 0; border: none;">📊 Dashboard Executivo & Financeiro</h3>
+        
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <label style="font-size: 12px; font-weight: 600;">Filtrar de:</label>
+          <input type="date" id="dashDataInicio" style="padding: 5px 8px; font-size: 12px; width: auto;">
+          <label style="font-size: 12px; font-weight: 600;">até:</label>
+          <input type="date" id="dashDataFim" style="padding: 5px 8px; font-size: 12px; width: auto;">
+          <button onclick="filtrarDashboardData()" class="btn-success" style="padding: 5px 10px; font-size: 12px;">Filtrar Período</button>
+          <button onclick="limparFiltroDashboard()" class="btn-secondary" style="padding: 5px 10px; font-size: 12px;">Mês Atual</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card orange">
+          <span class="kpi-title">Valor Total em Estoque</span>
+          <span id="valorTotalEstoqueKpi" class="kpi-value">0 Db</span>
+          <span id="qtdTotalEstoqueKpi" class="kpi-sub" style="color:#d97706;">0 produtos cadastrados</span>
+        </div>
+
+        <div class="kpi-card blue">
+          <span class="kpi-title">Vendas Hoje</span>
+          <span id="vendasHoje" class="kpi-value">0 Db</span>
+          <span id="qtdVendasHoje" class="kpi-sub">0 transações</span>
+        </div>
+
+        <div class="kpi-card blue">
+          <span class="kpi-title" id="tituloVendasPeriodo">Vendas do Mês</span>
+          <span id="vendasMes" class="kpi-value">0 Db</span>
+          <span id="lucroMes" class="kpi-sub">Lucro Produtos: 0 Db</span>
+        </div>
+
+        <div class="kpi-card teal">
+          <span class="kpi-title">Encomendas / Importação</span>
+          <span id="lucroEncomendasKpi" class="kpi-value">0 Db</span>
+          <span id="subEncomendasKpi" style="font-size: 11px; color:#0d9488;">0 ativas em trânsito</span>
+        </div>
+
+        <div class="kpi-card purple">
+          <span class="kpi-title">Lucro Câmbio / Remessas</span>
+          <span id="lucroCambioKpi" class="kpi-value">0 Db</span>
+          <span style="font-size: 11px; color:#8b5cf6;">Comissões de Câmbio</span>
+        </div>
+
+        <div class="kpi-card red">
+          <span class="kpi-title" id="tituloDespesasPeriodo">Despesas (Mês)</span>
+          <span id="despesasMes" class="kpi-value">0 Db</span>
+          <span style="font-size: 11px; color:#ef4444;">Custos Operacionais</span>
+        </div>
+
+        <div class="kpi-card green">
+          <span class="kpi-title">Lucro Líquido Real</span>
+          <span id="lucroLiquidoReal" class="kpi-value">0 Db</span>
+          <span style="font-size: 11px; color:#10b981;">(Vendas + Import + Câmbio - Desp)</span>
+        </div>
+      </div>
+
+      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center; font-size: 14px;">
+        <div><b>Dinheiro:</b> <span id="pagDinheiro">0 Db</span></div>
+        <div><b>Transferência:</b> <span id="pagTransf">0 Db</span></div>
+        <div><b>Cartão:</b> <span id="pagCartao">0 Db</span></div>
+      </div>
+
+      <div class="dash-columns">
+        <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+          <h4 style="margin: 0 0 10px 0; color: #1e293b;">🏆 Top 5 Produtos Mais Vendidos</h4>
+          <table style="min-width: 100%; background: #fff;">
+            <thead>
+              <tr><th style="text-align: left;">Produto</th><th>Qtd</th><th>Faturamento</th></tr>
+            </thead>
+            <tbody id="listaTopProdutos"></tbody>
+          </table>
+        </div>
+
+        <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+          <h4 style="margin: 0 0 10px 0; color: #1e293b;">👤 Desempenho da Equipa</h4>
+          <table style="min-width: 100%; background: #fff;">
+            <thead>
+              <tr><th style="text-align: left;">Vendedor</th><th>Vendas</th><th>Total</th></tr>
+            </thead>
+            <tbody id="listaDesempenhoEquipe"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENCOMENDAS & IMPORTAÇÃO -->
+    <div class="card hidden" id="cardEncomendas">
+      <h3 style="color:#0d9488;">🚚 Encomendas & Importações (Sinal 50% + Entrega)</h3>
+      <div class="form-grid" style="margin-bottom: 15px;">
+        <input id="encCliente" placeholder="Nome do Cliente">
+        <input id="encTelefone" placeholder="Telefone / WhatsApp (ex: 23999...)">
+        <input id="encProduto" placeholder="Produto Encomendado (ex: Redmi Note 12)">
+        <input id="encValorTotal" type="number" placeholder="Valor Venda Total (Db)" oninput="calcularSinalAutomatico()">
+        <input id="encSinalPago" type="number" placeholder="Sinal Pago Hoje (Db)">
+        <input id="encCustoCompra" type="number" placeholder="Custo de Compra em PT (Db)" class="hidden">
+        <button onclick="registrarNovaEncomenda()" class="btn-success" style="grid-column: span 2; background: #0d9488;">📦 Registrar Encomenda & Receber Sinal</button>
+      </div>
+
+      <h4>📋 Acompanhamento de Encomendas em Trânsito</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th><th>Produto</th><th>Valor Total</th><th>Sinal (Pago)</th><th>Falta Pagar</th>
+            <th>Custo Compra</th><th>Estado</th><th>Contacto</th><th>Ação / Concluir</th>
+          </tr>
+        </thead>
+        <tbody id="listaEncomendas"></tbody>
+      </table>
+    </div>
+
+    <!-- CÂMBIO & REMESSAS -->
+    <div class="card hidden" id="cardCambio">
+      <h3 style="color:#8b5cf6;">💱 Remessas & Câmbio de Moeda (PT ⇄ STP)</h3>
+      <div class="form-grid">
+        <select id="cambioDirecao" onchange="atualizarRotulosCambio()" style="grid-column: span 2;">
+          <option value="PT_STP">Entrada: Portugal ➔ São Tomé (Recebe EUR / Entrega STN)</option>
+          <option value="STP_PT">Saída: São Tomé ➔ Portugal (Recebe STN / Entrega EUR)</option>
+        </select>
+        
+        <input id="cambioQtdEur" type="number" placeholder="Quantidade em Euros (€)" oninput="calcularCalculoCambioSimulado()">
+        <input id="cambioTaxa" type="number" step="0.1" value="26.0" placeholder="Taxa/Cotação (Ex: 26.0 ou 27.5)" oninput="calcularCalculoCambioSimulado()">
+        <input id="cambioCliente" placeholder="Nome do Cliente / Remetente">
+        
+        <div style="grid-column: span 2; background: #f5f3ff; padding: 12px; border-radius: 8px; border: 1px solid #ddd6fe; text-align: center;">
+          <span style="font-size: 12px; color: #6b21a8; font-weight: 600;">RESUMO DA OPERAÇÃO:</span>
+          <h3 id="cambioResumoTxt" style="margin: 4px 0; color: #7c3aed;">0 € = 0 Db</h3>
+          <small id="cambioLucroEstimadoTxt" style="color: #059669; font-weight: 600;">Lucro estimado: 0 Db</small>
+        </div>
+
+        <button onclick="registrarOperacaoCambio()" class="btn-success" style="grid-column: span 2; background: #8b5cf6;">✅ Registrar Transferência & Gravar Caixa</button>
+      </div>
+    </div>
+
+    <!-- COMPRAS / REABASTECIMENTO -->
+    <div class="card hidden" id="cardCompras">
+      <h3 style="color:#2563eb;">🛒 Registar Compra de Produtos (Fornecedor / Reabastecimento)</h3>
+      <div class="form-grid">
+        <select id="compraSelectProduto" style="grid-column: span 2;">
+          <option value="">-- Selecionar Produto a Reabastecer --</option>
+        </select>
+        <input id="compraQtd" type="number" placeholder="Quantidade Comprada">
+        <input id="compraCustoTotal" type="number" placeholder="Custo Total Pago (Db)">
+        <input id="compraFornecedor" placeholder="Fornecedor / Origem (Ex: Loja X, Importação)">
+        <select id="compraFormaPag">
+          <option value="Dinheiro">Dinheiro (Caixa)</option>
+          <option value="Transferencia">Transferência Bancária</option>
+        </select>
+        <button onclick="registrarCompraProduto()" class="btn-success" style="grid-column: span 2;">📦 Dar Entrada & Gravar Compra</button>
+      </div>
+    </div>
+
+    <!-- DESPESAS OPERACIONAIS -->
+    <div class="card hidden" id="cardDespesas">
+      <h3>💸 Registo de Despesas Operacionais (Custos Fixos/Variáveis)</h3>
+      <div class="form-grid">
+        <input id="despDescricao" placeholder="Descrição (ex: Renda da Loja, Luz, Net)">
+        <input id="despValor" type="number" placeholder="Valor (Db)">
+        <select id="despCategoria">
+          <option value="Renda">Renda / Aluguer</option>
+          <option value="Energia/Agua">Energia / Água</option>
+          <option value="Salarios">Salários / Comissões</option>
+          <option value="Transporte">Transporte / Logística</option>
+          <option value="Outros">Outras Despesas</option>
+        </select>
+        <button onclick="salvarDespesa()" class="btn-success">Registar Despesa</button>
+      </div>
+    </div>
+
+    <!-- NOVO / EDITAR PRODUTO -->
+    <div class="card hidden" id="cardNovoProduto">
+      <h3 id="tituloFormProduto">📦 Novo Produto</h3>
+      <div class="form-grid">
+        <input id="nome" placeholder="Nome do Produto">
+        <input id="categoriaInput" placeholder="Categoria">
+        <input id="estoque" type="number" placeholder="Qtd Estoque Inicial">
+        <input id="minimo" type="number" placeholder="Estoque Mínimo">
+        <input id="compra" type="number" placeholder="Preço Compra Unitário">
+        <input id="venda" type="number" placeholder="Preço Venda Unitário">
+        
+        <div class="img-preview-box" style="grid-column: span 2;">
+          <input type="file" id="fotoInput" accept="image/*" onchange="processarFotoOtimizada(event)" style="font-size: 12px;">
+          <input type="hidden" id="fotoBase64">
+          <img id="previewFoto" src="" class="img-thumb hidden" alt="Preview">
+        </div>
+
+        <button id="btnSalvarProduto" onclick="salvarProduto()" class="btn-success">Salvar Produto</button>
+        <button id="btnCancelarProduto" onclick="cancelarEdicaoProduto()" class="btn-secondary hidden">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- ESTOQUE GERAL STP -->
+    <div class="card hidden" id="cardEstoque">
+      <h3>📋 Estoque Geral (São Tomé)</h3>
+      <div class="search-container">
+        <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar produto..." oninput="mudarFiltroOuBusca()">
+        <select id="selectCategoriaFiltro" onchange="mudarFiltroOuBusca()" style="padding: 10px; font-size: 14px; width: auto;">
+          <option value="">Todas as Categorias</option>
+        </select>
+        <button id="btnExportarEstoque" class="btn-secondary hidden" onclick="exportarEstoque()">📥 Exportar Excel</button>
+      </div>
+      <table>
+        <thead id="cabecalhoTabela"></thead>
+        <tbody id="lista"></tbody>
+      </table>
+
+      <div class="paginacao-container">
+        <button onclick="paginaAnterior()" class="btn-secondary" id="btnPagAnt">⬅️ Anterior</button>
+        <span id="infoPaginacao" style="font-size: 13px; font-weight: 600; color: #64748b;">Página 1</span>
+        <button onclick="proximaPagina()" class="btn-secondary" id="btnPagProx">Próxima ➡️</button>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div class="card hidden" id="cardHistorico">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+        <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações</h3>
+        
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <label style="font-size: 12px; font-weight: 600;">De:</label>
+          <input type="date" id="histDataInicio" style="padding: 5px; font-size: 12px; width: auto;">
+          <label style="font-size: 12px; font-weight: 600;">Até:</label>
+          <input type="date" id="histDataFim" style="padding: 5px; font-size: 12px; width: auto;">
+          <button onclick="filtrarHistoricoIntervalo()" class="btn-success" style="padding: 5px 10px; font-size: 12px;">Filtrar Período</button>
+          <button onclick="filtrarHistoricoHoje()" class="btn-secondary" style="padding: 5px 10px; font-size: 12px;">Hoje</button>
+          <button onclick="limparFiltroHistorico()" class="btn-secondary" style="padding: 5px 10px; font-size: 12px;">Todos</button>
+          <button id="btnExportarHistorico" class="btn-secondary hidden" onclick="exportarHistorico()" style="padding: 5px 10px; font-size: 12px;">📥 Excel</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Foto</th><th>Produto/Serviço</th><th>Tipo</th><th>Qtd</th><th>Pag/Detalhes</th>
+            <th>Valor Total</th><th>Usuário</th><th>Data</th><th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="historico"></tbody>
+      </table>
+    </div>
+
+  </div> <!-- FIM PAGINA PRINCIPAL -->
+
+
+  <!-- PÁGINA 2: ARMAZÉM PORTUGAL & LOTES DE ENVIO (DEDICADA) -->
+  <div id="paginaArmazemPT" class="hidden">
+    
+    <div class="card" style="border-top: 4px solid #2563eb;">
+      <h3 style="color:#1e3a8a;">🇵🇹 Registar Novo Envio / Lote para Portugal</h3>
+      <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 16px;">
+        Cadastre caixas, malas ou mercadorias compradas em Portugal antes de entrarem na remessa oficial.
+      </p>
       
-      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0;">
-        <label style="font-size: 12px; font-weight: 600;">Filtrar de:</label>
-        <input type="date" id="dashDataInicio" style="padding: 5px 8px; font-size: 12px; width: auto;">
-        <label style="font-size: 12px; font-weight: 600;">até:</label>
-        <input type="date" id="dashDataFim" style="padding: 5px 8px; font-size: 12px; width: auto;">
-        <button onclick="filtrarDashboardData()" class="btn-success" style="padding: 5px 10px; font-size: 12px;">Filtrar Período</button>
-        <button onclick="limparFiltroDashboard()" class="btn-secondary" style="padding: 5px 10px; font-size: 12px;">Mês Atual</button>
+      <div class="form-grid">
+        <input id="ptCodigoLote" placeholder="Código/Identificador (ex: Lote-2026-A)">
+        <input id="ptItemNome" placeholder="Nome do Item / Conteúdo">
+        <input id="ptQuantidade" type="number" placeholder="Quantidade (Unidades)">
+        <input id="ptCustoEuro" type="number" step="0.01" placeholder="Custo Total em EUR (€)">
+        <input id="ptFornecedor" placeholder="Fornecedor / Loja (ex: Amazon, Worten)">
+        <select id="ptTransportadora">
+          <option value="Mala Aérea">Mala Aérea (Passageiro)</option>
+          <option value="Carga Aérea">Carga Aérea Expressa</option>
+          <option value="Contentor Marítimo">Contentor Marítimo</option>
+          <option value="Outro">Outro</option>
+        </select>
+        <button onclick="registrarItemArmazemPT()" class="btn-success" style="grid-column: span 2; padding: 12px;">
+          📦 Receber no Armazém Portugal
+        </button>
       </div>
     </div>
 
-    <div class="kpi-grid">
-      <div class="kpi-card orange">
-        <span class="kpi-title">Valor Total em Estoque</span>
-        <span id="valorTotalEstoqueKpi" class="kpi-value">0 Db</span>
-        <span id="qtdTotalEstoqueKpi" class="kpi-sub" style="color:#d97706;">0 produtos cadastrados</span>
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+        <h3 style="margin:0; border:none; color:#0f172a;">📋 Gestão de Estoque & Envios em Portugal</h3>
+        <span id="ptResumoTotal" style="font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 6px 12px; border-radius: 20px;">
+          0 Itens | 0.00 €
+        </span>
       </div>
 
-      <div class="kpi-card blue">
-        <span class="kpi-title">Vendas Hoje</span>
-        <span id="vendasHoje" class="kpi-value">0 Db</span>
-        <span id="qtdVendasHoje" class="kpi-sub">0 transações</span>
-      </div>
-
-      <div class="kpi-card blue">
-        <span class="kpi-title" id="tituloVendasPeriodo">Vendas do Mês</span>
-        <span id="vendasMes" class="kpi-value">0 Db</span>
-        <span id="lucroMes" class="kpi-sub">Lucro Produtos: 0 Db</span>
-      </div>
-
-      <div class="kpi-card teal">
-        <span class="kpi-title">Encomendas / Importação</span>
-        <span id="lucroEncomendasKpi" class="kpi-value">0 Db</span>
-        <span id="subEncomendasKpi" style="font-size: 11px; color:#0d9488;">0 ativas em trânsito</span>
-      </div>
-
-      <div class="kpi-card purple">
-        <span class="kpi-title">Lucro Câmbio / Remessas</span>
-        <span id="lucroCambioKpi" class="kpi-value">0 Db</span>
-        <span style="font-size: 11px; color:#8b5cf6;">Comissões de Câmbio</span>
-      </div>
-
-      <div class="kpi-card red">
-        <span class="kpi-title" id="tituloDespesasPeriodo">Despesas (Mês)</span>
-        <span id="despesasMes" class="kpi-value">0 Db</span>
-        <span style="font-size: 11px; color:#ef4444;">Custos Operacionais</span>
-      </div>
-
-      <div class="kpi-card green">
-        <span class="kpi-title">Lucro Líquido Real</span>
-        <span id="lucroLiquidoReal" class="kpi-value">0 Db</span>
-        <span style="font-size: 11px; color:#10b981;">(Vendas + Import + Câmbio - Desp)</span>
-      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Código Lote</th>
+            <th>Item / Conteúdo</th>
+            <th>Qtd</th>
+            <th>Custo (€)</th>
+            <th>Transporte</th>
+            <th>Fornecedor</th>
+            <th>Estado</th>
+            <th>Data Registo</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="listaArmazemPT"></tbody>
+      </table>
     </div>
 
-    <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center; font-size: 14px;">
-      <div><b>Dinheiro:</b> <span id="pagDinheiro">0 Db</span></div>
-      <div><b>Transferência:</b> <span id="pagTransf">0 Db</span></div>
-      <div><b>Cartão:</b> <span id="pagCartao">0 Db</span></div>
-    </div>
-
-    <div class="dash-columns">
-      <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-        <h4 style="margin: 0 0 10px 0; color: #1e293b;">🏆 Top 5 Produtos Mais Vendidos</h4>
-        <table style="min-width: 100%; background: #fff;">
-          <thead>
-            <tr><th style="text-align: left;">Produto</th><th>Qtd</th><th>Faturamento</th></tr>
-          </thead>
-          <tbody id="listaTopProdutos"></tbody>
-        </table>
-      </div>
-
-      <div style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-        <h4 style="margin: 0 0 10px 0; color: #1e293b;">👤 Desempenho da Equipa</h4>
-        <table style="min-width: 100%; background: #fff;">
-          <thead>
-            <tr><th style="text-align: left;">Vendedor</th><th>Vendas</th><th>Total</th></tr>
-          </thead>
-          <tbody id="listaDesempenhoEquipe"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ENCOMENDAS & IMPORTAÇÃO -->
-  <div class="card hidden" id="cardEncomendas">
-    <h3 style="color:#0d9488;">🚚 Encomendas & Importações (Sinal 50% + Entrega)</h3>
-    <div class="form-grid" style="margin-bottom: 15px;">
-      <input id="encCliente" placeholder="Nome do Cliente">
-      <input id="encTelefone" placeholder="Telefone / WhatsApp (ex: 23999...)">
-      <input id="encProduto" placeholder="Produto Encomendado (ex: Redmi Note 12)">
-      <input id="encValorTotal" type="number" placeholder="Valor Venda Total (Db)" oninput="calcularSinalAutomatico()">
-      <input id="encSinalPago" type="number" placeholder="Sinal Pago Hoje (Db)">
-      <input id="encCustoCompra" type="number" placeholder="Custo de Compra em PT (Db)" class="hidden">
-      <button onclick="registrarNovaEncomenda()" class="btn-success" style="grid-column: span 2; background: #0d9488;">📦 Registrar Encomenda & Receber Sinal</button>
-    </div>
-
-    <h4>📋 Acompanhamento de Encomendas em Trânsito</h4>
-    <table>
-      <thead>
-        <tr>
-          <th>Cliente</th><th>Produto</th><th>Valor Total</th><th>Sinal (Pago)</th><th>Falta Pagar</th>
-          <th>Custo Compra</th><th>Estado</th><th>Contacto</th><th>Ação / Concluir</th>
-        </tr>
-      </thead>
-      <tbody id="listaEncomendas"></tbody>
-    </table>
-  </div>
-
-  <!-- CÂMBIO & REMESSAS -->
-  <div class="card hidden" id="cardCambio">
-    <h3 style="color:#8b5cf6;">💱 Remessas & Câmbio de Moeda (PT ⇄ STP)</h3>
-    <div class="form-grid">
-      <select id="cambioDirecao" onchange="atualizarRotulosCambio()" style="grid-column: span 2;">
-        <option value="PT_STP">Entrada: Portugal ➔ São Tomé (Recebe EUR / Entrega STN)</option>
-        <option value="STP_PT">Saída: São Tomé ➔ Portugal (Recebe STN / Entrega EUR)</option>
-      </select>
-      
-      <input id="cambioQtdEur" type="number" placeholder="Quantidade em Euros (€)" oninput="calcularCalculoCambioSimulado()">
-      <input id="cambioTaxa" type="number" step="0.1" value="26.0" placeholder="Taxa/Cotação (Ex: 26.0 ou 27.5)" oninput="calcularCalculoCambioSimulado()">
-      <input id="cambioCliente" placeholder="Nome do Cliente / Remetente">
-      
-      <div style="grid-column: span 2; background: #f5f3ff; padding: 12px; border-radius: 8px; border: 1px solid #ddd6fe; text-align: center;">
-        <span style="font-size: 12px; color: #6b21a8; font-weight: 600;">RESUMO DA OPERAÇÃO:</span>
-        <h3 id="cambioResumoTxt" style="margin: 4px 0; color: #7c3aed;">0 € = 0 Db</h3>
-        <small id="cambioLucroEstimadoTxt" style="color: #059669; font-weight: 600;">Lucro estimado: 0 Db</small>
-      </div>
-
-      <button onclick="registrarOperacaoCambio()" class="btn-success" style="grid-column: span 2; background: #8b5cf6;">✅ Registrar Transferência & Gravar Caixa</button>
-    </div>
-  </div>
-
-  <!-- COMPRAS / REABASTECIMENTO -->
-  <div class="card hidden" id="cardCompras">
-    <h3 style="color:#2563eb;">🛒 Registar Compra de Produtos (Fornecedor / Reabastecimento)</h3>
-    <div class="form-grid">
-      <select id="compraSelectProduto" style="grid-column: span 2;">
-        <option value="">-- Selecionar Produto a Reabastecer --</option>
-      </select>
-      <input id="compraQtd" type="number" placeholder="Quantidade Comprada">
-      <input id="compraCustoTotal" type="number" placeholder="Custo Total Pago (Db)">
-      <input id="compraFornecedor" placeholder="Fornecedor / Origem (Ex: Loja X, Importação)">
-      <select id="compraFormaPag">
-        <option value="Dinheiro">Dinheiro (Caixa)</option>
-        <option value="Transferencia">Transferência Bancária</option>
-      </select>
-      <button onclick="registrarCompraProduto()" class="btn-success" style="grid-column: span 2;">📦 Dar Entrada & Gravar Compra</button>
-    </div>
-  </div>
-
-  <!-- DESPESAS OPERACIONAIS -->
-  <div class="card hidden" id="cardDespesas">
-    <h3>💸 Registo de Despesas Operacionais (Custos Fixos/Variáveis)</h3>
-    <div class="form-grid">
-      <input id="despDescricao" placeholder="Descrição (ex: Renda da Loja, Luz, Net)">
-      <input id="despValor" type="number" placeholder="Valor (Db)">
-      <select id="despCategoria">
-        <option value="Renda">Renda / Aluguer</option>
-        <option value="Energia/Agua">Energia / Água</option>
-        <option value="Salarios">Salários / Comissões</option>
-        <option value="Transporte">Transporte / Logística</option>
-        <option value="Outros">Outras Despesas</option>
-      </select>
-      <button onclick="salvarDespesa()" class="btn-success">Registar Despesa</button>
-    </div>
-  </div>
-
-  <!-- NOVO / EDITAR PRODUTO -->
-  <div class="card hidden" id="cardNovoProduto">
-    <h3 id="tituloFormProduto">📦 Novo Produto</h3>
-    <div class="form-grid">
-      <input id="nome" placeholder="Nome do Produto">
-      <input id="categoriaInput" placeholder="Categoria">
-      <input id="estoque" type="number" placeholder="Qtd Estoque Inicial">
-      <input id="minimo" type="number" placeholder="Estoque Mínimo">
-      <input id="compra" type="number" placeholder="Preço Compra Unitário">
-      <input id="venda" type="number" placeholder="Preço Venda Unitário">
-      
-      <div class="img-preview-box" style="grid-column: span 2;">
-        <input type="file" id="fotoInput" accept="image/*" onchange="processarFotoOtimizada(event)" style="font-size: 12px;">
-        <input type="hidden" id="fotoBase64">
-        <img id="previewFoto" src="" class="img-thumb hidden" alt="Preview">
-      </div>
-
-      <button id="btnSalvarProduto" onclick="salvarProduto()" class="btn-success">Salvar Produto</button>
-      <button id="btnCancelarProduto" onclick="cancelarEdicaoProduto()" class="btn-secondary hidden">Cancelar</button>
-    </div>
-  </div>
-
-  <!-- ESTOQUE GERAL -->
-  <div class="card hidden" id="cardEstoque">
-    <h3>📋 Estoque Geral</h3>
-    <div class="search-container">
-      <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar produto..." oninput="mudarFiltroOuBusca()">
-      <select id="selectCategoriaFiltro" onchange="mudarFiltroOuBusca()" style="padding: 10px; font-size: 14px; width: auto;">
-        <option value="">Todas as Categorias</option>
-      </select>
-      <button id="btnExportarEstoque" class="btn-secondary hidden" onclick="exportarEstoque()">📥 Exportar Excel</button>
-    </div>
-    <table>
-      <thead id="cabecalhoTabela"></thead>
-      <tbody id="lista"></tbody>
-    </table>
-
-    <div class="paginacao-container">
-      <button onclick="paginaAnterior()" class="btn-secondary" id="btnPagAnt">⬅️ Anterior</button>
-      <span id="infoPaginacao" style="font-size: 13px; font-weight: 600; color: #64748b;">Página 1</span>
-      <button onclick="proximaPagina()" class="btn-secondary" id="btnPagProx">Próxima ➡️</button>
-    </div>
-  </div>
-
-  <!-- HISTÓRICO -->
-  <div class="card hidden" id="cardHistorico">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-      <h3 style="margin: 0; border: none;">📜 Histórico de Movimentações</h3>
-      
-      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-        <label style="font-size: 12px; font-weight: 600;">De:</label>
-        <input type="date" id="histDataInicio" style="padding: 5px; font-size: 12px; width: auto;">
-        <label style="font-size: 12px; font-weight: 600;">Até:</label>
-        <input type="date" id="histDataFim" style="padding: 5px; font-size: 12px; width: auto;">
-        <button onclick="filtrarHistoricoIntervalo()" class="btn-success" style="padding: 5px 10px; font-size: 12px;">Filtrar Período</button>
-        <button onclick="filtrarHistoricoHoje()" class="btn-secondary" style="padding: 5px 10px; font-size: 12px;">Hoje</button>
-        <button onclick="limparFiltroHistorico()" class="btn-secondary" style="padding: 5px 10px; font-size: 12px;">Todos</button>
-        <button id="btnExportarHistorico" class="btn-secondary hidden" onclick="exportarHistorico()" style="padding: 5px 10px; font-size: 12px;">📥 Excel</button>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Foto</th><th>Produto/Serviço</th><th>Tipo</th><th>Qtd</th><th>Pag/Detalhes</th>
-          <th>Valor Total</th><th>Usuário</th><th>Data</th><th>Ação</th>
-        </tr>
-      </thead>
-      <tbody id="historico"></tbody>
-    </table>
-  </div>
+  </div> <!-- FIM PAGINA ARMAZEM PT -->
 
 </div>
 
@@ -676,11 +731,13 @@ let listenerMovimentacoes = null;
 let listenerFuncionarios = null;
 let listenerDespesas = null;
 let listenerEncomendas = null;
+let listenerArmazemPT = null;
 
 let todosProdutos = [];
 let todasMovimentacoes = [];
 let todasDespesas = [];
 let todasEncomendas = [];
+let todosItensArmazemPT = [];
 
 let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
@@ -695,6 +752,23 @@ function login(){
   if(erroCampo) erroCampo.innerText = "";
   auth.signInWithEmailAndPassword(email.value, senha.value)
     .catch(e => { if(erroCampo) erroCampo.innerText = e.message; });
+}
+
+/* SISTEMA DE NAVEGAÇÃO POR PÁGINAS */
+function navegarPara(paginaId) {
+  document.getElementById("paginaPrincipal").classList.add("hidden");
+  document.getElementById("paginaArmazemPT").classList.add("hidden");
+
+  document.getElementById("btnPageMain").classList.remove("active");
+  document.getElementById("btnPageArmazem").classList.remove("active");
+
+  if(paginaId === 'paginaPrincipal') {
+    document.getElementById("paginaPrincipal").classList.remove("hidden");
+    document.getElementById("btnPageMain").classList.add("active");
+  } else if(paginaId === 'paginaArmazemPT') {
+    document.getElementById("paginaArmazemPT").classList.remove("hidden");
+    document.getElementById("btnPageArmazem").classList.add("active");
+  }
 }
 
 function resetarInterface() {
@@ -719,6 +793,7 @@ function logout(){
   if(listenerFuncionarios) listenerFuncionarios();
   if(listenerDespesas) listenerDespesas();
   if(listenerEncomendas) listenerEncomendas();
+  if(listenerArmazemPT) listenerArmazemPT();
   usuarioRole = null;
   resetarInterface();
   app.classList.add("hidden");
@@ -788,6 +863,7 @@ function carregar(){
   if(listenerMovimentacoes) listenerMovimentacoes();
   if(listenerDespesas) listenerDespesas();
   if(listenerEncomendas) listenerEncomendas();
+  if(listenerArmazemPT) listenerArmazemPT();
 
   let isAdmin = (usuarioRole === "admin");
   let isEstoque = (usuarioRole === "estoque");
@@ -809,6 +885,7 @@ function carregar(){
   if(isAdmin) { carregarFuncionarios(); carregarDespesas(); }
 
   carregarEncomendas();
+  carregarArmazemPT();
 
   listenerProdutos = db.collection("produtos").onSnapshot(s => {
     todosProdutos = [];
@@ -846,6 +923,107 @@ function carregar(){
     renderizarHistorico(todasMovimentacoes);
     processarDashboard();
   });
+}
+
+/* LÓGICA DO ARMAZÉM PORTUGAL & LOTES DE ENVIO */
+function carregarArmazemPT() {
+  listenerArmazemPT = db.collection("armazem_pt").orderBy("dataRegisto", "desc").onSnapshot(s => {
+    todosItensArmazemPT = [];
+    let htmlBuffer = "";
+    let totalEuros = 0;
+
+    s.forEach(d => {
+      let item = d.data();
+      item.id = d.id;
+      todosItensArmazemPT.push(item);
+
+      totalEuros += Number(item.custoEuro) || 0;
+      let dataFmt = item.dataRegisto ? item.dataRegisto.toDate().toLocaleDateString('pt-PT') : '-';
+
+      let statusBadge = item.estado === 'RECEBIDO' ? 
+        '<span class="badge-em-transito">NO ARMAZÉM PT</span>' : 
+        '<span class="badge-concluido">DESPACHADO PARA STP</span>';
+
+      let btnAcao = item.estado === 'RECEBIDO' ? 
+        `<button class="btn-success btn-acao" onclick="despacharItemPT('${item.id}')">✈️ Despachar p/ STP</button>` : '-';
+
+      let btnApagar = (usuarioRole === "admin") ? 
+        `<button class="btn-danger btn-acao" onclick="apagarItemPT('${item.id}')">🗑️</button>` : '';
+
+      htmlBuffer += `
+        <tr>
+          <td><b>${item.codigoLote || 'N/A'}</b></td>
+          <td><b>${item.itemNome}</b></td>
+          <td>${item.quantidade} un</td>
+          <td style="color:#2563eb; font-weight:bold;">${(Number(item.custoEuro)||0).toFixed(2)} €</td>
+          <td><small>${item.transportadora}</small></td>
+          <td><small>${item.fornecedor || 'N/A'}</small></td>
+          <td>${statusBadge}</td>
+          <td><small>${dataFmt}</small></td>
+          <td>
+            <div class="acoes-cell">
+              ${btnAcao}
+              ${btnApagar}
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    listaArmazemPT.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhum registo no Armazém de Portugal.</td></tr>';
+    ptResumoTotal.innerText = `${todosItensArmazemPT.length} Registo(s) | Total: ${totalEuros.toFixed(2)} €`;
+  });
+}
+
+function registrarItemArmazemPT() {
+  let cod = ptCodigoLote.value.trim();
+  let nomeItem = ptItemNome.value.trim();
+  let qtd = Number(ptQuantidade.value) || 0;
+  let custo = Number(ptCustoEuro.value) || 0;
+  let forn = ptFornecedor.value.trim();
+  let transp = ptTransportadora.value;
+
+  if(!nomeItem || qtd <= 0) {
+    return alert("Por favor, preencha o nome do item e a quantidade!");
+  }
+
+  let payload = {
+    codigoLote: cod || "LOTE-GERAL",
+    itemNome: nomeItem,
+    quantidade: qtd,
+    custoEuro: custo,
+    fornecedor: forn,
+    transportadora: transp,
+    estado: "RECEBIDO",
+    usuario: auth.currentUser.email,
+    dataRegisto: new Date()
+  };
+
+  db.collection("armazem_pt").add(payload).then(() => {
+    ptCodigoLote.value = "";
+    ptItemNome.value = "";
+    ptQuantidade.value = "";
+    ptCustoEuro.value = "";
+    ptFornecedor.value = "";
+    alert("Item recebido e registado no Armazém de Portugal com sucesso!");
+  }).catch(e => alert("Erro ao registar: " + e.message));
+}
+
+function despacharItemPT(id) {
+  if(confirm("Deseja marcar este lote/item como despachado para São Tomé?")) {
+    db.collection("armazem_pt").doc(id).update({
+      estado: "DESPACHADO",
+      dataDespacho: new Date()
+    }).then(() => {
+      alert("Lote marcado como despachado!");
+    });
+  }
+}
+
+function apagarItemPT(id) {
+  if(confirm("Tens a certeza que desejas remover este registo do Armazém de Portugal?")) {
+    db.collection("armazem_pt").doc(id).delete();
+  }
 }
 
 function verificarAlertaEstoqueBaixo() {
@@ -1092,13 +1270,9 @@ function processarFotoOtimizada(event) {
   reader.readAsDataURL(file);
 }
 
-/* =========================================================
-   LÓGICA CORRIGIDA DO DASHBOARD EXECUTIVO & FINANCEIRO
-========================================================= */
 function processarDashboard() {
   if(usuarioRole !== "admin") return;
 
-  // 1. KPI Valor Total em Estoque
   let totalValorEstoque = 0;
   let totalQtdEstoque = 0;
   todosProdutos.forEach(p => {
@@ -1110,7 +1284,6 @@ function processarDashboard() {
   valorTotalEstoqueKpi.innerText = totalValorEstoque.toLocaleString('pt-PT') + " Db";
   qtdTotalEstoqueKpi.innerText = `${totalQtdEstoque} unidades (${todosProdutos.length} produtos)`;
 
-  // 2. Definição do Período
   let agora = new Date();
   let hojeStr = agora.toISOString().split('T')[0];
   let anoAtual = agora.getFullYear();
@@ -1130,7 +1303,6 @@ function processarDashboard() {
   let prodLookup = {};
   todosProdutos.forEach(p => { prodLookup[p.nome] = p; });
 
-  // 3. Processamento de Vendas Directas e Câmbio
   todasMovimentacoes.forEach(m => {
     if(!m.data) return;
     let d = m.data.toDate();
@@ -1138,7 +1310,6 @@ function processarDashboard() {
     let qtd = Number(m.quantidade) || 0;
     let dStr = d.toISOString().split('T')[0];
 
-    // Ignora movimentações que sejam parte do fluxo de encomendas para evitar duplicação do faturamento directo
     let isEncomendaMov = (m.formaPagamento && m.formaPagamento.includes("Encomenda"));
 
     if(m.tipo === "saida") {
@@ -1176,7 +1347,6 @@ function processarDashboard() {
     }
   });
 
-  // 4. Lucro Real Líquido das Encomendas (Apenas Concluídas)
   let totalLucroEncomendas = 0;
   let emTransitoQtd = 0;
   todasEncomendas.forEach(enc => {
@@ -1186,12 +1356,11 @@ function processarDashboard() {
       if(dEnc >= dataInicio && dEnc <= dataFim) {
         let vTot = Number(enc.valorTotal) || 0;
         let cComp = Number(enc.custoCompra) || 0;
-        totalLucroEncomendas += (vTot - cComp); // Lucro Líquido sem duplicação
+        totalLucroEncomendas += (vTot - cComp);
       }
     }
   });
 
-  // 5. Despesas do Período
   let totalDespesasPeriodo = 0;
   todasDespesas.forEach(dp => {
     if(!dp.data) return;
@@ -1201,10 +1370,8 @@ function processarDashboard() {
     }
   });
 
-  // 6. Cálculo Final do Lucro Líquido Real Verdadeiro
   let lucroLiquidoFinal = (totalLucroVendasPeriodo + totalLucroCambioPeriodo + totalLucroEncomendas) - totalDespesasPeriodo;
 
-  // Renderização nos Cards de KPI
   vendasHoje.innerText = totalVendasHoje.toLocaleString('pt-PT') + " Db";
   qtdVendasHoje.innerText = `${qtdVendasHojeVal} transações`;
 
