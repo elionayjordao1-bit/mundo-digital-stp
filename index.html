@@ -50,6 +50,15 @@ header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px
   padding-bottom: 8px;
 }
 
+/* BARRA DE BOTÕES DE AÇÃO NO TOPO */
+.top-action-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
 /* KPI GRID */
 .kpi-grid {
   display: grid;
@@ -175,6 +184,7 @@ button {
 button:hover { opacity: 0.92; }
 .btn-secondary { background: #64748b; color: #fff; }
 .btn-danger { background: #ef4444; color: #fff; }
+.btn-warning { background: #d97706; color: #fff; }
 .btn-success { background: #10b981; color: #fff; }
 
 table {
@@ -279,8 +289,22 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 <div id="app" class="hidden no-print">
 
-  <div id="containerFuncionarios" class="hidden" style="margin-bottom: 15px; display: flex; justify-content: flex-end;">
-    <button onclick="toggleFuncionarios()" class="btn-secondary">👥 Gerir Equipa / Funcionários</button>
+  <!-- BARRA SUPERIOR DE BOTÕES (IGUAL AO GERIR EQUIPA) -->
+  <div class="top-action-bar">
+    <button onclick="toggleAlertasEstoque()" class="btn-warning" id="btnToggleAlertas">⚠️ Alertas de Estoque (0)</button>
+    <button id="btnToggleFunc" onclick="toggleFuncionarios()" class="btn-secondary hidden">👥 Gerir Equipa / Funcionários</button>
+  </div>
+
+  <!-- PAINEL DE ALERTAS DE ESTOQUE (OCULTO POR PADRÃO) -->
+  <div class="card hidden" id="cardAlertaEstoque" style="border-top: 4px solid #ef4444;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+      <h3 style="color:#dc2626; margin:0; border:none; font-size:16px;">⚠️ Painel de Controle: Alertas de Estoque</h3>
+      <button onclick="toggleApenasBaixoEstoque()" class="btn-secondary" id="btnFiltroEstoqueBaixo" style="background:#ef4444; font-size:12px; padding:6px 12px;">🚨 Ver Apenas Produtos Críticos na Tabela</button>
+    </div>
+
+    <div id="containerProdutosEmFalta" class="alerta-container">
+      <p style="color:#64748b; margin:0; font-size:13px;">A carregar verificação de estoque...</p>
+    </div>
   </div>
 
   <div class="card hidden" id="cardFuncionarios">
@@ -497,18 +521,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
-  <!-- DESIGN REDESENHADO: PAINEL DE ALERTAS DE ESTOQUE E PRODUTOS EM FALTA -->
-  <div class="card" id="cardAlertaEstoque" style="border-top: 4px solid #ef4444;">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
-      <h3 style="color:#dc2626; margin:0; border:none; font-size:16px;">⚠️ Painel de Controle: Alertas de Estoque</h3>
-      <button onclick="toggleApenasBaixoEstoque()" class="btn-secondary" id="btnFiltroEstoqueBaixo" style="background:#ef4444; font-size:12px; padding:6px 12px;">🚨 Ver Apenas Produtos Críticos</button>
-    </div>
-
-    <div id="containerProdutosEmFalta" class="alerta-container">
-      <p style="color:#64748b; margin:0; font-size:13px;">A carregar verificação de estoque...</p>
-    </div>
-  </div>
-
   <!-- ESTOQUE GERAL -->
   <div class="card hidden" id="cardEstoque">
     <h3>📋 Estoque Geral</h3>
@@ -693,8 +705,9 @@ function resetarInterface() {
   cardEncomendas.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
-  containerFuncionarios.classList.add("hidden");
+  btnToggleFunc.classList.add("hidden");
   cardFuncionarios.classList.add("hidden");
+  cardAlertaEstoque.classList.add("hidden");
   btnExportarEstoque.classList.add("hidden");
   btnExportarHistorico.classList.add("hidden");
   cardEstoque.classList.add("hidden");
@@ -715,6 +728,7 @@ function logout(){
 }
 
 function toggleFuncionarios() { cardFuncionarios.classList.toggle("hidden"); }
+function toggleAlertasEstoque() { cardAlertaEstoque.classList.toggle("hidden"); }
 
 auth.onAuthStateChanged(u => {
   if(u){
@@ -743,7 +757,7 @@ auth.onAuthStateChanged(u => {
         cardEncomendas.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
-        containerFuncionarios.classList.remove("hidden");
+        btnToggleFunc.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
         btnExportarHistorico.classList.remove("hidden");
         encCustoCompra.classList.remove("hidden");
@@ -834,7 +848,6 @@ function carregar(){
   });
 }
 
-// RENDERIZAÇÃO REDESENHADA E ELEGANTE DO ALERTA DE ESTOQUE
 function verificarAlertaEstoqueBaixo() {
   let emFalta = todosProdutos.filter(p => (Number(p.estoque) || 0) <= 0);
   let estoqueBaixo = todosProdutos.filter(p => {
@@ -843,9 +856,20 @@ function verificarAlertaEstoqueBaixo() {
     return q > 0 && q <= m;
   });
 
+  let totalAlertas = emFalta.length + estoqueBaixo.length;
+  
+  // Atualiza o texto do botão superior dinamicamente
+  if(totalAlertas > 0) {
+    btnToggleAlertas.innerText = `⚠️ Alertas de Estoque (${totalAlertas})`;
+    btnToggleAlertas.className = "btn-warning";
+  } else {
+    btnToggleAlertas.innerText = `✅ Alertas de Estoque (0)`;
+    btnToggleAlertas.className = "btn-secondary";
+  }
+
   let htmlBox = "";
 
-  if(emFalta.length === 0 && estoqueBaixo.length === 0) {
+  if(totalAlertas === 0) {
     htmlBox = `<p style="color:#10b981; font-weight:600; margin:0; display:flex; align-items:center; gap:6px;">✅ Excelente! Todos os produtos estão com níveis normais de estoque.</p>`;
   } else {
     if(emFalta.length > 0) {
@@ -884,7 +908,7 @@ function verificarAlertaEstoqueBaixo() {
 
 function toggleApenasBaixoEstoque() {
   filtrarApenasBaixoEstoque = !filtrarApenasBaixoEstoque;
-  btnFiltroEstoqueBaixo.innerText = filtrarApenasBaixoEstoque ? "📋 Ver Todos os Produtos" : "🚨 Ver Apenas Produtos Críticos";
+  btnFiltroEstoqueBaixo.innerText = filtrarApenasBaixoEstoque ? "📋 Ver Todos os Produtos na Tabela" : "🚨 Ver Apenas Produtos Críticos na Tabela";
   paginaAtual = 1;
   renderizarTabelaEstoque();
 }
