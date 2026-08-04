@@ -783,6 +783,10 @@ function carregarEncomendas() {
         `<button class="btn-success btn-acao" onclick="concluirEncomendaModal('${enc.id}', '${enc.cliente.replace(/'/g, "\\'")}', '${enc.produto.replace(/'/g, "\\'")}', ${faltaPagar}, ${enc.valorTotal}, ${enc.custoCompra||0})">✅ Concluir & Entregar</button>` :
         `<span class="badge-concluido">Entregue</span>`;
 
+      // Botão de Apagar adicionado aqui:
+      let btnApagar = (usuarioRole === "admin") ? 
+        `<button class="btn-danger btn-acao" onclick="apagarEncomenda('${enc.id}')">🗑️</button>` : '';
+
       htmlBuffer += `
         <tr>
           <td><b>${enc.cliente}</b></td>
@@ -792,7 +796,12 @@ function carregarEncomendas() {
           <td style="color:#ef4444; font-weight:bold;">${faltaPagar} Db</td>
           <td><span class="${enc.estado === 'EM_TRANSITO' ? 'badge-em-transito' : 'badge-concluido'}">${enc.estado === 'EM_TRANSITO' ? 'EM TRÂNSITO' : 'CONCLUÍDO'}</span></td>
           <td>${btnWhatsApp}</td>
-          <td>${btnAcao}</td>
+          <td>
+            <div class="acoes-cell">
+              ${btnAcao}
+              ${btnApagar}
+            </div>
+          </td>
         </tr>
       `;
     });
@@ -801,7 +810,6 @@ function carregarEncomendas() {
     processarDashboard();
   });
 }
-
 function calcularSinalAutomatico() {
   let total = Number(encValorTotal.value) || 0;
   if(total > 0 && (!encSinalPago.value || encSinalPago.value === "")) {
@@ -871,6 +879,15 @@ function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, cu
       });
     }).then(() => {
       alert("Encomenda concluída e entregue! Faturamento registrado com sucesso.");
+    });
+  }
+}
+function apagarEncomenda(id) {
+  if(confirm("Tens a certeza que desejas apagar esta encomenda do sistema?")) {
+    db.collection("encomendas").doc(id).delete().then(() => {
+      alert("Encomenda removida com sucesso!");
+    }).catch(e => {
+      alert("Erro ao apagar encomenda: " + e.message);
     });
   }
 }
