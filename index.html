@@ -289,13 +289,13 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 <div id="app" class="hidden no-print">
 
-  <!-- BARRA SUPERIOR DE BOTÕES (IGUAL AO GERIR EQUIPA) -->
+  <!-- BARRA SUPERIOR DE BOTÕES -->
   <div class="top-action-bar">
     <button onclick="toggleAlertasEstoque()" class="btn-warning" id="btnToggleAlertas">⚠️ Alertas de Estoque (0)</button>
     <button id="btnToggleFunc" onclick="toggleFuncionarios()" class="btn-secondary hidden">👥 Gerir Equipa / Funcionários</button>
   </div>
 
-  <!-- PAINEL DE ALERTAS DE ESTOQUE (OCULTO POR PADRÃO) -->
+  <!-- PAINEL DE ALERTAS DE ESTOQUE -->
   <div class="card hidden" id="cardAlertaEstoque" style="border-top: 4px solid #ef4444;">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
       <h3 style="color:#dc2626; margin:0; border:none; font-size:16px;">⚠️ Painel de Controle: Alertas de Estoque</h3>
@@ -434,7 +434,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <thead>
         <tr>
           <th>Cliente</th><th>Produto</th><th>Valor Total</th><th>Sinal (Pago)</th><th>Falta Pagar</th>
-          <th>Estado</th><th>Contacto</th><th>Ação / Concluir</th>
+          <th>Custo Compra</th><th>Estado</th><th>Contacto</th><th>Ação / Concluir</th>
         </tr>
       </thead>
       <tbody id="listaEncomendas"></tbody>
@@ -858,7 +858,6 @@ function verificarAlertaEstoqueBaixo() {
 
   let totalAlertas = emFalta.length + estoqueBaixo.length;
   
-  // Atualiza o texto do botão superior dinamicamente
   if(totalAlertas > 0) {
     btnToggleAlertas.innerText = `⚠️ Alertas de Estoque (${totalAlertas})`;
     btnToggleAlertas.className = "btn-warning";
@@ -952,6 +951,7 @@ function carregarEncomendas() {
           <td>${enc.valorTotal} Db</td>
           <td style="color:#10b981; font-weight:bold;">${enc.sinalPago} Db</td>
           <td style="color:#ef4444; font-weight:bold;">${faltaPagar} Db</td>
+          <td style="color:#64748b;">${enc.custoCompra || 0} Db</td>
           <td><span class="${enc.estado === 'EM_TRANSITO' ? 'badge-em-transito' : 'badge-concluido'}">${enc.estado === 'EM_TRANSITO' ? 'EM TRÂNSITO' : 'CONCLUÍDO'}</span></td>
           <td>${btnWhatsApp}</td>
           <td>
@@ -964,7 +964,7 @@ function carregarEncomendas() {
       `;
     });
 
-    listaEncomendas.innerHTML = htmlBuffer || '<tr><td colspan="8" style="color:#94a3b8;">Nenhuma encomenda registada.</td></tr>';
+    listaEncomendas.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma encomenda registada.</td></tr>';
     processarDashboard();
   });
 }
@@ -1092,9 +1092,13 @@ function processarFotoOtimizada(event) {
   reader.readAsDataURL(file);
 }
 
+/* =========================================================
+   LÓGICA CORRIGIDA DO DASHBOARD EXECUTIVO & FINANCEIRO
+========================================================= */
 function processarDashboard() {
   if(usuarioRole !== "admin") return;
 
+  // 1. KPI Valor Total em Estoque
   let totalValorEstoque = 0;
   let totalQtdEstoque = 0;
   todosProdutos.forEach(p => {
@@ -1106,6 +1110,7 @@ function processarDashboard() {
   valorTotalEstoqueKpi.innerText = totalValorEstoque.toLocaleString('pt-PT') + " Db";
   qtdTotalEstoqueKpi.innerText = `${totalQtdEstoque} unidades (${todosProdutos.length} produtos)`;
 
+  // 2. Definição do Período
   let agora = new Date();
   let hojeStr = agora.toISOString().split('T')[0];
   let anoAtual = agora.getFullYear();
@@ -1125,12 +1130,16 @@ function processarDashboard() {
   let prodLookup = {};
   todosProdutos.forEach(p => { prodLookup[p.nome] = p; });
 
+  // 3. Processamento de Vendas Directas e Câmbio
   todasMovimentacoes.forEach(m => {
     if(!m.data) return;
     let d = m.data.toDate();
     let val = Number(m.valor) || 0;
     let qtd = Number(m.quantidade) || 0;
     let dStr = d.toISOString().split('T')[0];
+
+    // Ignora movimentações que sejam parte do fluxo de encomendas para evitar duplicação do faturamento directo
+    let isEncomendaMov = (m.formaPagamento && m.formaPagamento.includes("Encomenda"));
 
     if(m.tipo === "saida") {
       if(dStr === hojeStr) {
@@ -1141,9 +1150,11 @@ function processarDashboard() {
       if(d >= dataInicio && d <= dataFim) {
         totalVendasPeriodo += val;
 
-        let precoCompra = prodLookup[m.produto] ? Number(prodLookup[m.produto].compra || 0) : 0;
-        let lucroItem = val - (qtd * precoCompra);
-        totalLucroVendasPeriodo += lucroItem;
+        if(!isEncomendaMov) {
+          let precoCompra = prodLookup[m.produto] ? Number(prodLookup[m.produto].compra || 0) : 0;
+          let lucroItem = val - (qtd * precoCompra);
+          totalLucroVendasPeriodo += lucroItem;
+        }
 
         let fPag = m.formaPagamento || "Dinheiro";
         if(fPag.includes("Dinheiro")) pagDin += val;
@@ -1165,6 +1176,7 @@ function processarDashboard() {
     }
   });
 
+  // 4. Lucro Real Líquido das Encomendas (Apenas Concluídas)
   let totalLucroEncomendas = 0;
   let emTransitoQtd = 0;
   todasEncomendas.forEach(enc => {
@@ -1174,11 +1186,12 @@ function processarDashboard() {
       if(dEnc >= dataInicio && dEnc <= dataFim) {
         let vTot = Number(enc.valorTotal) || 0;
         let cComp = Number(enc.custoCompra) || 0;
-        totalLucroEncomendas += (vTot - cComp);
+        totalLucroEncomendas += (vTot - cComp); // Lucro Líquido sem duplicação
       }
     }
   });
 
+  // 5. Despesas do Período
   let totalDespesasPeriodo = 0;
   todasDespesas.forEach(dp => {
     if(!dp.data) return;
@@ -1188,8 +1201,10 @@ function processarDashboard() {
     }
   });
 
+  // 6. Cálculo Final do Lucro Líquido Real Verdadeiro
   let lucroLiquidoFinal = (totalLucroVendasPeriodo + totalLucroCambioPeriodo + totalLucroEncomendas) - totalDespesasPeriodo;
 
+  // Renderização nos Cards de KPI
   vendasHoje.innerText = totalVendasHoje.toLocaleString('pt-PT') + " Db";
   qtdVendasHoje.innerText = `${qtdVendasHojeVal} transações`;
 
