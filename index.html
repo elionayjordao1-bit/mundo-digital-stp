@@ -82,6 +82,26 @@ header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px
   padding-bottom: 8px;
 }
 
+/* ESTILOS ESPECÍFICOS DO ARMAZÉM PT EM 3 PASSOS */
+.pt-step-card {
+  border-left: 5px solid #2563eb;
+  background: #ffffff;
+}
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.step-badge {
+  background: #2563eb;
+  color: #fff;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
 /* BARRA DE BOTÕES DE AÇÃO NO TOPO DO DASHBOARD */
 .top-action-bar {
   display: flex;
@@ -570,56 +590,101 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div> <!-- FIM PAGINA PRINCIPAL -->
 
 
-  <!-- PÁGINA 2: ARMAZÉM PORTUGAL & LOTES DE ENVIO (DEDICADA) -->
+  <!-- PÁGINA 2: ARMAZÉM PORTUGAL (FLUXO EM 3 ETAPAS INDEPENDENTES) -->
   <div id="paginaArmazemPT" class="hidden">
     
-    <div class="card" style="border-top: 4px solid #2563eb;">
-      <h3 style="color:#1e3a8a;">🇵🇹 Registar Novo Envio / Lote para Portugal</h3>
+    <!-- PASSO 1: REGISTO DE COMPRAS EM LISBOA -->
+    <div class="card pt-step-card">
+      <div class="step-header">
+        <span class="step-badge">PASSO 1</span>
+        <h3 style="margin: 0; border: none;">🛒 Registo de Compras em Lisboa (Artigos Soltos)</h3>
+      </div>
       <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 16px;">
-        Cadastre caixas, malas ou mercadorias compradas em Portugal antes de entrarem na remessa oficial.
+        Registe os artigos comprados em Portugal individualmente. Nesta fase não se fala em transporte nem em lotes.
       </p>
       
       <div class="form-grid">
-        <input id="ptCodigoLote" placeholder="Código/Identificador (ex: Lote-2026-A)">
-        <input id="ptItemNome" placeholder="Nome do Item / Conteúdo">
-        <input id="ptQuantidade" type="number" placeholder="Quantidade (Unidades)">
-        <input id="ptCustoEuro" type="number" step="0.01" placeholder="Custo Total em EUR (€)">
-        <input id="ptFornecedor" placeholder="Fornecedor / Loja (ex: Amazon, Worten)">
-        <select id="ptTransportadora">
-          <option value="Mala Aérea">Mala Aérea (Passageiro)</option>
-          <option value="Carga Aérea">Carga Aérea Expressa</option>
-          <option value="Contentor Marítimo">Contentor Marítimo</option>
-          <option value="Outro">Outro</option>
-        </select>
-        <button onclick="registrarItemArmazemPT()" class="btn-success" style="grid-column: span 2; padding: 12px;">
-          📦 Receber no Armazém Portugal
+        <input id="ptNomeItem" placeholder="Nome do Artigo">
+        <input id="ptCategoriaItem" placeholder="Categoria (ex: Informática)">
+        <input id="ptQtdItem" type="number" min="1" placeholder="Quantidade">
+        <input id="ptCustoEuroItem" type="number" step="0.01" placeholder="Custo Unitário em EUR (€)">
+        <button onclick="cadastrarItemSoltoPT()" class="btn-success" style="grid-column: span 2; padding: 10px;">
+          📥 Cadastrar Artigo no Stock Lisboa
         </button>
       </div>
+
+      <h4 style="margin-top: 20px; color: #1e293b;">Itens Soltos no Armazém PT (Aguardando Lote)</h4>
+      <table>
+        <thead>
+          <tr>
+            <th>Artigo</th>
+            <th>Categoria</th>
+            <th>Qtd</th>
+            <th>Custo Unit. (€)</th>
+            <th>Custo Subtotal (€)</th>
+            <th>Data Cadastro</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="listaItensSoltosPT"></tbody>
+      </table>
     </div>
 
-    <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-        <h3 style="margin:0; border:none; color:#0f172a;">📋 Gestão de Estoque & Envios em Portugal</h3>
-        <span id="ptResumoTotal" style="font-size: 13px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 6px 12px; border-radius: 20px;">
-          0 Itens | 0.00 €
-        </span>
+    <!-- PASSO 2: MONTAGEM DO LOTE / TAMBOR + RATEIO DO FRETE -->
+    <div class="card pt-step-card" style="border-left-color: #d97706;">
+      <div class="step-header">
+        <span class="step-badge" style="background: #d97706;">PASSO 2</span>
+        <h3 style="margin: 0; border: none;">📦 Montagem do Lote / Tambor & Rateio de Frete</h3>
       </div>
+      <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 16px;">
+        Selecione os artigos soltos que vão compor este Lote/Caixa, informe o custo total do frete e despache para STP.
+      </p>
+      
+      <div class="form-grid" style="margin-bottom: 15px;">
+        <input id="loteNomeIdentificador" placeholder="Identificador do Lote (ex: Tambor #01 - Março)">
+        <input id="loteFreteEuro" type="number" step="0.01" placeholder="Custo Total do Frete/Transporte em EUR (€)">
+        <button onclick="despacharLotePT()" class="btn-warning" style="grid-column: span 2; padding: 10px; background: #d97706;">
+          ✈️ Despachar Lote para São Tomé (Ratear Frete)
+        </button>
+      </div>
+
+      <h4 style="margin-top: 15px; color: #1e293b;">Selecione os Artigos a Incluir no Lote:</h4>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 40px;"><input type="checkbox" id="checkTodosArtigosPT" onchange="selecionarTodosArtigosPT(this)"></th>
+            <th>Artigo</th>
+            <th>Qtd</th>
+            <th>Custo Total (€)</th>
+          </tr>
+        </thead>
+        <tbody id="listaSelecaoLotePT"></tbody>
+      </table>
+    </div>
+
+    <!-- PASSO 3: RECEBIMENTO EM SÃO TOMÉ / TRANSFERÊNCIA P/ STOCK -->
+    <div class="card pt-step-card" style="border-left-color: #10b981;">
+      <div class="step-header">
+        <span class="step-badge" style="background: #10b981;">PASSO 3</span>
+        <h3 style="margin: 0; border: none;">🛬 Recebimento em São Tomé & Transferência p/ Stock Geral</h3>
+      </div>
+      <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 16px;">
+        Lotes em trânsito vindos de Portugal. Dê entrada no stock da loja convertendo o custo do produto + frete em Dobras (STN).
+      </p>
 
       <table>
         <thead>
           <tr>
-            <th>Código Lote</th>
-            <th>Item / Conteúdo</th>
-            <th>Qtd</th>
-            <th>Custo (€)</th>
-            <th>Transporte</th>
-            <th>Fornecedor</th>
+            <th>Identificador do Lote</th>
+            <th>Artigos Incluídos</th>
+            <th>Frete Lote (€)</th>
+            <th>Custo Total Lote (€)</th>
             <th>Estado</th>
-            <th>Data Registo</th>
-            <th>Ações</th>
+            <th>Data Envio</th>
+            <th>Ação</th>
           </tr>
         </thead>
-        <tbody id="listaArmazemPT"></tbody>
+        <tbody id="listaLotesEmTransitoPT"></tbody>
       </table>
     </div>
 
@@ -732,12 +797,14 @@ let listenerFuncionarios = null;
 let listenerDespesas = null;
 let listenerEncomendas = null;
 let listenerArmazemPT = null;
+let listenerLotesPT = null;
 
 let todosProdutos = [];
 let todasMovimentacoes = [];
 let todasDespesas = [];
 let todasEncomendas = [];
-let todosItensArmazemPT = [];
+let todosItensSoltosPT = [];
+let todosLotesPT = [];
 
 let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
@@ -754,7 +821,7 @@ function login(){
     .catch(e => { if(erroCampo) erroCampo.innerText = e.message; });
 }
 
-/* SISTEMA DE NAVEGAÇÃO POR PÁGINAS */
+/* SISTEMA DE NAVEGAÇÃO POR PÁGINAS (DASHBOARD x ARMAZÉM PORTUGAL) */
 function navegarPara(paginaId) {
   document.getElementById("paginaPrincipal").classList.add("hidden");
   document.getElementById("paginaArmazemPT").classList.add("hidden");
@@ -794,6 +861,7 @@ function logout(){
   if(listenerDespesas) listenerDespesas();
   if(listenerEncomendas) listenerEncomendas();
   if(listenerArmazemPT) listenerArmazemPT();
+  if(listenerLotesPT) listenerLotesPT();
   usuarioRole = null;
   resetarInterface();
   app.classList.add("hidden");
@@ -863,7 +931,6 @@ function carregar(){
   if(listenerMovimentacoes) listenerMovimentacoes();
   if(listenerDespesas) listenerDespesas();
   if(listenerEncomendas) listenerEncomendas();
-  if(listenerArmazemPT) listenerArmazemPT();
 
   let isAdmin = (usuarioRole === "admin");
   let isEstoque = (usuarioRole === "estoque");
@@ -885,7 +952,7 @@ function carregar(){
   if(isAdmin) { carregarFuncionarios(); carregarDespesas(); }
 
   carregarEncomendas();
-  carregarArmazemPT();
+  carregarArmazemPTTresPassos();
 
   listenerProdutos = db.collection("produtos").onSnapshot(s => {
     todosProdutos = [];
@@ -925,106 +992,267 @@ function carregar(){
   });
 }
 
-/* LÓGICA DO ARMAZÉM PORTUGAL & LOTES DE ENVIO */
-function carregarArmazemPT() {
+/* =========================================================================
+   LÓGICA DO ARMAZÉM PORTUGAL (3 ETAPAS INDEPENDENTES)
+   ========================================================================= */
+
+function carregarArmazemPTTresPassos() {
+  if(listenerArmazemPT) listenerArmazemPT();
+  if(listenerLotesPT) listenerLotesPT();
+
+  // Escuta itens do Armazém PT (Soltos x Alocados)
   listenerArmazemPT = db.collection("armazem_pt").orderBy("dataRegisto", "desc").onSnapshot(s => {
-    todosItensArmazemPT = [];
-    let htmlBuffer = "";
-    let totalEuros = 0;
+    todosItensSoltosPT = [];
+    let htmlSoltos = "";
+    let htmlSelecao = "";
 
     s.forEach(d => {
       let item = d.data();
       item.id = d.id;
-      todosItensArmazemPT.push(item);
 
-      totalEuros += Number(item.custoEuro) || 0;
-      let dataFmt = item.dataRegisto ? item.dataRegisto.toDate().toLocaleDateString('pt-PT') : '-';
+      if(item.estado === "EM_LISBOA") {
+        todosItensSoltosPT.push(item);
 
-      let statusBadge = item.estado === 'RECEBIDO' ? 
-        '<span class="badge-em-transito">NO ARMAZÉM PT</span>' : 
-        '<span class="badge-concluido">DESPACHADO PARA STP</span>';
+        let dataFmt = item.dataRegisto ? item.dataRegisto.toDate().toLocaleDateString('pt-PT') : '-';
+        let subtotal = (item.quantidade || 0) * (item.custoEuroUnitario || 0);
 
-      let btnAcao = item.estado === 'RECEBIDO' ? 
-        `<button class="btn-success btn-acao" onclick="despacharItemPT('${item.id}')">✈️ Despachar p/ STP</button>` : '-';
+        htmlSoltos += `
+          <tr>
+            <td><b>${item.nome}</b></td>
+            <td><small>${item.categoria || 'Geral'}</small></td>
+            <td><b>${item.quantidade} un</b></td>
+            <td>${(item.custoEuroUnitario || 0).toFixed(2)} €</td>
+            <td style="color:#2563eb; font-weight:bold;">${subtotal.toFixed(2)} €</td>
+            <td><small>${dataFmt}</small></td>
+            <td>
+              <button class="btn-danger btn-acao" onclick="apagarItemSoltoPT('${item.id}')">🗑️</button>
+            </td>
+          </tr>
+        `;
 
-      let btnApagar = (usuarioRole === "admin") ? 
-        `<button class="btn-danger btn-acao" onclick="apagarItemPT('${item.id}')">🗑️</button>` : '';
+        htmlSelecao += `
+          <tr>
+            <td><input type="checkbox" class="chk-item-pt" value="${item.id}" data-custototal="${subtotal}"></td>
+            <td><b>${item.nome}</b> (${item.categoria || 'Geral'})</td>
+            <td>${item.quantidade} un</td>
+            <td><b>${subtotal.toFixed(2)} €</b></td>
+          </tr>
+        `;
+      }
+    });
 
-      htmlBuffer += `
+    listaItensSoltosPT.innerHTML = htmlSoltos || '<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo solto no Armazém de Lisboa.</td></tr>';
+    listaSelecaoLotePT.innerHTML = htmlSelecao || '<tr><td colspan="4" style="color:#94a3b8;">Nenhum artigo disponível para montagem de lote.</td></tr>';
+  });
+
+  // Escuta Lotes em Trânsito / Recebidos
+  listenerLotesPT = db.collection("lotes_pt").orderBy("dataEnvio", "desc").onSnapshot(s => {
+    todosLotesPT = [];
+    let htmlLotes = "";
+
+    s.forEach(d => {
+      let lote = d.data();
+      lote.id = d.id;
+      todosLotesPT.push(lote);
+
+      let dataFmt = lote.dataEnvio ? lote.dataEnvio.toDate().toLocaleDateString('pt-PT') : '-';
+      let statusBadge = lote.estado === 'EM_TRANSITO' ? 
+        '<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>' : 
+        '<span class="badge-concluido">ENTRADA DADA NO STOCK</span>';
+
+      let btnAcao = lote.estado === 'EM_TRANSITO' ? 
+        `<button class="btn-success btn-acao" onclick="darEntradaLoteNoStockSTP('${lote.id}')">🛬 Dar Entrada no Stock</button>` : '-';
+
+      let nomesItens = (lote.itens || []).map(i => `${i.nome} (${i.quantidade}un)`).join(", ");
+
+      htmlLotes += `
         <tr>
-          <td><b>${item.codigoLote || 'N/A'}</b></td>
-          <td><b>${item.itemNome}</b></td>
-          <td>${item.quantidade} un</td>
-          <td style="color:#2563eb; font-weight:bold;">${(Number(item.custoEuro)||0).toFixed(2)} €</td>
-          <td><small>${item.transportadora}</small></td>
-          <td><small>${item.fornecedor || 'N/A'}</small></td>
+          <td><b>${lote.identificador}</b></td>
+          <td><small>${nomesItens}</small></td>
+          <td style="color:#d97706; font-weight:bold;">${(lote.custoFreteEuro || 0).toFixed(2)} €</td>
+          <td style="color:#2563eb; font-weight:bold;">${(lote.custoTotalItensEuro + lote.custoFreteEuro).toFixed(2)} €</td>
           <td>${statusBadge}</td>
           <td><small>${dataFmt}</small></td>
-          <td>
-            <div class="acoes-cell">
-              ${btnAcao}
-              ${btnApagar}
-            </div>
-          </td>
+          <td>${btnAcao}</td>
         </tr>
       `;
     });
 
-    listaArmazemPT.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhum registo no Armazém de Portugal.</td></tr>';
-    ptResumoTotal.innerText = `${todosItensArmazemPT.length} Registo(s) | Total: ${totalEuros.toFixed(2)} €`;
+    listaLotesEmTransitoPT.innerHTML = htmlLotes || '<tr><td colspan="7" style="color:#94a3b8;">Nenhum lote enviado ou em trânsito.</td></tr>';
   });
 }
 
-function registrarItemArmazemPT() {
-  let cod = ptCodigoLote.value.trim();
-  let nomeItem = ptItemNome.value.trim();
-  let qtd = Number(ptQuantidade.value) || 0;
-  let custo = Number(ptCustoEuro.value) || 0;
-  let forn = ptFornecedor.value.trim();
-  let transp = ptTransportadora.value;
+/* PASSO 1: Registo de Itens Soltos em Lisboa */
+function cadastrarItemSoltoPT() {
+  let nome = ptNomeItem.value.trim();
+  let cat = ptCategoriaItem.value.trim() || "Geral";
+  let qtd = Number(ptQtdItem.value) || 0;
+  let custoUnit = Number(ptCustoEuroItem.value) || 0;
 
-  if(!nomeItem || qtd <= 0) {
-    return alert("Por favor, preencha o nome do item e a quantidade!");
+  if(!nome || qtd <= 0 || custoUnit <= 0) {
+    return alert("Preencha o nome do artigo, quantidade e custo unitário em Euros (€)!");
   }
 
   let payload = {
-    codigoLote: cod || "LOTE-GERAL",
-    itemNome: nomeItem,
+    nome: nome,
+    categoria: cat,
     quantidade: qtd,
-    custoEuro: custo,
-    fornecedor: forn,
-    transportadora: transp,
-    estado: "RECEBIDO",
+    custoEuroUnitario: custoUnit,
+    estado: "EM_LISBOA",
     usuario: auth.currentUser.email,
     dataRegisto: new Date()
   };
 
   db.collection("armazem_pt").add(payload).then(() => {
-    ptCodigoLote.value = "";
-    ptItemNome.value = "";
-    ptQuantidade.value = "";
-    ptCustoEuro.value = "";
-    ptFornecedor.value = "";
-    alert("Item recebido e registado no Armazém de Portugal com sucesso!");
-  }).catch(e => alert("Erro ao registar: " + e.message));
+    ptNomeItem.value = "";
+    ptCategoriaItem.value = "";
+    ptQtdItem.value = "";
+    ptCustoEuroItem.value = "";
+    alert("Artigo cadastrado no Stock de Lisboa com sucesso!");
+  }).catch(e => alert("Erro ao cadastrar: " + e.message));
 }
 
-function despacharItemPT(id) {
-  if(confirm("Deseja marcar este lote/item como despachado para São Tomé?")) {
-    db.collection("armazem_pt").doc(id).update({
-      estado: "DESPACHADO",
-      dataDespacho: new Date()
-    }).then(() => {
-      alert("Lote marcado como despachado!");
-    });
-  }
-}
-
-function apagarItemPT(id) {
-  if(confirm("Tens a certeza que desejas remover este registo do Armazém de Portugal?")) {
+function apagarItemSoltoPT(id) {
+  if(confirm("Deseja apagar este artigo do stock de Lisboa?")) {
     db.collection("armazem_pt").doc(id).delete();
   }
 }
+
+function selecionarTodosArtigosPT(chkMaster) {
+  let checkboxes = document.querySelectorAll(".chk-item-pt");
+  checkboxes.forEach(c => c.checked = chkMaster.checked);
+}
+
+/* PASSO 2: Montagem do Lote / Tambor + Rateio do Frete */
+function despacharLotePT() {
+  let ident = loteNomeIdentificador.value.trim();
+  let freteEuro = Number(loteFreteEuro.value) || 0;
+  let chks = document.querySelectorAll(".chk-item-pt:checked");
+
+  if(!ident) return alert("Por favor, digite um identificador para o Lote/Tambor!");
+  if(freteEuro < 0) return alert("Informe um valor válido de frete (€)!");
+  if(chks.length === 0) return alert("Selecione pelo menos um artigo para incluir no lote!");
+
+  let idsSelecionados = Array.from(chks).map(c => c.value);
+  let itensAlocados = todosItensSoltosPT.filter(i => idsSelecionados.includes(i.id));
+
+  // Custo total dos produtos selecionados para o cálculo proporcional do rateio
+  let custoTotalItensEuro = itensAlocados.reduce((acc, i) => acc + (i.quantidade * i.custoEuroUnitario), 0);
+
+  // Rateio do frete proporcional ao custo do produto
+  let itensComRateio = itensAlocados.map(item => {
+    let subtotalItem = item.quantidade * item.custoEuroUnitario;
+    let proporcao = custoTotalItensEuro > 0 ? (subtotalItem / custoTotalItensEuro) : (1 / itensAlocados.length);
+    let freteAlocadoAoItem = freteEuro * proporcao;
+    let fretePorUnidade = freteAlocadoAoItem / item.quantidade;
+    let custoFinalUnitarioEuro = item.custoEuroUnitario + fretePorUnidade;
+
+    return {
+      idOriginalPT: item.id,
+      nome: item.nome,
+      categoria: item.categoria,
+      quantidade: item.quantidade,
+      custoEuroUnitarioBase: item.custoEuroUnitario,
+      freteAlocadoItemTotal: freteAlocadoAoItem,
+      custoFinalUnitarioEuro: custoFinalUnitarioEuro
+    };
+  });
+
+  let lotePayload = {
+    identificador: ident,
+    custoFreteEuro: freteEuro,
+    custoTotalItensEuro: custoTotalItensEuro,
+    itens: itensComRateio,
+    estado: "EM_TRANSITO",
+    usuario: auth.currentUser.email,
+    dataEnvio: new Date()
+  };
+
+  db.collection("lotes_pt").add(lotePayload).then(() => {
+    // Atualiza o estado dos itens originais para "EM_LOTE"
+    let batch = db.batch();
+    idsSelecionados.forEach(id => {
+      let ref = db.collection("armazem_pt").doc(id);
+      batch.update(ref, { estado: "EM_LOTE", loteIdentificador: ident });
+    });
+    return batch.commit();
+  }).then(() => {
+    loteNomeIdentificador.value = "";
+    loteFreteEuro.value = "";
+    alert("Lote montado e despachado com sucesso! Frete rateado proporcionalmente.");
+  }).catch(e => alert("Erro ao despachar lote: " + e.message));
+}
+
+/* PASSO 3: Recebimento em São Tomé & Transferência p/ Stock Geral */
+function darEntradaLoteNoStockSTP(loteId) {
+  let lote = todosLotesPT.find(l => l.id === loteId);
+  if(!lote) return;
+
+  let cotacaoPrompt = prompt("Digite a Cotação/Taxa de Câmbio do Euro para Dobras (STN) para converter os custos:", "26.0");
+  if(!cotacaoPrompt) return;
+  let taxaCambio = Number(cotacaoPrompt) || 26.0;
+
+  if(!confirm(`Confirmar a entrada dos produtos do Lote "${lote.identificador}" no Stock Geral de São Tomé à taxa de ${taxaCambio} Db/€?`)) {
+    return;
+  }
+
+  let batch = db.batch();
+
+  lote.itens.forEach(item => {
+    let custoUnitarioSTN = Math.round(item.custoFinalUnitarioEuro * taxaCambio);
+    let precoVendaSugerido = Math.round(custoUnitarioSTN * 1.3); // Margem de 30% padrão
+
+    // Verifica se o produto já existe no stock pelo nome
+    let prodExistente = todosProdutos.find(p => p.nome.toLowerCase().trim() === item.nome.toLowerCase().trim());
+
+    if(prodExistente) {
+      let refExistente = db.collection("produtos").doc(prodExistente.id);
+      let novoEstoque = (Number(prodExistente.estoque) || 0) + item.quantidade;
+      batch.update(refExistente, {
+        estoque: novoEstoque,
+        compra: custoUnitarioSTN
+      });
+    } else {
+      let novoRef = db.collection("produtos").doc();
+      batch.set(novoRef, {
+        nome: item.nome,
+        categoria: item.categoria || "Importado PT",
+        estoque: item.quantidade,
+        minimo: 2,
+        compra: custoUnitarioSTN,
+        venda: precoVendaSugerido,
+        foto: ""
+      });
+    }
+
+    // Regista a movimentação de entrada
+    let movRef = db.collection("movimentacoes").doc();
+    batch.set(movRef, {
+      produto: item.nome,
+      tipo: "entrada",
+      quantidade: item.quantidade,
+      valor: custoUnitarioSTN * item.quantidade,
+      formaPagamento: `Transferência Lote PT (${lote.identificador})`,
+      usuario: auth.currentUser.email,
+      data: new Date()
+    });
+  });
+
+  // Atualiza o lote para RECEBIDO
+  let loteRef = db.collection("lotes_pt").doc(loteId);
+  batch.update(loteRef, {
+    estado: "RECEBIDO",
+    dataRecebimento: new Date()
+  });
+
+  batch.commit().then(() => {
+    alert("Produtos transferidos e somados ao Stock Geral de São Tomé com sucesso!");
+  }).catch(e => alert("Erro ao dar entrada no stock: " + e.message));
+}
+
+/* =========================================================================
+   FIM D0 ARMAZÉM PORTUGAL
+   ========================================================================= */
 
 function verificarAlertaEstoqueBaixo() {
   let emFalta = todosProdutos.filter(p => (Number(p.estoque) || 0) <= 0);
