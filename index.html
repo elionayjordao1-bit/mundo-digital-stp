@@ -2270,33 +2270,20 @@ function renderizarTabelaEstoque() {
         <td><b>${vend} Db</b></td>
         ${isAdmin ? `<td style="color:${lucro>=0?'#10b981':'#ef4444'}">${lucro} Db</td>` : ''}
         <td><b>${totalItem} Db</b></td>
-        ${podeAdicionarEstoque ? `
-          <td>
-            <button class="btn-success btn-acao" onclick="entradaEstoque('${p.id}', ${est})">+</button>
-          </td>
-        ` : ''}
-        ${podeVender ? `
-          <td>
-            <button class="btn-secondary btn-acao" onclick="abrirModalVenda('${p.id}', '${p.nome.replace(/'/g, "\\'")}', ${est}, ${vend})">🛒 Vender</button>
-          </td>
-        ` : ''}
-        ${isAdmin ? `
-          <td>
-            <div class="acoes-cell">
-              <button class="btn-secondary btn-acao" onclick="prepararEditarProduto('${p.id}')">✏️ Edit</button>
-              <button class="btn-danger btn-acao" onclick="del('${p.id}')">🗑️</button>
-            </div>
-          </td>
-        ` : ''}
+        ${podeAdicionarEstoque ? `<td><button class="btn-success btn-acao" onclick="adicionarEstoqueRapido('${p.id}')">➕</button></td>` : ''}
+        ${podeVender ? `<td><button class="btn-success btn-acao" onclick="abrirModalVenda('${p.id}')">🛒 Vender</button></td>` : ''}
+        ${isAdmin ? `<td>
+          <div class="acoes-cell">
+            <button class="btn-warning btn-acao" onclick="editarProduto('${p.id}')">✏️</button>
+            <button class="btn-danger btn-acao" onclick="apagarProduto('${p.id}')">🗑️</button>
+          </div>
+        </td>` : ''}
       </tr>
     `;
   });
 
-  lista.innerHTML = htmlBuffer || '<tr><td colspan="12" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>';
-  
-  infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas} (${produtosFiltrados.length} itens)`;
-  btnPagAnt.disabled = (paginaAtual === 1);
-  btnPagProx.disabled = (paginaAtual === totalPaginas);
+  lista.innerHTML = htmlBuffer || `<tr><td colspan="11" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>`;
+  infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas}`;
 }
 
 function mudarFiltroOuBusca() {
