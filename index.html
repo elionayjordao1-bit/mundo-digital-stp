@@ -257,6 +257,11 @@ tr:nth-child(even) { background-color: #f8fafc; }
 .badge-em-transito { background: #fef3c7; color: #d97706; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
 .badge-concluido { background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
 
+/* BADGES E CARDS DO MÓDULO CAIXA */
+.badge-caixa-certo { background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; display: inline-block; }
+.badge-caixa-falta { background: #fef2f2; color: #dc2626; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; display: inline-block; }
+.badge-caixa-sobra { background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; display: inline-block; }
+
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
@@ -264,6 +269,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
 }
 .modal-content {
   background: #fff; padding: 25px; border-radius: 12px; max-width: 420px; width: 90%;
+  box-shadow: 0 20px 25px 5px rgba(0,0,0,0.2);
+}
+.modal-content-large {
+  background: #fff; padding: 25px; border-radius: 12px; max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto;
   box-shadow: 0 20px 25px 5px rgba(0,0,0,0.2);
 }
 
@@ -300,6 +309,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   <!-- NAVEGAÇÃO ENTRE PÁGINAS PRINCIPAIS -->
   <nav class="main-nav">
     <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas STP</button>
+    <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Módulo Caixa</button>
     <button class="nav-btn" id="btnPageArmazem" onclick="navegarPara('paginaArmazemPT')">🇵🇹 Armazém Portugal & Lotes</button>
   </nav>
 
@@ -590,6 +600,141 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div> <!-- FIM PAGINA PRINCIPAL -->
 
 
+  <!-- PÁGINA: MÓDULO DE CAIXA & AUDITORIA DE TURNO (FASE 2) -->
+  <div id="paginaCaixa" class="hidden">
+    
+    <!-- QUADRO DE STATUS E OPERAÇÃO DE CAIXA INDIVIDUAL -->
+    <div class="card">
+      <h3>💵 Gestão Operacional de Caixa (Seu Turno)</h3>
+      
+      <!-- ESTADO: CAIXA FECHADO (FORM DE ABERTURA) -->
+      <div id="boxCaixaFechado" class="hidden">
+        <div style="background: #fffbe6; padding: 15px; border-radius: 8px; border: 1px solid #fde68a; margin-bottom: 15px;">
+          <span style="color: #d97706; font-weight: bold; font-size: 16px;">🔒 O seu caixa encontra-se atualmente FECHADO.</span>
+          <p style="margin: 5px 0 0 0; font-size: 13px; color: #78350f;">Para começar a realizar vendas no POS e registrar movimentações em dinheiro, é necessário abrir o seu turno declarando o valor inicial (troco).</p>
+        </div>
+
+        <div class="form-grid" style="max-width: 500px;">
+          <label style="font-weight: 600; font-size: 13px;">Valor Inicial / Troco de Abertura (Db):</label>
+          <input type="number" id="caixaValorInicial" placeholder="Ex: 500" min="0">
+          <button onclick="abrirCaixaTurno()" class="btn-success" style="padding: 12px; font-size: 14px;">🔓 Abrir Caixa de Turno</button>
+        </div>
+      </div>
+
+      <!-- ESTADO: CAIXA ABERTO (RESUMO DO TURNO & FORM DE FECHAMENTO) -->
+      <div id="boxCaixaAberto" class="hidden">
+        <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <span style="color: #166534; font-weight: bold; font-size: 16px;">🟢 Caixa ABERTO - Operações Ativas</span>
+            <br>
+            <small style="color: #15803d;" id="infoAberturaCaixaCurrent">Aberto às -- por --</small>
+          </div>
+          <button onclick="scrollParaFechamento()" class="btn-danger">🔴 Fechar Caixa de Turno</button>
+        </div>
+
+        <!-- KPIS DO TURNO ATUAL -->
+        <div class="kpi-grid">
+          <div class="kpi-card blue">
+            <span class="kpi-title">Valor Inicial (Troco)</span>
+            <span id="caixaKpiValorInicial" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card green">
+            <span class="kpi-title">Vendas em Dinheiro</span>
+            <span id="caixaKpiVendasDinheiro" class="kpi-value">0 Db</span>
+            <span id="caixaKpiQtdVendasDinheiro" class="kpi-sub">0 vendas</span>
+          </div>
+          <div class="kpi-card purple">
+            <span class="kpi-title">Outros Meios (Transf/Cartão)</span>
+            <span id="caixaKpiOutrosMeios" class="kpi-value">0 Db</span>
+            <span style="font-size: 11px; color: #8b5cf6;">Não afeta dinheiro físico</span>
+          </div>
+          <div class="kpi-card red">
+            <span class="kpi-title">Saídas de Dinheiro</span>
+            <span id="caixaKpiSaidasDinheiro" class="kpi-value">0 Db</span>
+            <span style="font-size: 11px; color: #ef4444;">Compras / Despesas em $</span>
+          </div>
+          <div class="kpi-card orange">
+            <span class="kpi-title">DINHEIRO ESPERADO NO CAIXA</span>
+            <span id="caixaKpiDinheiroEsperado" class="kpi-value" style="color:#d97706; font-size:22px;">0 Db</span>
+            <span style="font-size: 11px; color: #b45309;">(Inicial + Dinheiro - Saídas)</span>
+          </div>
+        </div>
+
+        <!-- PAINEL DE FECHAMENTO DE CAIXA -->
+        <div style="background: #f8fafc; padding: 20px; border-radius: 10px; border: 1px solid #cbd5e1; margin-top: 20px;" id="secaoFechamentoForm">
+          <h4 style="margin-top:0; color:#0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">🔒 Concluir & Fechar Caixa do Turno</h4>
+          
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div>
+              <label style="font-size: 12px; font-weight: 600;">Dinheiro Contado Fisicamente (Db):</label>
+              <input type="number" id="caixaDinheiroContado" placeholder="Digite o valor na gaveta" oninput="calcularQuebraCaixaLive()">
+            </div>
+            
+            <div>
+              <label style="font-size: 12px; font-weight: 600;">Resultado / Diferença (Quebra):</label>
+              <div id="boxResultadoQuebra" style="padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 15px; background: #e2e8f0;">
+                Informe o valor contado
+              </div>
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+              <label style="font-size: 12px; font-weight: 600;">Observação / Justificativa (Obrigatório se houver diferença):</label>
+              <input type="text" id="caixaObservacaoFechamento" placeholder="Ex: Troco errado no início, nota rasgada, etc.">
+            </div>
+
+            <button onclick="fecharCaixaTurno()" class="btn-danger" style="grid-column: 1 / -1; padding: 12px; font-size: 15px;">
+              🔴 Confirmar Fechamento de Caixa
+            </button>
+          </div>
+        </div>
+
+        <!-- LISTA DE VENDAS REALIZADAS NESTE TURNO -->
+        <h4 style="margin-top: 25px; color: #1e293b;">🛒 Vendas Realizadas neste Turno Ativo</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Horário</th>
+              <th>Produto</th>
+              <th>Qtd</th>
+              <th>Forma Pagamento</th>
+              <th>Valor Total</th>
+              <th>Cliente</th>
+            </tr>
+          </thead>
+          <tbody id="listaVendasTurnoAtual"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAINEL ADMINISTRATIVO DE AUDITORIA DE CAIXAS (VISÃO ADMIN) -->
+    <div class="card hidden" id="cardAdminCaixas">
+      <h3 style="color:#0f172a;">👑 Painel de Auditoria Geral de Caixas & Turnos (Histórico Completo)</h3>
+      <p style="font-size: 13px; color: #64748b; margin-top:-8px; margin-bottom:15px;">
+        Consulte o histórico completo de caixas abertos e fechados por cada funcionário, incluindo contagens de dinheiro, diferenças e relatórios completos do turno.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Funcionário / Role</th>
+            <th>Abertura</th>
+            <th>Fechamento</th>
+            <th>Inicial</th>
+            <th>Vendas $</th>
+            <th>Esperado</th>
+            <th>Contado</th>
+            <th>Diferença</th>
+            <th>Ações / Auditoria</th>
+          </tr>
+        </thead>
+        <tbody id="listaHistoricoCaixasAdmin"></tbody>
+      </table>
+    </div>
+
+  </div> <!-- FIM PAGINA CAIXA -->
+
+
   <!-- PÁGINA 2: ARMAZÉM PORTUGAL (FLUXO EM 3 ETAPAS INDEPENDENTES) -->
   <div id="paginaArmazemPT" class="hidden">
     
@@ -731,6 +876,20 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
+<!-- MODAL AUDITORIA DETALHADA DO TURNO (ADMIN) -->
+<div id="modalAuditoriaCaixa" class="modal-overlay hidden">
+  <div class="modal-content-large">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 15px;">
+      <h3 style="margin:0; color:#0f172a;" id="auditoriaModalTitulo">🔎 Relatório de Auditoria Completa do Turno</h3>
+      <button onclick="fecharModalAuditoria()" class="btn-secondary" style="padding: 4px 10px;">✕ Fechar</button>
+    </div>
+
+    <div id="conteudoAuditoriaModal">
+      <!-- Preenchido via JavaScript -->
+    </div>
+  </div>
+</div>
+
 <!-- COMPROVATIVO / RECIBO -->
 <div id="areaImpressaoRecibo">
   <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
@@ -798,6 +957,8 @@ let listenerDespesas = null;
 let listenerEncomendas = null;
 let listenerArmazemPT = null;
 let listenerLotesPT = null;
+let listenerCaixaAtual = null;
+let listenerCaixasAdmin = null;
 
 let todosProdutos = [];
 let todasMovimentacoes = [];
@@ -805,7 +966,9 @@ let todasDespesas = [];
 let todasEncomendas = [];
 let todosItensSoltosPT = [];
 let todosLotesPT = [];
+let todosCaixasAdmin = [];
 
+let caixaAtualDoc = null; // Guarda o documento do caixa ABERTO do utilizador logado
 let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
 let dataFiltroFimDash = null;
@@ -821,17 +984,22 @@ function login(){
     .catch(e => { if(erroCampo) erroCampo.innerText = e.message; });
 }
 
-/* SISTEMA DE NAVEGAÇÃO POR PÁGINAS (DASHBOARD x ARMAZÉM PORTUGAL) */
+/* SISTEMA DE NAVEGAÇÃO POR PÁGINAS (DASHBOARD x CAIXA x ARMAZÉM PORTUGAL) */
 function navegarPara(paginaId) {
   document.getElementById("paginaPrincipal").classList.add("hidden");
+  document.getElementById("paginaCaixa").classList.add("hidden");
   document.getElementById("paginaArmazemPT").classList.add("hidden");
 
   document.getElementById("btnPageMain").classList.remove("active");
+  document.getElementById("btnPageCaixa").classList.remove("active");
   document.getElementById("btnPageArmazem").classList.remove("active");
 
   if(paginaId === 'paginaPrincipal') {
     document.getElementById("paginaPrincipal").classList.remove("hidden");
     document.getElementById("btnPageMain").classList.add("active");
+  } else if(paginaId === 'paginaCaixa') {
+    document.getElementById("paginaCaixa").classList.remove("hidden");
+    document.getElementById("btnPageCaixa").classList.add("active");
   } else if(paginaId === 'paginaArmazemPT') {
     document.getElementById("paginaArmazemPT").classList.remove("hidden");
     document.getElementById("btnPageArmazem").classList.add("active");
@@ -852,6 +1020,7 @@ function resetarInterface() {
   btnExportarEstoque.classList.add("hidden");
   btnExportarHistorico.classList.add("hidden");
   cardEstoque.classList.add("hidden");
+  cardAdminCaixas.classList.add("hidden");
 }
 
 function logout(){
@@ -862,7 +1031,10 @@ function logout(){
   if(listenerEncomendas) listenerEncomendas();
   if(listenerArmazemPT) listenerArmazemPT();
   if(listenerLotesPT) listenerLotesPT();
+  if(listenerCaixaAtual) listenerCaixaAtual();
+  if(listenerCaixasAdmin) listenerCaixasAdmin();
   usuarioRole = null;
+  caixaAtualDoc = null;
   resetarInterface();
   app.classList.add("hidden");
   userInfoHeader.classList.add("hidden");
@@ -903,6 +1075,7 @@ auth.onAuthStateChanged(u => {
         btnToggleFunc.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
         btnExportarHistorico.classList.remove("hidden");
+        cardAdminCaixas.classList.remove("hidden");
         encCustoCompra.classList.remove("hidden");
       } else if(usuarioRole === "estoque") {
         cardCompras.classList.remove("hidden");
@@ -918,6 +1091,7 @@ auth.onAuthStateChanged(u => {
 
       cardEstoque.classList.remove("hidden");
       carregar();
+      carregarModuloCaixa();
     });
   } else {
     app.classList.add("hidden");
@@ -989,7 +1163,399 @@ function carregar(){
     s.forEach(d => { let m = d.data(); m.id = d.id; todasMovimentacoes.push(m); });
     renderizarHistorico(todasMovimentacoes);
     processarDashboard();
+    renderizarVendasTurnoAtual();
   });
+}
+
+/* =========================================================================
+   LÓGICA DO MÓDULO DE CAIXA E AUDITORIA DE TURNO (FASE 2)
+   ========================================================================= */
+
+function carregarModuloCaixa() {
+  if(listenerCaixaAtual) listenerCaixaAtual();
+  if(listenerCaixasAdmin) listenerCaixasAdmin();
+
+  let uid = auth.currentUser.uid;
+
+  // Listener para ouvir o caixa ativo do utilizador logado
+  listenerCaixaAtual = db.collection("caixas")
+    .where("uid", "==", uid)
+    .where("estado", "==", "ABERTO")
+    .onSnapshot(snapshot => {
+      if (!snapshot.empty) {
+        let doc = snapshot.docs[0];
+        caixaAtualDoc = doc.data();
+        caixaAtualDoc.id = doc.id;
+
+        boxCaixaFechado.classList.add("hidden");
+        boxCaixaAberto.classList.remove("hidden");
+
+        let dtAbertura = caixaAtualDoc.dataAbertura ? caixaAtualDoc.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+        infoAberturaCaixaCurrent.innerText = `Aberto às ${dtAbertura} por ${caixaAtualDoc.usuario} (${(caixaAtualDoc.role || '').toUpperCase()})`;
+
+        atualizarResumoCaixaLive();
+        renderizarVendasTurnoAtual();
+      } else {
+        caixaAtualDoc = null;
+        boxCaixaAberto.classList.add("hidden");
+        boxCaixaFechado.classList.remove("hidden");
+      }
+    });
+
+  // Listener Admin para auditoria de caixas
+  if (usuarioRole === "admin") {
+    listenerCaixasAdmin = db.collection("caixas")
+      .orderBy("dataAbertura", "desc")
+      .onSnapshot(s => {
+        todosCaixasAdmin = [];
+        let htmlBuffer = "";
+
+        s.forEach(d => {
+          let c = d.data();
+          c.id = d.id;
+          todosCaixasAdmin.push(c);
+
+          let dtAb = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+          let dtFc = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'Em Aberto';
+          let isAberto = (c.estado === "ABERTO");
+
+          let badgeEstado = isAberto ? 
+            '<span class="badge-em-transito" style="background:#dcfce7; color:#15803d;">🟢 ABERTO</span>' : 
+            '<span class="badge-concluido" style="background:#f1f5f9; color:#475569;">🔴 FECHADO</span>';
+
+          let diffVal = c.diferenca !== undefined ? c.diferenca : 0;
+          let badgeDiff = '-';
+          if (!isAberto) {
+            if (diffVal === 0) badgeDiff = '<span class="badge-caixa-certo">🟢 Certo (0)</span>';
+            else if (diffVal < 0) badgeDiff = `<span class="badge-caixa-falta">🔴 Falta (${diffVal} Db)</span>`;
+            else badgeDiff = `<span class="badge-caixa-sobra">🟡 Sobra (+${diffVal} Db)</span>`;
+          }
+
+          htmlBuffer += `
+            <tr>
+              <td>${badgeEstado}</td>
+              <td><b>${c.usuario}</b><br><small style="color:#64748b;">${c.role || ''}</small></td>
+              <td><small>${dtAb}</small></td>
+              <td><small>${dtFc}</small></td>
+              <td>${c.valorInicial || 0} Db</td>
+              <td style="color:#10b981; font-weight:bold;">${c.totalVendasDinheiro || 0} Db</td>
+              <td style="color:#d97706; font-weight:bold;">${c.dinheiroEsperado || 0} Db</td>
+              <td><b>${!isAberto ? (c.dinheiroContado + ' Db') : '-'}</b></td>
+              <td>${badgeDiff}</td>
+              <td>
+                <button class="btn-secondary btn-acao" onclick="abrirAuditoriaModalCaixa('${c.id}')">🔎 Relatório</button>
+              </td>
+            </tr>
+          `;
+        });
+
+        listaHistoricoCaixasAdmin.innerHTML = htmlBuffer || '<tr><td colspan="10" style="color:#94a3b8;">Nenhum registro de caixa encontrado.</td></tr>';
+      });
+  }
+}
+
+// ABERTURA DE CAIXA COM TRANSACTION
+function abrirCaixaTurno() {
+  let valInicial = Number(caixaValorInicial.value);
+  if (isNaN(valInicial) || valInicial < 0 || caixaValorInicial.value === "") {
+    return alert("Informe um valor inicial/troco válido para abertura do caixa!");
+  }
+
+  let user = auth.currentUser;
+
+  db.runTransaction(function(transaction) {
+    let queryRef = db.collection("caixas")
+      .where("uid", "==", user.uid)
+      .where("estado", "==", "ABERTO");
+
+    return transaction.get(queryRef).then(function(snapshot) {
+      if (!snapshot.empty) {
+        throw "Você já possui um caixa ABERTO! Não é permitido abrir dois caixas simultaneamente.";
+      }
+
+      let novoCaixaRef = db.collection("caixas").doc();
+      transaction.set(novoCaixaRef, {
+        uid: user.uid,
+        usuario: user.email,
+        role: usuarioRole,
+        valorInicial: valInicial,
+        dataAbertura: new Date(),
+        estado: "ABERTO",
+        totalVendasDinheiro: 0,
+        dinheiroEsperado: valInicial
+      });
+    });
+  }).then(() => {
+    caixaValorInicial.value = "";
+    alert("Caixa aberto com sucesso! Bom turno de vendas.");
+  }).catch(e => alert("Erro ao abrir caixa: " + e));
+}
+
+// CÁLCULO DINÂMICO EM TEMPO REAL DO CAIXA ATIVO
+function calcularCalculoCaixaAtual() {
+  if (!caixaAtualDoc) return { inicial: 0, vendasDinheiro: 0, outrosMeios: 0, saidasDinheiro: 0, entradasEstoque: 0, esperado: 0, listaVendasTurno: [] };
+
+  let caixaId = caixaAtualDoc.id;
+  let inicial = Number(caixaAtualDoc.valorInicial) || 0;
+
+  let vendasDinheiro = 0;
+  let outrosMeios = 0;
+  let saidasDinheiro = 0;
+  let entradasEstoque = 0;
+  let listaVendasTurno = [];
+
+  todasMovimentacoes.forEach(m => {
+    if (m.caixaId === caixaId) {
+      let val = Number(m.valor) || 0;
+      let fPag = m.formaPagamento || "Dinheiro";
+
+      if (m.tipo === "saida") {
+        listaVendasTurno.push(m);
+        if (fPag.includes("Dinheiro")) {
+          vendasDinheiro += val;
+        } else {
+          outrosMeios += val;
+        }
+      } else if (m.tipo === "compra") {
+        if (fPag.includes("Dinheiro")) {
+          saidasDinheiro += val;
+        }
+      } else if (m.tipo === "entrada") {
+        entradasEstoque++;
+      }
+    }
+  });
+
+  let esperado = inicial + vendasDinheiro - saidasDinheiro;
+
+  return {
+    inicial,
+    vendasDinheiro,
+    outrosMeios,
+    saidasDinheiro,
+    entradasEstoque,
+    esperado,
+    listaVendasTurno
+  };
+}
+
+function atualizarResumoCaixaLive() {
+  let res = calcularCalculoCaixaAtual();
+
+  caixaKpiValorInicial.innerText = res.inicial.toLocaleString('pt-PT') + " Db";
+  caixaKpiVendasDinheiro.innerText = res.vendasDinheiro.toLocaleString('pt-PT') + " Db";
+  caixaKpiQtdVendasDinheiro.innerText = `${res.listaVendasTurno.filter(v => (v.formaPagamento||'').includes("Dinheiro")).length} vendas em dinheiro`;
+  caixaKpiOutrosMeios.innerText = res.outrosMeios.toLocaleString('pt-PT') + " Db";
+  caixaKpiSaidasDinheiro.innerText = res.saidasDinheiro.toLocaleString('pt-PT') + " Db";
+  caixaKpiDinheiroEsperado.innerText = res.esperado.toLocaleString('pt-PT') + " Db";
+
+  calcularQuebraCaixaLive();
+}
+
+function renderizarVendasTurnoAtual() {
+  if (!caixaAtualDoc) return;
+  let res = calcularCalculoCaixaAtual();
+  let htmlBuffer = "";
+
+  res.listaVendasTurno.forEach(v => {
+    let dt = v.data ? v.data.toDate().toLocaleTimeString('pt-PT') : '-';
+    htmlBuffer += `
+      <tr>
+        <td><small>${dt}</small></td>
+        <td><b>${v.produto}</b></td>
+        <td>${v.quantidade} un</td>
+        <td><small>${v.formaPagamento || 'Dinheiro'}</small></td>
+        <td style="color:#10b981; font-weight:bold;">${v.valor} Db</td>
+        <td><small>${v.cliente || 'Consumidor Final'}</small></td>
+      </tr>
+    `;
+  });
+
+  listaVendasTurnoAtual.innerHTML = htmlBuffer || '<tr><td colspan="6" style="color:#94a3b8;">Nenhuma venda realizada neste turno.</td></tr>';
+}
+
+function calcularQuebraCaixaLive() {
+  let res = calcularCalculoCaixaAtual();
+  let contado = Number(caixaDinheiroContado.value);
+
+  if (caixaDinheiroContado.value === "" || isNaN(contado)) {
+    boxResultadoQuebra.innerHTML = "Informe o valor contado";
+    boxResultadoQuebra.style.background = "#e2e8f0";
+    boxResultadoQuebra.style.color = "#475569";
+    return;
+  }
+
+  let diff = contado - res.esperado;
+
+  if (diff === 0) {
+    boxResultadoQuebra.innerHTML = "🟢 Caixa Certo (Diferença: 0 Db)";
+    boxResultadoQuebra.style.background = "#dcfce7";
+    boxResultadoQuebra.style.color = "#15803d";
+  } else if (diff < 0) {
+    boxResultadoQuebra.innerHTML = `🔴 Falta / Quebra: ${diff} Db`;
+    boxResultadoQuebra.style.background = "#fef2f2";
+    boxResultadoQuebra.style.color = "#dc2626";
+  } else {
+    boxResultadoQuebra.innerHTML = `🟡 Sobra de Caixa: +${diff} Db`;
+    boxResultadoQuebra.style.background = "#fef3c7";
+    boxResultadoQuebra.style.color = "#d97706";
+  }
+}
+
+function scrollParaFechamento() {
+  secaoFechamentoForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+// FECHAMENTO DE CAIXA COM TRANSACTION E AUDITORIA COMPLETA
+function fecharCaixaTurno() {
+  if (!caixaAtualDoc) return;
+
+  let contado = Number(caixaDinheiroContado.value);
+  if (caixaDinheiroContado.value === "" || isNaN(contado) || contado < 0) {
+    return alert("Informe o valor em dinheiro contado na gaveta!");
+  }
+
+  let res = calcularCalculoCaixaAtual();
+  let diff = contado - res.esperado;
+  let obs = caixaObservacaoFechamento.value.trim();
+
+  if (diff !== 0 && !obs) {
+    return alert("Atenção: Houve diferença/quebra no caixa! Por favor, preencha a observação justificando o motivo.");
+  }
+
+  if (!confirm(`Confirmar o fechamento do caixa?\n\n- Dinheiro Esperado: ${res.esperado} Db\n- Dinheiro Contado: ${contado} Db\n- Diferença: ${diff} Db`)) {
+    return;
+  }
+
+  let user = auth.currentUser;
+  let caixaId = caixaAtualDoc.id;
+
+  db.runTransaction(function(transaction) {
+    let caixaRef = db.collection("caixas").doc(caixaId);
+
+    return transaction.get(caixaRef).then(function(doc) {
+      if (!doc.exists) throw "Caixa não encontrado.";
+      let dados = doc.data();
+
+      if (dados.estado === "FECHADO") throw "Este caixa já foi fechado previamente.";
+      if (dados.uid !== user.uid && usuarioRole !== "admin") throw "Acesso negado: Você só pode fechar seu próprio caixa.";
+
+      transaction.update(caixaRef, {
+        estado: "FECHADO",
+        dataFechamento: new Date(),
+        fechadoPorUid: user.uid,
+        fechadoPorEmail: user.email,
+        totalVendasDinheiro: res.vendasDinheiro,
+        totalVendasOutros: res.outrosMeios,
+        totalSaidasDinheiro: res.saidasDinheiro,
+        dinheiroEsperado: res.esperado,
+        dinheiroContado: contado,
+        diferenca: diff,
+        observacao: obs,
+        resumoAuditTurno: {
+          totalVendasRegistadas: res.listaVendasTurno.length,
+          entradasEstoqueTurno: res.entradasEstoque
+        }
+      });
+    });
+  }).then(() => {
+    caixaDinheiroContado.value = "";
+    caixaObservacaoFechamento.value = "";
+    alert("Caixa fechado e auditoria de turno registrada com sucesso!");
+  }).catch(e => alert("Erro ao fechar caixa: " + e));
+}
+
+// AUDITORIA COMPLETA DO TURNO PARA ADMINISTRADOR
+function abrirAuditoriaModalCaixa(caixaId) {
+  let c = todosCaixasAdmin.find(item => item.id === caixaId);
+  if (!c) return;
+
+  let dtAb = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+  let dtFc = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'Em Aberto';
+  let isAberto = (c.estado === "ABERTO");
+
+  let vendasTurno = todasMovimentacoes.filter(m => m.caixaId === caixaId);
+  let vendasHtml = "";
+
+  vendasTurno.forEach(v => {
+    let dtV = v.data ? v.data.toDate().toLocaleTimeString('pt-PT') : '-';
+    vendasHtml += `
+      <tr>
+        <td><small>${dtV}</small></td>
+        <td><b>${v.produto}</b></td>
+        <td><span style="font-weight:bold;">${v.tipo.toUpperCase()}</span></td>
+        <td>${v.quantidade} un</td>
+        <td>${v.valor} Db</td>
+        <td><small>${v.formaPagamento || 'Dinheiro'}</small></td>
+        <td><small>${v.usuario}</small></td>
+      </tr>
+    `;
+  });
+
+  auditoriaModalTitulo.innerText = `🔎 Relatório de Turno: ${c.usuario}`;
+
+  conteudoAuditoriaModal.innerHTML = `
+    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 13px;">
+        <div><b>Aberto Por:</b> ${c.usuario} (${(c.role||'').toUpperCase()})</div>
+        <div><b>Data Abertura:</b> ${dtAb}</div>
+        <div><b>Valor Inicial (Troco):</b> ${c.valorInicial || 0} Db</div>
+        <div><b>Fechado Por:</b> ${c.fechadoPorEmail || (isAberto ? 'Em Aberto' : c.usuario)}</div>
+        <div><b>Data Fechamento:</b> ${dtFc}</div>
+        <div><b>Estado do Turno:</b> <b style="color:${isAberto?'#10b981':'#ef4444'}">${c.estado}</b></div>
+      </div>
+    </div>
+
+    <div class="kpi-grid" style="margin-bottom: 15px;">
+      <div class="kpi-card blue">
+        <span class="kpi-title">Vendas $ Dinheiro</span>
+        <span class="kpi-value">${c.totalVendasDinheiro || 0} Db</span>
+      </div>
+      <div class="kpi-card purple">
+        <span class="kpi-title">Outros Pagamentos</span>
+        <span class="kpi-value">${c.totalVendasOutros || 0} Db</span>
+      </div>
+      <div class="kpi-card orange">
+        <span class="kpi-title">Dinheiro Esperado</span>
+        <span class="kpi-value">${c.dinheiroEsperado || 0} Db</span>
+      </div>
+      <div class="kpi-card green">
+        <span class="kpi-title">Dinheiro Contado</span>
+        <span class="kpi-value">${!isAberto ? (c.dinheiroContado + ' Db') : '-'}</span>
+      </div>
+    </div>
+
+    ${!isAberto ? `
+      <div style="background:${c.diferenca === 0 ? '#f0fdf4' : (c.diferenca < 0 ? '#fef2f2' : '#fffbe6')}; padding:12px; border-radius:8px; margin-bottom:15px; font-size:14px;">
+        <b>Resultado / Diferença:</b> ${c.diferenca === 0 ? '🟢 Caixa Certo (0 Db)' : (c.diferenca < 0 ? `🔴 Quebra: ${c.diferenca} Db` : `🟡 Sobra: +${c.diferenca} Db`)}
+        <br><b>Observação Registrada:</b> ${c.observacao || 'Nenhuma observação declarada.'}
+      </div>
+    ` : ''}
+
+    <h4 style="margin-top: 15px; color: #1e293b;">📋 Registo de Todas as Operações do Turno (${vendasTurno.length})</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Horário</th>
+          <th>Produto / Operação</th>
+          <th>Tipo</th>
+          <th>Qtd</th>
+          <th>Valor Total</th>
+          <th>Forma Pagamento</th>
+          <th>Operador</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${vendasHtml || '<tr><td colspan="7" style="color:#94a3b8;">Nenhuma movimentação realizada neste turno.</td></tr>'}
+      </tbody>
+    </table>
+  `;
+
+  modalAuditoriaCaixa.classList.remove("hidden");
+}
+
+function fecharModalAuditoria() {
+  modalAuditoriaCaixa.classList.add("hidden");
 }
 
 /* =========================================================================
@@ -1040,7 +1606,7 @@ function carregarArmazemPTTresPassos() {
       }
     });
 
-    listaItensSoltosPT.innerHTML = htmlSoltos || '<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo solto no Armazém de Lisboa.</td></tr>';
+    listaItensSoltosPT.innerHTML = htmlSoltos || '<tr><td colspan="7" style="color:#94a3b8;">Nenum artigo solto no Armazém de Lisboa.</td></tr>';
     listaSelecaoLotePT.innerHTML = htmlSelecao || '<tr><td colspan="4" style="color:#94a3b8;">Nenhum artigo disponível para montagem de lote.</td></tr>';
   });
 
@@ -1180,7 +1746,7 @@ function despacharLotePT() {
   }).catch(e => alert("Erro ao despachar lote: " + e.message));
 }
 
-// TRANSACTION DE ENTRADA LOTE PT COM SEGURANÇA
+// TRANSACTION DE ENTRADA LOTE PT COM SEGURANÇA E VINCULAÇÃO AO CAIXA
 function darEntradaLoteNoStockSTP(loteId) {
   let lote = todosLotesPT.find(l => l.id === loteId);
   if(!lote) return;
@@ -1236,7 +1802,8 @@ function darEntradaLoteNoStockSTP(loteId) {
           usuario: auth.currentUser.email,
           uid: auth.currentUser.uid,
           role: usuarioRole,
-          data: new Date()
+          data: new Date(),
+          caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
         });
       });
 
@@ -1415,7 +1982,8 @@ function registrarNovaEncomenda() {
       usuario: auth.currentUser.email,
       uid: auth.currentUser.uid,
       role: usuarioRole,
-      data: new Date()
+      data: new Date(),
+      caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
     });
   }).then(() => {
     encCliente.value = ""; encTelefone.value = ""; encProduto.value = "";
@@ -1440,7 +2008,8 @@ function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, cu
         usuario: auth.currentUser.email,
         uid: auth.currentUser.uid,
         role: usuarioRole,
-        data: new Date()
+        data: new Date(),
+        caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
       });
     }).then(() => {
       alert("Encomenda concluída e entregue! Faturamento registrado com sucesso.");
@@ -1810,7 +2379,7 @@ function cancelarEdicaoProduto() {
   btnCancelarProduto.classList.add("hidden");
 }
 
-// TRANSACTION PARA ENTRADA RÁPIDA DE ESTOQUE
+// TRANSACTION PARA ENTRADA RÁPIDA DE ESTOQUE (COM VINCULAÇÃO DE CAIXA)
 function entradaEstoque(id, atual) {
   let add = prompt("Quantidade a adicionar ao estoque:");
   if(add && !isNaN(add) && Number(add) > 0) {
@@ -1834,14 +2403,15 @@ function entradaEstoque(id, atual) {
           usuario: auth.currentUser.email,
           uid: auth.currentUser.uid,
           role: usuarioRole,
-          data: new Date()
+          data: new Date(),
+          caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
         });
       });
     }).catch(e => alert("Erro ao adicionar estoque: " + e));
   }
 }
 
-// TRANSACTION PARA COMPRA DE FORNECEDOR
+// TRANSACTION PARA COMPRA DE FORNECEDOR (COM VINCULAÇÃO DE CAIXA)
 function registrarCompraProduto() {
   let pId = compraSelectProduto.value;
   let q = Number(compraQtd.value) || 0;
@@ -1880,7 +2450,8 @@ function registrarCompraProduto() {
         usuario: auth.currentUser.email,
         uid: auth.currentUser.uid,
         role: usuarioRole,
-        data: new Date()
+        data: new Date(),
+        caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
       });
     });
   }).then(() => {
@@ -1947,7 +2518,8 @@ function registrarOperacaoCambio() {
     usuario: auth.currentUser.email,
     uid: auth.currentUser.uid,
     role: usuarioRole,
-    data: new Date()
+    data: new Date(),
+    caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
   }).then(() => {
     cambioQtdEur.value = "";
     cambioCliente.value = "";
@@ -2027,7 +2599,11 @@ function limparFiltroHistorico() {
 }
 
 function abrirModalVenda(id, nome, estoque, precoVenda) {
+  if (!caixaAtualDoc) {
+    return alert("Atenção: É necessário abrir um caixa de turno antes de realizar vendas!");
+  }
   if(estoque <= 0) return alert("Produto sem estoque disponível!");
+
   produtoVendaAtual = { id, nome, estoque, precoVenda };
   modalProdNome.innerText = nome;
   modalProdQtd.value = 1;
@@ -2068,9 +2644,14 @@ function calcularTroco() {
   lblTroco.innerText = (troco > 0 ? troco : 0) + " Db";
 }
 
-// TRANSACTION DE VENDA: VERIFICA ESTOQUE E EXECUTA BAIXA/LOG ATÔMICO
+// TRANSACTION DE VENDA: VERIFICA ESTOQUE, ASSOCIA AO CAIXA E EXECUTA BAIXA ATÔMICA
 function confirmarVendaModal() {
   if(!produtoVendaAtual) return;
+
+  if(!caixaAtualDoc) {
+    return alert("Atenção: O seu caixa precisa estar aberto para confirmar a venda!");
+  }
+
   let q = +modalProdQtd.value;
   if(!q || q <= 0) return alert("Quantidade inválida.");
 
@@ -2082,6 +2663,8 @@ function confirmarVendaModal() {
   let clienteVal = modalNomeCliente.value.trim() || "Consumidor Final";
   let recebidoVal = +modalValorRecebido.value || totalval;
   let trocoVal = recebidoVal - totalval;
+
+  let caixaIdAtivo = caixaAtualDoc.id;
 
   db.runTransaction(function(transaction) {
     let prodRef = db.collection("produtos").doc(produtoVendaAtual.id);
@@ -2109,7 +2692,8 @@ function confirmarVendaModal() {
         usuario: auth.currentUser.email,
         uid: auth.currentUser.uid,
         role: usuarioRole,
-        data: new Date()
+        data: new Date(),
+        caixaId: caixaIdAtivo
       });
     });
   }).then(() => {
@@ -2169,7 +2753,8 @@ function salvarDespesa() {
     usuario: auth.currentUser.email,
     uid: auth.currentUser.uid,
     role: usuarioRole,
-    data: new Date()
+    data: new Date(),
+    caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
   }).then(() => {
     despDescricao.value = "";
     despValor.value = "";
