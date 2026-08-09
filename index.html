@@ -1956,6 +1956,10 @@ function registrarCompraProduto() {
   let novoEstoque = Number(prod.estoque || 0) + q;
   let novoCustoUnitario = Math.round(custoTotal / q);
 
+  if(!confirm(`Confirmar registro de compra?\n\nProduto: ${prod.nome}\nQuantidade: ${q}\nCusto Total: ${custoTotal} Db\nNovo estoque será: ${novoEstoque}`)) {
+    return;
+  }
+
   db.collection("produtos").doc(pId).update({
     estoque: novoEstoque,
     compra: novoCustoUnitario
