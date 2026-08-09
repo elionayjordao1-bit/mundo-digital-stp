@@ -190,6 +190,7 @@ button {
   transition: all 0.2s;
 }
 button:hover { opacity: 0.92; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-secondary { background: #64748b; color: #fff; }
 .btn-danger { background: #ef4444; color: #fff; }
 .btn-warning { background: #d97706; color: #fff; }
@@ -257,6 +258,14 @@ tr:nth-child(even) { background-color: #f8fafc; }
 .badge-em-transito { background: #fef3c7; color: #d97706; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
 .badge-concluido { background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
 
+/* ESTILOS ESPECÍFICOS DA FASE 2: CAIXA E TURNO */
+.status-caixa-aberto { background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+.status-caixa-fechado { background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+
+.dif-certo { color: #10b981; font-weight: bold; }
+.dif-quebra { color: #ef4444; font-weight: bold; }
+.dif-sobra { color: #d97706; font-weight: bold; }
+
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
@@ -265,7 +274,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
 .modal-content {
   background: #fff; padding: 25px; border-radius: 12px; max-width: 420px; width: 90%;
   box-shadow: 0 20px 25px 5px rgba(0,0,0,0.2);
+  max-height: 90vh;
+  overflow-y: auto;
 }
+.modal-content.large { max-width: 750px; }
 
 #areaImpressaoRecibo { display: none; }
 @media print {
@@ -300,6 +312,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   <!-- NAVEGAÇÃO ENTRE PÁGINAS PRINCIPAIS -->
   <nav class="main-nav">
     <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas STP</button>
+    <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Gestão de Caixa & Turno</button>
     <button class="nav-btn" id="btnPageArmazem" onclick="navegarPara('paginaArmazemPT')">🇵🇹 Armazém Portugal & Lotes</button>
   </nav>
 
@@ -590,6 +603,75 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div> <!-- FIM PAGINA PRINCIPAL -->
 
 
+  <!-- PÁGINA: FASE 2 — GESTÃO DE CAIXA & TURNO -->
+  <div id="paginaCaixa" class="hidden">
+    
+    <!-- PAINEL DE CONTROLO DO TURNO DO UTILIZADOR -->
+    <div class="card" id="cardPainelTurnoAtual">
+      <h3>💵 Módulo de Caixa / Turno Operacional</h3>
+      <div id="statusTurnoBox" style="padding: 15px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+        <p style="margin: 0; color: #64748b; font-size: 14px;">A verificar estado do caixa...</p>
+      </div>
+
+      <!-- FORMULÁRIO DE ABERTURA -->
+      <div id="formAberturaCaixa" class="hidden">
+        <h4 style="margin-top:0; color:#1e293b;">🟢 Abertura de Caixa / Turno</h4>
+        <div class="form-grid" style="max-width: 500px;">
+          <label style="font-size: 13px; font-weight: 600;">Valor Inicial (Troco em Dinheiro):</label>
+          <input type="number" id="aberturaValorInicial" placeholder="Ex: 500 Db" value="0" min="0">
+          <button onclick="abrirCaixa()" class="btn-success" style="padding: 12px; font-size: 14px;">🔓 Abrir Caixa Agora</button>
+        </div>
+      </div>
+
+      <!-- PAINEL DE CAIXA ABERTO & BOTÃO DE FECHAMENTO -->
+      <div id="painelCaixaAberto" class="hidden">
+        <div class="kpi-grid" style="margin-bottom: 15px;">
+          <div class="kpi-card blue">
+            <span class="kpi-title">Valor Inicial (Troco)</span>
+            <span id="kpiCaixaInicial" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card green">
+            <span class="kpi-title">Vendas em Dinheiro</span>
+            <span id="kpiCaixaVendasDinheiro" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card purple">
+            <span class="kpi-title">Dinheiro Esperado no Caixa</span>
+            <span id="kpiCaixaDinheiroEsperado" class="kpi-value">0 Db</span>
+          </div>
+        </div>
+        <button onclick="abrirModalFecharCaixa()" class="btn-danger" style="padding: 12px; font-size: 14px;">🔒 Fechar Caixa do Turno</button>
+      </div>
+    </div>
+
+    <!-- AUDITORIA DE CAIXAS (EXCLUSIVO ADMIN) -->
+    <div class="card hidden" id="cardAuditoriaCaixas">
+      <h3>📜 Auditoria de Caixas & Turnos (Administração)</h3>
+      <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 15px;">
+        Consulte o histórico completo de turnos abertos e fechados por cada funcionário.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Turno</th>
+            <th>Funcionário</th>
+            <th>Função</th>
+            <th>Abertura</th>
+            <th>Fechamento</th>
+            <th>V. Inicial</th>
+            <th>Din. Esperado</th>
+            <th>Din. Contado</th>
+            <th>Diferença</th>
+            <th>Estado</th>
+            <th>Auditoria Completa</th>
+          </tr>
+        </thead>
+        <tbody id="listaCaixasAuditoria"></tbody>
+      </table>
+    </div>
+
+  </div> <!-- FIM PAGINA CAIXA -->
+
+
   <!-- PÁGINA 2: ARMAZÉM PORTUGAL (FLUXO EM 3 ETAPAS INDEPENDENTES) -->
   <div id="paginaArmazemPT" class="hidden">
     
@@ -731,6 +813,55 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
+<!-- MODAL FECHAR CAIXA -->
+<div id="modalFecharCaixa" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h3 style="margin-top:0; color:#1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">🔒 Fechar Caixa do Turno</h3>
+    
+    <div style="background:#f8fafc; padding:12px; border-radius:8px; margin-bottom:15px; font-size:13px; border:1px solid #e2e8f0;">
+      <div style="display:flex; justify-style:space-between; margin-bottom:4px;">
+        <span>Valor Inicial:</span> <b id="lblModalValorInicial">0 Db</b>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+        <span>Vendas Dinheiro:</span> <b id="lblModalVendasDinheiro">0 Db</b>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:14px; color:#2563eb; font-weight:bold; border-top:1px dashed #cbd5e1; padding-top:4px;">
+        <span>Dinheiro Esperado:</span> <span id="lblModalDinheiroEsperado">0 Db</span>
+      </div>
+    </div>
+
+    <label style="font-size: 12px; font-weight:600;">💵 Dinheiro Contado Fisicamente (Db):</label>
+    <input type="number" id="modalDinheiroContado" placeholder="Ex: 970" oninput="calcularDiferencaFechamento()" style="margin-top:4px; margin-bottom: 10px;">
+    
+    <div style="background:#eff6ff; padding: 12px; border-radius:8px; text-align:center; margin-bottom:12px;">
+      <span style="font-size: 12px; color:#64748b;">DIFERENÇA DE CAIXA:</span>
+      <h3 id="lblModalDiferenca" style="margin:2px 0;" class="dif-certo">0 Db (Caixa certo)</h3>
+    </div>
+
+    <label style="font-size: 12px; font-weight:600;">Observações / Motivo da Diferença (se houver):</label>
+    <input type="text" id="modalObservacaoFechamento" placeholder="Ex: Faltou troco de 10 Db" style="margin-top:4px; margin-bottom: 15px;">
+
+    <div style="display: flex; gap:10px;">
+      <button id="btnConfirmarFecharCaixa" onclick="confirmarFechamentoCaixa()" class="btn-danger" style="flex:1; padding: 12px;">🔒 Confirmar Fechamento</button>
+      <button onclick="fecharModalFecharCaixa()" class="btn-secondary">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AUDITORIA DETALHADA DO TURNO (ADMIN) -->
+<div id="modalAuditoriaDetalhes" class="modal-overlay hidden">
+  <div class="modal-content large">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 15px;">
+      <h3 style="margin:0; color:#1e293b;" id="auditTituloModal">Turno #---</h3>
+      <button onclick="fecharModalAuditoria()" class="btn-secondary" style="padding: 4px 10px;">✕ Fechar</button>
+    </div>
+
+    <div id="auditConteudoModal">
+      <p style="color:#64748b;">Carregando detalhes do turno...</p>
+    </div>
+  </div>
+</div>
+
 <!-- COMPROVATIVO / RECIBO -->
 <div id="areaImpressaoRecibo">
   <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
@@ -799,12 +930,20 @@ let listenerEncomendas = null;
 let listenerArmazemPT = null;
 let listenerLotesPT = null;
 
+// LISTENERS DA FASE 2
+let listenerCaixaAtual = null;
+let listenerCaixasAuditoria = null;
+
 let todosProdutos = [];
 let todasMovimentacoes = [];
 let todasDespesas = [];
 let todasEncomendas = [];
 let todosItensSoltosPT = [];
 let todosLotesPT = [];
+
+// VARIÁVEIS DA FASE 2
+let caixaAtualObj = null;
+let todosCaixasAuditoria = [];
 
 let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
@@ -821,17 +960,22 @@ function login(){
     .catch(e => { if(erroCampo) erroCampo.innerText = e.message; });
 }
 
-/* SISTEMA DE NAVEGAÇÃO POR PÁGINAS (DASHBOARD x ARMAZÉM PORTUGAL) */
+/* SISTEMA DE NAVEGAÇÃO POR PÁGINAS */
 function navegarPara(paginaId) {
   document.getElementById("paginaPrincipal").classList.add("hidden");
+  document.getElementById("paginaCaixa").classList.add("hidden");
   document.getElementById("paginaArmazemPT").classList.add("hidden");
 
   document.getElementById("btnPageMain").classList.remove("active");
+  document.getElementById("btnPageCaixa").classList.remove("active");
   document.getElementById("btnPageArmazem").classList.remove("active");
 
   if(paginaId === 'paginaPrincipal') {
     document.getElementById("paginaPrincipal").classList.remove("hidden");
     document.getElementById("btnPageMain").classList.add("active");
+  } else if(paginaId === 'paginaCaixa') {
+    document.getElementById("paginaCaixa").classList.remove("hidden");
+    document.getElementById("btnPageCaixa").classList.add("active");
   } else if(paginaId === 'paginaArmazemPT') {
     document.getElementById("paginaArmazemPT").classList.remove("hidden");
     document.getElementById("btnPageArmazem").classList.add("active");
@@ -852,6 +996,7 @@ function resetarInterface() {
   btnExportarEstoque.classList.add("hidden");
   btnExportarHistorico.classList.add("hidden");
   cardEstoque.classList.add("hidden");
+  cardAuditoriaCaixas.classList.add("hidden");
 }
 
 function logout(){
@@ -862,7 +1007,11 @@ function logout(){
   if(listenerEncomendas) listenerEncomendas();
   if(listenerArmazemPT) listenerArmazemPT();
   if(listenerLotesPT) listenerLotesPT();
+  if(listenerCaixaAtual) listenerCaixaAtual();
+  if(listenerCaixasAuditoria) listenerCaixasAuditoria();
+
   usuarioRole = null;
+  caixaAtualObj = null;
   resetarInterface();
   app.classList.add("hidden");
   userInfoHeader.classList.add("hidden");
@@ -903,16 +1052,19 @@ auth.onAuthStateChanged(u => {
         btnToggleFunc.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
         btnExportarHistorico.classList.remove("hidden");
+        cardAuditoriaCaixas.classList.remove("hidden");
         encCustoCompra.classList.remove("hidden");
       } else if(usuarioRole === "estoque") {
         cardCompras.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnExportarEstoque.classList.remove("hidden");
+        cardAuditoriaCaixas.classList.add("hidden");
         encCustoCompra.classList.add("hidden");
       } else {
         cardCambio.classList.remove("hidden");
         cardEncomendas.classList.remove("hidden");
+        cardAuditoriaCaixas.classList.add("hidden");
         encCustoCompra.classList.add("hidden");
       }
 
@@ -949,10 +1101,15 @@ function carregar(){
     </tr>
   `;
 
-  if(isAdmin) { carregarFuncionarios(); carregarDespesas(); }
+  if(isAdmin) { 
+    carregarFuncionarios(); 
+    carregarDespesas(); 
+    carregarAuditoriaCaixasAdmin();
+  }
 
   carregarEncomendas();
   carregarArmazemPTTresPassos();
+  carregarCaixaDoUsuario();
 
   listenerProdutos = db.collection("produtos").onSnapshot(s => {
     todosProdutos = [];
@@ -989,7 +1146,421 @@ function carregar(){
     s.forEach(d => { let m = d.data(); m.id = d.id; todasMovimentacoes.push(m); });
     renderizarHistorico(todasMovimentacoes);
     processarDashboard();
+    atualizarKpiCaixaAbertoLocal();
   });
+}
+
+/* =========================================================================
+   LÓGICA DA FASE 2: GESTÃO DE CAIXA + AUDITORIA DE TURNO
+   ========================================================================= */
+
+function carregarCaixaDoUsuario() {
+  if(listenerCaixaAtual) listenerCaixaAtual();
+  let user = auth.currentUser;
+  if(!user) return;
+
+  // Monitora se o funcionário possui um caixa "aberto"
+  listenerCaixaAtual = db.collection("caixas")
+    .where("uid", "==", user.uid)
+    .where("estado", "==", "aberto")
+    .limit(1)
+    .onSnapshot(s => {
+      if(!s.empty) {
+        let doc = s.docs[0];
+        caixaAtualObj = doc.data();
+        caixaAtualObj.id = doc.id;
+        renderizarPainelCaixaAberto();
+      } else {
+        caixaAtualObj = null;
+        renderizarPainelCaixaFechado();
+      }
+    });
+}
+
+function renderizarPainelCaixaFechado() {
+  formAberturaCaixa.classList.remove("hidden");
+  painelCaixaAberto.classList.add("hidden");
+
+  let canOpen = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
+  if(!canOpen) {
+    statusTurnoBox.innerHTML = `<p style="margin:0; color:#ef4444; font-weight:bold;">⚠️ A sua função (${usuarioRole.toUpperCase()}) não realiza operações de caixa.</p>`;
+    formAberturaCaixa.classList.add("hidden");
+    return;
+  }
+
+  statusTurnoBox.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <span class="status-caixa-fechado">CAIXA FECHADO</span>
+        <span style="margin-left:10px; font-weight:600; font-size:14px;">Você não possui nenhum turno aberto no momento.</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderizarPainelCaixaAberto() {
+  formAberturaCaixa.classList.add("hidden");
+  painelCaixaAberto.classList.remove("hidden");
+
+  let dtAbertura = caixaAtualObj.dataAbertura ? caixaAtualObj.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+
+  statusTurnoBox.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <span class="status-caixa-aberto">🟢 CAIXA ABERTO</span>
+        <span style="margin-left:10px; font-weight:bold; font-size:14px;">Turno de ${caixaAtualObj.usuario}</span>
+        <small style="display:block; color:#64748b; margin-top:2px;">Aberto em: ${dtAbertura}</small>
+      </div>
+      <div style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 10px; border-radius:6px; font-weight:600;">
+        ID Turno: ${caixaAtualObj.id.substring(0,8)}...
+      </div>
+    </div>
+  `;
+
+  atualizarKpiCaixaAbertoLocal();
+}
+
+function atualizarKpiCaixaAbertoLocal() {
+  if(!caixaAtualObj) return;
+
+  let valInicial = Number(caixaAtualObj.valorInicial) || 0;
+  let totalVendasDinheiro = 0;
+
+  // Soma apenas vendas associadas a este caixaId E com forma de pagamento Dinheiro
+  todasMovimentacoes.forEach(m => {
+    if(m.caixaId === caixaAtualObj.id && m.tipo === "saida") {
+      let fPag = m.formaPagamento || "";
+      if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+        totalVendasDinheiro += Number(m.valor) || 0;
+      }
+    }
+  });
+
+  let dinheiroEsperado = valInicial + totalVendasDinheiro;
+
+  kpiCaixaInicial.innerText = valInicial.toLocaleString('pt-PT') + " Db";
+  kpiCaixaVendasDinheiro.innerText = totalVendasDinheiro.toLocaleString('pt-PT') + " Db";
+  kpiCaixaDinheiroEsperado.innerText = dinheiroEsperado.toLocaleString('pt-PT') + " Db";
+}
+
+function abrirCaixa() {
+  let u = auth.currentUser;
+  if(!u) return;
+
+  let valInicial = Number(aberturaValorInicial.value) || 0;
+  if(valInicial < 0) return alert("Por favor, informe um valor inicial válido!");
+
+  // Verificação de garantia contra duplo caixa
+  db.collection("caixas")
+    .where("uid", "==", u.uid)
+    .where("estado", "==", "aberto")
+    .get()
+    .then(snap => {
+      if(!snap.empty) {
+        alert("Já possui um caixa aberto! Feche o caixa atual antes de abrir um novo.");
+        return;
+      }
+
+      let payload = {
+        uid: u.uid,
+        usuario: u.email,
+        role: usuarioRole,
+        dataAbertura: new Date(),
+        valorInicial: valInicial,
+        estado: "aberto"
+      };
+
+      return db.collection("caixas").add(payload).then(() => {
+        aberturaValorInicial.value = "0";
+        alert("Caixa / Turno aberto com sucesso!");
+      });
+    })
+    .catch(e => alert("Erro ao abrir caixa: " + e.message));
+}
+
+function abrirModalFecharCaixa() {
+  if(!caixaAtualObj) return alert("Nenhum caixa aberto para fechar.");
+
+  let valInicial = Number(caixaAtualObj.valorInicial) || 0;
+  let totalVendasDinheiro = 0;
+
+  todasMovimentacoes.forEach(m => {
+    if(m.caixaId === caixaAtualObj.id && m.tipo === "saida") {
+      let fPag = m.formaPagamento || "";
+      if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+        totalVendasDinheiro += Number(m.valor) || 0;
+      }
+    }
+  });
+
+  let dinheiroEsperado = valInicial + totalVendasDinheiro;
+
+  lblModalValorInicial.innerText = valInicial.toLocaleString('pt-PT') + " Db";
+  lblModalVendasDinheiro.innerText = totalVendasDinheiro.toLocaleString('pt-PT') + " Db";
+  lblModalDinheiroEsperado.innerText = dinheiroEsperado.toLocaleString('pt-PT') + " Db";
+  
+  modalDinheiroContado.value = "";
+  modalObservacaoFechamento.value = "";
+  
+  calcularDiferencaFechamento();
+  modalFecharCaixa.classList.remove("hidden");
+}
+
+function fecharModalFecharCaixa() {
+  modalFecharCaixa.classList.add("hidden");
+}
+
+function calcularDiferencaFechamento() {
+  if(!caixaAtualObj) return;
+
+  let valInicial = Number(caixaAtualObj.valorInicial) || 0;
+  let totalVendasDinheiro = 0;
+
+  todasMovimentacoes.forEach(m => {
+    if(m.caixaId === caixaAtualObj.id && m.tipo === "saida") {
+      let fPag = m.formaPagamento || "";
+      if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+        totalVendasDinheiro += Number(m.valor) || 0;
+      }
+    }
+  });
+
+  let dinheiroEsperado = valInicial + totalVendasDinheiro;
+  let dinheiroContado = Number(modalDinheiroContado.value) || 0;
+  let diferenca = dinheiroContado - dinheiroEsperado;
+
+  let lbl = lblModalDiferenca;
+
+  if(diferenca === 0) {
+    lbl.className = "dif-certo";
+    lbl.innerText = "🟢 0 Db (Caixa certo)";
+  } else if(diferenca < 0) {
+    lbl.className = "dif-quebra";
+    lbl.innerText = `🔴 ${diferenca.toLocaleString('pt-PT')} Db (Falta / Quebra de Caixa)`;
+  } else {
+    lbl.className = "dif-sobra";
+    lbl.innerText = `🟡 +${diferenca.toLocaleString('pt-PT')} Db (Sobra de Caixa)`;
+  }
+}
+
+// TRANSACTION DE FECHAMENTO DE CAIXA
+function confirmarFechamentoCaixa() {
+  if(!caixaAtualObj) return;
+
+  let btn = document.getElementById("btnConfirmarFecharCaixa");
+  btn.disabled = true;
+
+  let dinheiroContadoVal = Number(modalDinheiroContado.value);
+  if(modalDinheiroContado.value === "" || isNaN(dinheiroContadoVal) || dinheiroContadoVal < 0) {
+    btn.disabled = false;
+    return alert("Por favor, digite o valor de dinheiro contado fisicamente!");
+  }
+
+  let obsVal = modalObservacaoFechamento.value.trim();
+  let user = auth.currentUser;
+
+  db.runTransaction(function(transaction) {
+    let caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
+
+    return transaction.get(caixaRef).then(function(caixaDoc) {
+      if(!caixaDoc.exists) throw "Caixa não encontrado.";
+      if(caixaDoc.data().estado === "fechado") throw "Este caixa já foi fechado anteriormente.";
+
+      let cData = caixaDoc.data();
+      let valInicial = Number(cData.valorInicial) || 0;
+
+      // Firestore query dentro de transação precisa calcular dinamicamente
+      return db.collection("movimentacoes").where("caixaId", "==", caixaAtualObj.id).get().then(snapMovs => {
+        let totalVendasDinheiro = 0;
+        snapMovs.forEach(docM => {
+          let m = docM.data();
+          if(m.tipo === "saida") {
+            let fPag = m.formaPagamento || "";
+            if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+              totalVendasDinheiro += Number(m.valor) || 0;
+            }
+          }
+        });
+
+        let dinheiroEsperado = valInicial + totalVendasDinheiro;
+        let diferenca = dinheiroContadoVal - dinheiroEsperado;
+
+        transaction.update(caixaRef, {
+          estado: "fechado",
+          dinheiroEsperado: dinheiroEsperado,
+          dinheiroContado: dinheiroContadoVal,
+          diferenca: diferenca,
+          observacaoFechamento: obsVal,
+          fechadoPorUid: user.uid,
+          fechadoPorUsuario: user.email,
+          dataFechamento: new Date()
+        });
+      });
+    });
+  }).then(() => {
+    btn.disabled = false;
+    fecharModalFecharCaixa();
+    alert("Caixa fechado com sucesso e auditoria gravada!");
+  }).catch(e => {
+    btn.disabled = false;
+    alert("Erro ao fechar caixa: " + e);
+  });
+}
+
+function carregarAuditoriaCaixasAdmin() {
+  if(listenerCaixasAuditoria) listenerCaixasAuditoria();
+
+  listenerCaixasAuditoria = db.collection("caixas").orderBy("dataAbertura", "desc").onSnapshot(s => {
+    todosCaixasAuditoria = [];
+    let htmlBuffer = "";
+
+    s.forEach(d => {
+      let c = d.data();
+      c.id = d.id;
+      todosCaixasAuditoria.push(c);
+
+      let dtAberto = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+      let dtFechado = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'EM ABERTO';
+      
+      let stBadge = c.estado === 'aberto' ? 
+        '<span class="status-caixa-aberto">ABERTO</span>' : 
+        '<span class="status-caixa-fechado">FECHADO</span>';
+
+      let difTxt = "-";
+      if(c.estado === "fechado") {
+        let dif = Number(c.diferenca) || 0;
+        if(dif === 0) difTxt = '<span class="dif-certo">0 Db</span>';
+        else if(dif < 0) difTxt = `<span class="dif-quebra">${dif} Db</span>`;
+        else difTxt = `<span class="dif-sobra">+${dif} Db</span>`;
+      }
+
+      htmlBuffer += `
+        <tr>
+          <td><b>Turno #${c.id.substring(0,5).toUpperCase()}</b></td>
+          <td><b>${c.usuario}</b></td>
+          <td><small>${(c.role || 'venda1').toUpperCase()}</small></td>
+          <td><small>${dtAberto}</small></td>
+          <td><small>${dtFechado}</small></td>
+          <td>${(Number(c.valorInicial)||0).toLocaleString('pt-PT')} Db</td>
+          <td>${c.dinheiroEsperado !== undefined ? Number(c.dinheiroEsperado).toLocaleString('pt-PT') + ' Db' : '-'}</td>
+          <td>${c.dinheiroContado !== undefined ? Number(c.dinheiroContado).toLocaleString('pt-PT') + ' Db' : '-'}</td>
+          <td>${difTxt}</td>
+          <td>${stBadge}</td>
+          <td>
+            <button class="btn-secondary btn-acao" onclick="abrirAuditoriaDetalhadaModal('${c.id}')">🔍 Ver Auditoria</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    listaCaixasAuditoria.innerHTML = htmlBuffer || '<tr><td colspan="11" style="color:#94a3b8;">Nenhum registo de caixa encontrado.</td></tr>';
+  });
+}
+
+function abrirAuditoriaDetalhadaModal(caixaId) {
+  let c = todosCaixasAuditoria.find(item => item.id === caixaId);
+  if(!c) return;
+
+  auditTituloModal.innerText = `Auditoria do Turno #${caixaId.substring(0,8).toUpperCase()}`;
+
+  let dtAberto = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+  let dtFechado = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'EM ABERTO';
+
+  // Buscar vendas e entradas ligadas a este turno
+  let vendasDoTurno = todasMovimentacoes.filter(m => m.caixaId === caixaId);
+
+  let totalVendasDinheiro = 0;
+  let totalVendasOutros = 0;
+  let htmlVendas = "";
+
+  vendasDoTurno.forEach(m => {
+    let dHora = m.data ? m.data.toDate().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'}) : '-';
+    let val = Number(m.valor) || 0;
+    let fPag = m.formaPagamento || "Dinheiro";
+
+    if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+      totalVendasDinheiro += val;
+    } else {
+      totalVendasOutros += val;
+    }
+
+    htmlVendas += `
+      <tr>
+        <td>${dHora}</td>
+        <td><b>${m.produto}</b></td>
+        <td>${m.quantidade} un</td>
+        <td><b>${val.toLocaleString('pt-PT')} Db</b></td>
+        <td><small>${fPag}</small></td>
+        <td><small>${m.usuario}</small></td>
+      </tr>
+    `;
+  });
+
+  let valInicial = Number(c.valorInicial) || 0;
+  let dinEsperadoCalculado = c.dinheiroEsperado !== undefined ? c.dinheiroEsperado : (valInicial + totalVendasDinheiro);
+
+  let htmlAudit = `
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:15px; font-size:13px;">
+      <div><b>Funcionário:</b> ${c.usuario}</div>
+      <div><b>Função:</b> ${(c.role||'venda1').toUpperCase()}</div>
+      <div><b>UID:</b> <small>${c.uid}</small></div>
+      <div><b>Abertura:</b> ${dtAberto}</div>
+      <div><b>Fechamento:</b> ${dtFechado}</div>
+      <div><b>Fechado Por:</b> ${c.fechadoPorUsuario || '-'}</div>
+    </div>
+
+    <div class="kpi-grid" style="margin-bottom: 15px;">
+      <div class="kpi-card blue">
+        <span class="kpi-title">Valor Inicial</span>
+        <span class="kpi-value">${valInicial.toLocaleString('pt-PT')} Db</span>
+      </div>
+      <div class="kpi-card green">
+        <span class="kpi-title">Vendas em Dinheiro</span>
+        <span class="kpi-value">${totalVendasDinheiro.toLocaleString('pt-PT')} Db</span>
+      </div>
+      <div class="kpi-card purple">
+        <span class="kpi-title">Dinheiro Esperado</span>
+        <span class="kpi-value">${dinEsperadoCalculado.toLocaleString('pt-PT')} Db</span>
+      </div>
+      <div class="kpi-card ${c.diferenca < 0 ? 'red' : (c.diferenca > 0 ? 'orange' : 'green')}">
+        <span class="kpi-title">Dinheiro Contado / Dif.</span>
+        <span class="kpi-value">${c.dinheiroContado !== undefined ? c.dinheiroContado.toLocaleString('pt-PT') + ' Db' : 'Em aberto'}</span>
+        <span class="kpi-sub" style="color:inherit;">
+          ${c.diferenca !== undefined ? 'Diferença: ' + c.diferenca + ' Db' : ''}
+        </span>
+      </div>
+    </div>
+
+    ${c.observacaoFechamento ? `
+      <div style="background:#fffbe6; padding:10px; border-radius:8px; border:1px solid #fde68a; margin-bottom:15px; font-size:13px; color:#92400e;">
+        <b>💬 Observação do Fechamento:</b> ${c.observacaoFechamento}
+      </div>
+    ` : ''}
+
+    <h4 style="margin: 15px 0 8px 0; color:#1e293b;">🛒 Vendas Realizadas Neste Turno (${vendasDoTurno.length})</h4>
+    <table style="min-width:100%;">
+      <thead>
+        <tr>
+          <th>Horário</th>
+          <th>Produto</th>
+          <th>Qtd</th>
+          <th>Valor</th>
+          <th>Forma Pag.</th>
+          <th>Funcionário</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${htmlVendas || '<tr><td colspan="6" style="color:#94a3b8;">Nenhuma venda cadastrada neste turno.</td></tr>'}
+      </tbody>
+    </table>
+  `;
+
+  auditConteudoModal.innerHTML = htmlAudit;
+  modalAuditoriaDetalhes.classList.remove("hidden");
+}
+
+function fecharModalAuditoria() {
+  modalAuditoriaDetalhes.classList.add("hidden");
 }
 
 /* =========================================================================
@@ -1180,7 +1751,7 @@ function despacharLotePT() {
   }).catch(e => alert("Erro ao despachar lote: " + e.message));
 }
 
-// TRANSACTION DE ENTRADA LOTE PT COM SEGURANÇA
+// TRANSACTION DE ENTRADA LOTE PT COM SEGURANÇA (E ASSOCIAÇÃO AO CAIXA/TURNO SE ESTIVER ABERTO)
 function darEntradaLoteNoStockSTP(loteId) {
   let lote = todosLotesPT.find(l => l.id === loteId);
   if(!lote) return;
@@ -1192,6 +1763,8 @@ function darEntradaLoteNoStockSTP(loteId) {
   if(!confirm(`Confirmar a entrada dos produtos do Lote "${lote.identificador}" no Stock Geral de São Tomé à taxa de ${taxaCambio} Db/€?`)) {
     return;
   }
+
+  let cId = caixaAtualObj ? caixaAtualObj.id : null;
 
   db.runTransaction(function(transaction) {
     let loteRef = db.collection("lotes_pt").doc(loteId);
@@ -1227,7 +1800,7 @@ function darEntradaLoteNoStockSTP(loteId) {
         }
 
         let movRef = db.collection("movimentacoes").doc();
-        transaction.set(movRef, {
+        let movPayload = {
           produto: item.nome,
           tipo: "entrada",
           quantidade: item.quantidade,
@@ -1237,7 +1810,10 @@ function darEntradaLoteNoStockSTP(loteId) {
           uid: auth.currentUser.uid,
           role: usuarioRole,
           data: new Date()
-        });
+        };
+        if(cId) movPayload.caixaId = cId;
+
+        transaction.set(movRef, movPayload);
       });
 
       transaction.update(loteRef, {
@@ -1390,6 +1966,8 @@ function registrarNovaEncomenda() {
     return alert("Preencha o nome do cliente, produto, valor total e o sinal pago!");
   }
 
+  let cId = caixaAtualObj ? caixaAtualObj.id : null;
+
   let payload = {
     cliente: cli,
     telefone: tel,
@@ -1405,7 +1983,7 @@ function registrarNovaEncomenda() {
   };
 
   db.collection("encomendas").add(payload).then(() => {
-    return db.collection("movimentacoes").add({
+    let movPayload = {
       produto: `Sinal Encomenda: ${prod}`,
       tipo: "saida",
       quantidade: 1,
@@ -1416,7 +1994,10 @@ function registrarNovaEncomenda() {
       uid: auth.currentUser.uid,
       role: usuarioRole,
       data: new Date()
-    });
+    };
+    if(cId) movPayload.caixaId = cId;
+
+    return db.collection("movimentacoes").add(movPayload);
   }).then(() => {
     encCliente.value = ""; encTelefone.value = ""; encProduto.value = "";
     encValorTotal.value = ""; encSinalPago.value = ""; encCustoCompra.value = "";
@@ -1426,11 +2007,13 @@ function registrarNovaEncomenda() {
 
 function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, custoCompra) {
   if(confirm(`Confirmar a entrega do produto "${produto}" ao cliente ${cliente}?\n\nValor restante a receber: ${faltaPagar} Db.`)) {
+    let cId = caixaAtualObj ? caixaAtualObj.id : null;
+
     db.collection("encomendas").doc(id).update({
       estado: "CONCLUIDO",
       dataConclusao: new Date()
     }).then(() => {
-      return db.collection("movimentacoes").add({
+      let movPayload = {
         produto: `Quitação Importação: ${produto}`,
         tipo: "saida",
         quantidade: 1,
@@ -1441,7 +2024,10 @@ function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, cu
         uid: auth.currentUser.uid,
         role: usuarioRole,
         data: new Date()
-      });
+      };
+      if(cId) movPayload.caixaId = cId;
+
+      return db.collection("movimentacoes").add(movPayload);
     }).then(() => {
       alert("Encomenda concluída e entregue! Faturamento registrado com sucesso.");
     });
@@ -1810,12 +2396,14 @@ function cancelarEdicaoProduto() {
   btnCancelarProduto.classList.add("hidden");
 }
 
-// TRANSACTION PARA ENTRADA RÁPIDA DE ESTOQUE
+// TRANSACTION PARA ENTRADA RÁPIDA DE ESTOQUE (COM REGISTO NO CAIXA/TURNO SE ABERTO)
 function entradaEstoque(id, atual) {
   let add = prompt("Quantidade a adicionar ao estoque:");
   if(add && !isNaN(add) && Number(add) > 0) {
     let qtdAdd = Number(add);
     let p = todosProdutos.find(item => item.id === id);
+
+    let cId = caixaAtualObj ? caixaAtualObj.id : null;
 
     db.runTransaction(function(transaction) {
       let prodRef = db.collection("produtos").doc(id);
@@ -1826,7 +2414,7 @@ function entradaEstoque(id, atual) {
         transaction.update(prodRef, { estoque: estoqueAtualBanco + qtdAdd });
 
         let movRef = db.collection("movimentacoes").doc();
-        transaction.set(movRef, {
+        let movPayload = {
           produto: p ? p.nome : prodDoc.data().nome,
           tipo: "entrada",
           quantidade: qtdAdd,
@@ -1835,13 +2423,16 @@ function entradaEstoque(id, atual) {
           uid: auth.currentUser.uid,
           role: usuarioRole,
           data: new Date()
-        });
+        };
+        if(cId) movPayload.caixaId = cId;
+
+        transaction.set(movRef, movPayload);
       });
     }).catch(e => alert("Erro ao adicionar estoque: " + e));
   }
 }
 
-// TRANSACTION PARA COMPRA DE FORNECEDOR
+// TRANSACTION PARA COMPRA DE FORNECEDOR (COM ASSOCIAÇÃO AO CAIXA/TURNO SE ABERTO)
 function registrarCompraProduto() {
   let pId = compraSelectProduto.value;
   let q = Number(compraQtd.value) || 0;
@@ -1857,6 +2448,7 @@ function registrarCompraProduto() {
   if(!prod) return;
 
   let novoCustoUnitario = Math.round(custoTotal / q);
+  let cId = caixaAtualObj ? caixaAtualObj.id : null;
 
   db.runTransaction(function(transaction) {
     let prodRef = db.collection("produtos").doc(pId);
@@ -1871,7 +2463,7 @@ function registrarCompraProduto() {
       });
 
       let movRef = db.collection("movimentacoes").doc();
-      transaction.set(movRef, {
+      let movPayload = {
         produto: prodDoc.data().nome,
         tipo: "compra",
         quantidade: q,
@@ -1881,7 +2473,10 @@ function registrarCompraProduto() {
         uid: auth.currentUser.uid,
         role: usuarioRole,
         data: new Date()
-      });
+      };
+      if(cId) movPayload.caixaId = cId;
+
+      transaction.set(movRef, movPayload);
     });
   }).then(() => {
     compraSelectProduto.value = "";
@@ -1936,7 +2531,9 @@ function registrarOperacaoCambio() {
     lucroCalculado = totalDb - custoBase;
   }
 
-  db.collection("movimentacoes").add({
+  let cId = caixaAtualObj ? caixaAtualObj.id : null;
+
+  let payload = {
     produto: `Câmbio (${dir === 'PT_STP' ? 'PT ➔ STP' : 'STP ➔ PT'})`,
     tipo: "cambio",
     quantidade: eur,
@@ -1948,7 +2545,10 @@ function registrarOperacaoCambio() {
     uid: auth.currentUser.uid,
     role: usuarioRole,
     data: new Date()
-  }).then(() => {
+  };
+  if(cId) payload.caixaId = cId;
+
+  db.collection("movimentacoes").add(payload).then(() => {
     cambioQtdEur.value = "";
     cambioCliente.value = "";
     calcularCalculoCambioSimulado();
@@ -2028,6 +2628,14 @@ function limparFiltroHistorico() {
 
 function abrirModalVenda(id, nome, estoque, precoVenda) {
   if(estoque <= 0) return alert("Produto sem estoque disponível!");
+
+  // REGRA FASE 2: Impede vendas caso o caixa esteja fechado/não aberto
+  if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") {
+    alert("⚠️ ATENÇÃO: É necessário abrir o Caixa no Módulo de Caixa antes de realizar vendas!");
+    navegarPara('paginaCaixa');
+    return;
+  }
+
   produtoVendaAtual = { id, nome, estoque, precoVenda };
   modalProdNome.innerText = nome;
   modalProdQtd.value = 1;
@@ -2068,11 +2676,18 @@ function calcularTroco() {
   lblTroco.innerText = (troco > 0 ? troco : 0) + " Db";
 }
 
-// TRANSACTION DE VENDA: VERIFICA ESTOQUE E EXECUTA BAIXA/LOG ATÔMICO
+// TRANSACTION DE VENDA: VERIFICA ESTOQUE, CAIXA ABERTO E EXECUTA A BAIXA/LOG ATÔMICO
 function confirmarVendaModal() {
   if(!produtoVendaAtual) return;
   let q = +modalProdQtd.value;
   if(!q || q <= 0) return alert("Quantidade inválida.");
+
+  if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") {
+    alert("Erro: Não existe caixa aberto para registrar esta venda.");
+    fecharModalVenda();
+    navegarPara('paginaCaixa');
+    return;
+  }
 
   let btnConf = document.getElementById("btnConfirmarVenda");
   btnConf.disabled = true;
@@ -2082,34 +2697,43 @@ function confirmarVendaModal() {
   let clienteVal = modalNomeCliente.value.trim() || "Consumidor Final";
   let recebidoVal = +modalValorRecebido.value || totalval;
   let trocoVal = recebidoVal - totalval;
+  let cId = caixaAtualObj.id;
 
   db.runTransaction(function(transaction) {
     let prodRef = db.collection("produtos").doc(produtoVendaAtual.id);
+    let caixaRef = db.collection("caixas").doc(cId);
 
-    return transaction.get(prodRef).then(function(prodDoc) {
-      if (!prodDoc.exists) throw "O produto não foi encontrado no banco de dados.";
-      
-      let estoqueAtualBanco = Number(prodDoc.data().estoque) || 0;
-
-      if (estoqueAtualBanco < q) {
-        throw "Estoque insuficiente no momento da confirmação. Restantes: " + estoqueAtualBanco;
+    return transaction.get(caixaRef).then(function(caixaDoc) {
+      if(!caixaDoc.exists || caixaDoc.data().estado !== "aberto") {
+        throw "O seu caixa foi fechado ou expirou. Abra o caixa novamente antes de vender.";
       }
 
-      let novoEstoque = estoqueAtualBanco - q;
-      transaction.update(prodRef, { estoque: novoEstoque });
+      return transaction.get(prodRef).then(function(prodDoc) {
+        if (!prodDoc.exists) throw "O produto não foi encontrado no banco de dados.";
+        
+        let estoqueAtualBanco = Number(prodDoc.data().estoque) || 0;
 
-      let movRef = db.collection("movimentacoes").doc();
-      transaction.set(movRef, {
-        produto: produtoVendaAtual.nome,
-        tipo: "saida",
-        quantidade: q,
-        valor: totalval,
-        formaPagamento: formaPag,
-        cliente: clienteVal,
-        usuario: auth.currentUser.email,
-        uid: auth.currentUser.uid,
-        role: usuarioRole,
-        data: new Date()
+        if (estoqueAtualBanco < q) {
+          throw "Estoque insuficiente no momento da confirmação. Restantes: " + estoqueAtualBanco;
+        }
+
+        let novoEstoque = estoqueAtualBanco - q;
+        transaction.update(prodRef, { estoque: novoEstoque });
+
+        let movRef = db.collection("movimentacoes").doc();
+        transaction.set(movRef, {
+          caixaId: cId,
+          produto: produtoVendaAtual.nome,
+          tipo: "saida",
+          quantidade: q,
+          valor: totalval,
+          formaPagamento: formaPag,
+          cliente: clienteVal,
+          usuario: auth.currentUser.email,
+          uid: auth.currentUser.uid,
+          role: usuarioRole,
+          data: new Date()
+        });
       });
     });
   }).then(() => {
@@ -2208,7 +2832,6 @@ function carregarFuncionarios() {
   });
 }
 
-// CRIAÇÃO DE FUNCIONÁRIOS REATORADA (Firebase Secundário para preservar sessão Admin)
 function salvarFuncionario() {
   let emailVal = funcEmail.value.toLowerCase().trim();
   let senhaVal = funcSenha.value;
@@ -2280,32 +2903,31 @@ function del(id){ if(usuarioRole === "admin" && confirm("Excluir produto do esto
 
 function exportarEstoque(){
   db.collection("produtos").get().then(s => {
-    let c = "Produto,Categoria,Qtd,Min,Compra,Venda\n";
+    let c = "Produto,Categoria,Quantidade,EstoqueMinimo,PrecoCompra,PrecoVenda,ValorTotal\n";
     s.forEach(d => {
       let p = d.data();
-      c += `"${p.nome}","${p.categoria||'Geral'}",${p.estoque},${p.minimo},${p.compra||0},${p.venda}\n`;
+      c += `"${p.nome}","${p.categoria||'Geral'}",${p.estoque},${p.minimo},${p.compra||0},${p.venda},${(p.estoque*p.venda)}\n`;
     });
-    baixar(c, "estoque.csv");
+    let a = document.createElement("a");
+    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(c);
+    a.download = "estoque_mundo_digital_stp.csv";
+    a.click();
   });
 }
 
 function exportarHistorico(){
-  db.collection("movimentacoes").get().then(s => {
-    let c = "Produto,Tipo,Qtd,Forma Pag,Valor,Usuario,Data\n";
+  db.collection("movimentacoes").orderBy("data","desc").get().then(s => {
+    let c = "Produto,Tipo,Quantidade,ValorTotal,FormaPagamento,Usuario,Data,CaixaID\n";
     s.forEach(d => {
       let m = d.data();
       let dt = m.data ? m.data.toDate().toLocaleString('pt-PT') : '';
-      c += `"${m.produto}","${m.tipo}",${m.quantidade},"${m.formaPagamento||'Dinheiro'}",${m.valor},"${m.usuario}","${dt}"\n`;
+      c += `"${m.produto}","${m.tipo}",${m.quantidade},${m.valor},"${m.formaPagamento||'Dinheiro'}","${m.usuario}","${dt}","${m.caixaId||''}"\n`;
     });
-    baixar(c, "historico.csv");
+    let a = document.createElement("a");
+    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(c);
+    a.download = "historico_movimentacoes_stp.csv";
+    a.click();
   });
-}
-
-function baixar(c, n){
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([c], { type: 'text/csv;charset=utf-8;' }));
-  a.download = n;
-  a.click();
 }
 </script>
 </body>
