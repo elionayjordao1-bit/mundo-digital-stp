@@ -968,7 +968,7 @@ let todosItensSoltosPT = [];
 let todosLotesPT = [];
 let todosCaixasAdmin = [];
 
-let caixaAtualDoc = null; 
+let caixaAtualDoc = null; // Guarda o documento do caixa ABERTO do utilizador logado
 let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
 let dataFiltroFimDash = null;
@@ -1177,6 +1177,7 @@ function carregarModuloCaixa() {
 
   let uid = auth.currentUser.uid;
 
+  // Listener para ouvir o caixa ativo do utilizador logado
   listenerCaixaAtual = db.collection("caixas")
     .where("uid", "==", uid)
     .where("estado", "==", "ABERTO")
@@ -1201,6 +1202,7 @@ function carregarModuloCaixa() {
       }
     });
 
+  // Listener Admin para auditoria de caixas
   if (usuarioRole === "admin") {
     listenerCaixasAdmin = db.collection("caixas")
       .orderBy("dataAbertura", "desc")
@@ -1252,6 +1254,7 @@ function carregarModuloCaixa() {
   }
 }
 
+// ABERTURA DE CAIXA COM TRANSACTION
 function abrirCaixaTurno() {
   let valInicial = Number(caixaValorInicial.value);
   if (isNaN(valInicial) || valInicial < 0 || caixaValorInicial.value === "") {
@@ -1288,6 +1291,7 @@ function abrirCaixaTurno() {
   }).catch(e => alert("Erro ao abrir caixa: " + e));
 }
 
+// CÁLCULO DINÂMICO EM TEMPO REAL DO CAIXA ATIVO
 function calcularCalculoCaixaAtual() {
   if (!caixaAtualDoc) return { inicial: 0, vendasDinheiro: 0, outrosMeios: 0, saidasDinheiro: 0, entradasEstoque: 0, esperado: 0, listaVendasTurno: [] };
 
@@ -1402,6 +1406,7 @@ function scrollParaFechamento() {
   secaoFechamentoForm.scrollIntoView({ behavior: 'smooth' });
 }
 
+// FECHAMENTO DE CAIXA COM TRANSACTION E AUDITORIA COMPLETA
 function fecharCaixaTurno() {
   if (!caixaAtualDoc) return;
 
@@ -1460,6 +1465,7 @@ function fecharCaixaTurno() {
   }).catch(e => alert("Erro ao fechar caixa: " + e));
 }
 
+// AUDITORIA COMPLETA DO TURNO PARA ADMINISTRADOR
 function abrirAuditoriaModalCaixa(caixaId) {
   let c = todosCaixasAdmin.find(item => item.id === caixaId);
   if (!c) return;
@@ -1740,6 +1746,7 @@ function despacharLotePT() {
   }).catch(e => alert("Erro ao despachar lote: " + e.message));
 }
 
+// TRANSACTION DE ENTRADA LOTE PT COM SEGURANÇA E VINCULAÇÃO AO CAIXA
 function darEntradaLoteNoStockSTP(loteId) {
   let lote = todosLotesPT.find(l => l.id === loteId);
   if(!lote) return;
@@ -2261,15 +2268,23 @@ function renderizarTabelaEstoque() {
         <td>${min}</td>
         ${isAdmin ? `<td>${comp} Db</td>` : ''}
         <td><b>${vend} Db</b></td>
-        ${isAdmin ? `<td style="color:${lucro >= 0 ? '#10b981' : '#ef4444'}; font-weight:bold;">${lucro} Db</td>` : ''}
+        ${isAdmin ? `<td style="color:${lucro>=0?'#10b981':'#ef4444'}">${lucro} Db</td>` : ''}
         <td><b>${totalItem} Db</b></td>
-        ${podeAdicionarEstoque ? `<td><button class="btn-success btn-acao" onclick="adicionarEstoqueModal('${p.id}')">➕</button></td>` : ''}
-        ${podeVender ? `<td><button class="btn-success btn-acao" onclick="abrirModalVenda('${p.id}')">🛒 Vender</button></td>` : ''}
+        ${podeAdicionarEstoque ? `
+          <td>
+            <button class="btn-success btn-acao" onclick="entradaEstoque('${p.id}', ${est})">+</button>
+          </td>
+        ` : ''}
+        ${podeVender ? `
+          <td>
+            <button class="btn-secondary btn-acao" onclick="abrirModalVenda('${p.id}', '${p.nome.replace(/'/g, "\\'")}', ${est}, ${vend})">🛒 Vender</button>
+          </td>
+        ` : ''}
         ${isAdmin ? `
           <td>
             <div class="acoes-cell">
-              <button class="btn-warning btn-acao" onclick="editarProduto('${p.id}')">✏️</button>
-              <button class="btn-danger btn-acao" onclick="apagarProduto('${p.id}')">🗑️</button>
+              <button class="btn-secondary btn-acao" onclick="prepararEditarProduto('${p.id}')">✏️ Edit</button>
+              <button class="btn-danger btn-acao" onclick="del('${p.id}')">🗑️</button>
             </div>
           </td>
         ` : ''}
@@ -2277,38 +2292,27 @@ function renderizarTabelaEstoque() {
     `;
   });
 
-  lista.innerHTML = htmlBuffer || `<tr><td colspan="12" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>`;
-  infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas}`;
+  lista.innerHTML = htmlBuffer || '<tr><td colspan="12" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>';
+  
+  infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas} (${produtosFiltrados.length} itens)`;
   btnPagAnt.disabled = (paginaAtual === 1);
   btnPagProx.disabled = (paginaAtual === totalPaginas);
 }
 
+function mudarFiltroOuBusca() {
+  paginaAtual = 1;
+  renderizarTabelaEstoque();
+}
+
 function paginaAnterior() {
-  if (paginaAtual > 1) {
+  if(paginaAtual > 1) {
     paginaAtual--;
     renderizarTabelaEstoque();
   }
 }
 
 function proximaPagina() {
-  let produtosFiltrados = todosProdutos.filter(p => {
-    let busca = inputBusca.value.toLowerCase();
-    let catFiltro = selectCategoriaFiltro.value;
-    let nomeMatch = p.nome.toLowerCase().includes(busca);
-    let catMatch = catFiltro === "" || p.categoria === catFiltro;
-    let filtroBaixoMatch = !filtrarApenasBaixoEstoque || (Number(p.estoque) <= Number(p.minimo));
-    return nomeMatch && catMatch && filtroBaixoMatch;
-  });
-
-  let totalPaginas = Math.ceil(produtosFiltrados.length / itensPorPagina) || 1;
-  if (paginaAtual < totalPaginas) {
-    paginaAtual++;
-    renderizarTabelaEstoque();
-  }
-}
-
-function mudarFiltroOuBusca() {
-  paginaAtual = 1;
+  paginaAtual++;
   renderizarTabelaEstoque();
 }
 
@@ -2319,36 +2323,29 @@ function salvarProduto() {
   let m = Number(minimo.value) || 0;
   let comp = Number(compra.value) || 0;
   let v = Number(venda.value) || 0;
-  let img = fotoBase64.value;
+  let ft = fotoBase64.value || "";
 
-  if(!n || v <= 0) return alert("Preencha o nome do produto e o preço de venda!");
+  if(!n) return alert("Preencha o nome do produto!");
 
-  let payload = { nome: n, categoria: c, estoque: e, minimo: m, compra: comp, venda: v, foto: img };
+  let payload = { nome: n, categoria: c, estoque: e, minimo: m, compra: comp, venda: v };
+  if(ft) payload.foto = ft;
 
   if(editandoProdutoId) {
-    db.collection("produtos").doc(editandoProdutoId).update(payload).then(() => {
-      cancelarEdicaoProduto();
-      alert("Produto atualizado com sucesso!");
-    });
+    db.collection("produtos").doc(editandoProdutoId).update(payload).then(() => cancelarEdicaoProduto());
   } else {
-    db.collection("produtos").add(payload).then(() => {
-      cancelarEdicaoProduto();
-      alert("Produto cadastrado com sucesso!");
-    });
+    db.collection("produtos").add(payload).then(() => cancelarEdicaoProduto());
   }
 }
 
-function editarProduto(id) {
+function prepararEditarProduto(id) {
   let p = todosProdutos.find(item => item.id === id);
   if(!p) return;
-
   editandoProdutoId = id;
-  tituloFormProduto.innerText = "✏️ Editar Produto";
   nome.value = p.nome;
-  categoriaInput.value = p.categoria;
+  categoriaInput.value = p.categoria || "Geral";
   estoque.value = p.estoque;
   minimo.value = p.minimo;
-  compra.value = p.compra;
+  compra.value = p.compra || 0;
   venda.value = p.venda;
   fotoBase64.value = p.foto || "";
 
@@ -2359,229 +2356,97 @@ function editarProduto(id) {
     previewFoto.classList.add("hidden");
   }
 
+  tituloFormProduto.innerText = "✏️ Editar Produto";
   btnSalvarProduto.innerText = "Atualizar Produto";
   btnCancelarProduto.classList.remove("hidden");
-  cardNovoProduto.scrollIntoView({ behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function cancelarEdicaoProduto() {
   editandoProdutoId = null;
-  tituloFormProduto.innerText = "📦 Novo Produto";
-  nome.value = ""; categoriaInput.value = ""; estoque.value = "";
-  minimo.value = ""; compra.value = ""; venda.value = ""; fotoBase64.value = "";
-  previewFoto.classList.add("hidden");
+  nome.value = "";
+  categoriaInput.value = "";
+  estoque.value = "";
+  minimo.value = "";
+  compra.value = "";
+  venda.value = "";
   fotoInput.value = "";
+  fotoBase64.value = "";
+  previewFoto.src = "";
+  previewFoto.classList.add("hidden");
+  tituloFormProduto.innerText = "📦 Novo Produto";
   btnSalvarProduto.innerText = "Salvar Produto";
   btnCancelarProduto.classList.add("hidden");
 }
 
-function apagarProduto(id) {
-  if(confirm("Deseja eliminar este produto do catálogo?")) {
-    db.collection("produtos").doc(id).delete();
-  }
-}
+// TRANSACTION PARA ENTRADA RÁPIDA DE ESTOQUE (COM VINCULAÇÃO DE CAIXA)
+function entradaEstoque(id, atual) {
+  let add = prompt("Quantidade a adicionar ao estoque:");
+  if(add && !isNaN(add) && Number(add) > 0) {
+    let qtdAdd = Number(add);
+    let p = todosProdutos.find(item => item.id === id);
 
-function adicionarEstoqueModal(id) {
-  let p = todosProdutos.find(item => item.id === id);
-  if(!p) return;
+    db.runTransaction(function(transaction) {
+      let prodRef = db.collection("produtos").doc(id);
+      return transaction.get(prodRef).then(function(prodDoc) {
+        if (!prodDoc.exists) throw "Produto não encontrado.";
+        let estoqueAtualBanco = Number(prodDoc.data().estoque) || 0;
+        
+        transaction.update(prodRef, { estoque: estoqueAtualBanco + qtdAdd });
 
-  let qtdStr = prompt(`Adicionar quantas unidades ao stock de "${p.nome}"?`, "1");
-  if(!qtdStr) return;
-  let qtd = Number(qtdStr);
-  if(isNaN(qtd) || qtd <= 0) return alert("Quantidade inválida.");
-
-  db.runTransaction(function(transaction) {
-    let pRef = db.collection("produtos").doc(id);
-    return transaction.get(pRef).then(function(doc) {
-      if(!doc.exists) throw "Produto não encontrado.";
-      let estAtual = Number(doc.data().estoque) || 0;
-      transaction.update(pRef, { estoque: estAtual + qtd });
-
-      let movRef = db.collection("movimentacoes").doc();
-      transaction.set(movRef, {
-        produto: p.nome,
-        tipo: "entrada",
-        quantidade: qtd,
-        valor: (Number(p.compra) || 0) * qtd,
-        formaPagamento: "Entrada Manual Estoque",
-        usuario: auth.currentUser.email,
-        uid: auth.currentUser.uid,
-        role: usuarioRole,
-        data: new Date(),
-        caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
+        let movRef = db.collection("movimentacoes").doc();
+        transaction.set(movRef, {
+          produto: p ? p.nome : prodDoc.data().nome,
+          tipo: "entrada",
+          quantidade: qtdAdd,
+          valor: (p ? p.compra * qtdAdd : 0),
+          usuario: auth.currentUser.email,
+          uid: auth.currentUser.uid,
+          role: usuarioRole,
+          data: new Date(),
+          caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
+        });
       });
-    });
-  }).then(() => {
-    alert("Estoque adicionado com sucesso!");
-  }).catch(e => alert("Erro ao adicionar estoque: " + e));
-}
-
-function abrirModalVenda(id) {
-  if(!caixaAtualDoc && usuarioRole !== "admin") {
-    alert("Atenção: O seu caixa encontra-se FECHADO! Abra o caixa no 'Módulo Caixa' antes de realizar vendas.");
-    navegarPara('paginaCaixa');
-    return;
-  }
-
-  let p = todosProdutos.find(item => item.id === id);
-  if(!p) return;
-
-  if(Number(p.estoque) <= 0) return alert("Produto esgotado no estoque!");
-
-  produtoVendaAtual = p;
-  modalProdNome.innerText = p.nome;
-  modalProdQtd.value = 1;
-  modalProdQtd.max = p.estoque;
-  modalNomeCliente.value = "";
-  modalValorRecebido.value = "";
-  lblTroco.innerText = "0 Db";
-
-  calcularTotalVendaModal();
-  alternarCampoTroco();
-  modalVenda.classList.remove("hidden");
-}
-
-function fecharModalVenda() {
-  modalVenda.classList.add("hidden");
-  produtoVendaAtual = null;
-}
-
-function calcularTotalVendaModal() {
-  if(!produtoVendaAtual) return;
-  let q = Number(modalProdQtd.value) || 1;
-  let tot = q * Number(produtoVendaAtual.venda);
-  modalTotalPagar.innerText = tot.toLocaleString('pt-PT') + " Db";
-  calcularTroco();
-}
-
-function alternarCampoTroco() {
-  let f = modalFormaPagamento.value;
-  if(f === "Dinheiro") boxCalculoTroco.classList.remove("hidden");
-  else boxCalculoTroco.classList.add("hidden");
-}
-
-function calcularTroco() {
-  if(!produtoVendaAtual) return;
-  let q = Number(modalProdQtd.value) || 1;
-  let tot = q * Number(produtoVendaAtual.venda);
-  let rec = Number(modalValorRecebido.value) || 0;
-
-  let tr = rec - tot;
-  if(tr >= 0) {
-    lblTroco.innerText = tr.toLocaleString('pt-PT') + " Db";
-    lblTroco.style.color = "#10b981";
-  } else {
-    lblTroco.innerText = "Faltam " + Math.abs(tr).toLocaleString('pt-PT') + " Db";
-    lblTroco.style.color = "#ef4444";
+    }).catch(e => alert("Erro ao adicionar estoque: " + e));
   }
 }
 
-function confirmarVendaModal() {
-  if(!produtoVendaAtual) return;
-
-  let id = produtoVendaAtual.id;
-  let q = Number(modalProdQtd.value) || 1;
-  let fPag = modalFormaPagamento.value;
-  let cli = modalNomeCliente.value.trim() || "Consumidor Final";
-
-  if(q <= 0) return alert("Quantidade inválida.");
-
-  let user = auth.currentUser;
-
-  db.runTransaction(function(transaction) {
-    let pRef = db.collection("produtos").doc(id);
-
-    return transaction.get(pRef).then(function(doc) {
-      if(!doc.exists) throw "Produto não encontrado.";
-      let estAtual = Number(doc.data().estoque) || 0;
-      if(estAtual < q) throw "Quantidade insuficiente em estoque!";
-
-      let tot = q * Number(doc.data().venda);
-
-      transaction.update(pRef, { estoque: estAtual - q });
-
-      let movRef = db.collection("movimentacoes").doc();
-      transaction.set(movRef, {
-        produto: doc.data().nome,
-        tipo: "saida",
-        quantidade: q,
-        valor: tot,
-        formaPagamento: fPag,
-        cliente: cli,
-        usuario: user.email,
-        uid: user.uid,
-        role: usuarioRole,
-        data: new Date(),
-        caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
-      });
-
-      return { nome: doc.data().nome, precoUnit: doc.data().venda, total: tot };
-    });
-  }).then(res => {
-    fecharModalVenda();
-    imprimirReciboVenda(res.nome, q, res.precoUnit, res.total, fPag, cli);
-  }).catch(e => alert("Erro ao concluir venda: " + e));
-}
-
-function imprimirReciboVenda(nomeProd, qtd, precoUnit, total, formaPag, cliente) {
-  reciboData.innerText = new Date().toLocaleString('pt-PT');
-  reciboCliente.innerText = cliente;
-  reciboVendedor.innerText = auth.currentUser.email;
-  reciboItem.innerText = nomeProd;
-  reciboQtd.innerText = qtd;
-  reciboPrecoUnit.innerText = precoUnit;
-  reciboTotalItem.innerText = total;
-  reciboTotal.innerText = total;
-  reciboPagamento.innerText = formaPag;
-
-  if(formaPag === "Dinheiro" && modalValorRecebido.value) {
-    let rec = Number(modalValorRecebido.value);
-    let tr = rec - total;
-    reciboTrocoRow.classList.remove("hidden");
-    reciboTroco.innerText = tr >= 0 ? tr : 0;
-  } else {
-    reciboTrocoRow.classList.add("hidden");
-  }
-
-  window.print();
-}
-
+// TRANSACTION PARA COMPRA DE FORNECEDOR (COM VINCULAÇÃO DE CAIXA)
 function registrarCompraProduto() {
-  let prodId = compraSelectProduto.value;
+  let pId = compraSelectProduto.value;
   let q = Number(compraQtd.value) || 0;
-  let custoTot = Number(compraCustoTotal.value) || 0;
-  let forn = compraFornecedor.value.trim() || "Fornecedor Local";
+  let custoTotal = Number(compraCustoTotal.value) || 0;
+  let forn = compraFornecedor.value.trim() || "Não Especificado";
   let fPag = compraFormaPag.value;
 
-  if(!prodId || q <= 0 || custoTot <= 0) {
-    return alert("Selecione o produto, informe a quantidade comprada e o custo total pago!");
-  }
+  if(!pId) return alert("Selecione um produto para reabastecer!");
+  if(q <= 0) return alert("Informe a quantidade comprada!");
+  if(custoTotal <= 0) return alert("Informe o custo total pago pela compra!");
 
-  let p = todosProdutos.find(item => item.id === prodId);
-  if(!p) return;
+  let prod = todosProdutos.find(item => item.id === pId);
+  if(!prod) return;
 
-  let custoUnitNovo = Math.round(custoTot / q);
+  let novoCustoUnitario = Math.round(custoTotal / q);
 
   db.runTransaction(function(transaction) {
-    let pRef = db.collection("produtos").doc(prodId);
+    let prodRef = db.collection("produtos").doc(pId);
+    return transaction.get(prodRef).then(function(prodDoc) {
+      if (!prodDoc.exists) throw "Produto não existe.";
 
-    return transaction.get(pRef).then(function(doc) {
-      if(!doc.exists) throw "Produto não encontrado.";
-      let estAtual = Number(doc.data().estoque) || 0;
+      let estoqueAtualBanco = Number(prodDoc.data().estoque || 0);
 
-      transaction.update(pRef, {
-        estoque: estAtual + q,
-        compra: custoUnitNovo
+      transaction.update(prodRef, {
+        estoque: estoqueAtualBanco + q,
+        compra: novoCustoUnitario
       });
 
       let movRef = db.collection("movimentacoes").doc();
       transaction.set(movRef, {
-        produto: doc.data().nome,
+        produto: prodDoc.data().nome,
         tipo: "compra",
         quantidade: q,
-        valor: custoTot,
-        formaPagamento: fPag,
-        fornecedor: forn,
+        valor: custoTotal,
+        formaPagamento: fPag + " (Fornecedor: " + forn + ")",
         usuario: auth.currentUser.email,
         uid: auth.currentUser.uid,
         role: usuarioRole,
@@ -2594,25 +2459,302 @@ function registrarCompraProduto() {
     compraQtd.value = "";
     compraCustoTotal.value = "";
     compraFornecedor.value = "";
-    alert("Compra registrada com sucesso! Estoque e valor de custo atualizados.");
+    alert(`Compra registada com sucesso!\n${q} unidades adicionadas ao estoque do produto "${prod.nome}".`);
   }).catch(e => alert("Erro ao registrar compra: " + e));
 }
 
-function salvarDespesa() {
-  let desc = despDescricao.value.trim();
-  let val = Number(despValor.value) || 0;
-  let cat = despCategoria.value;
+function atualizarRotulosCambio() {
+  let dir = cambioDirecao.value;
+  if(dir === "PT_STP") {
+    cambioTaxa.value = "26.0";
+  } else {
+    cambioTaxa.value = "27.5";
+  }
+  calcularCalculoCambioSimulado();
+}
 
-  if(!desc || val <= 0) return alert("Preencha a descrição e o valor da despesa!");
+function calcularCalculoCambioSimulado() {
+  let dir = cambioDirecao.value;
+  let eur = Number(cambioQtdEur.value) || 0;
+  let taxa = Number(cambioTaxa.value) || 26.0;
 
-  db.collection("despesas").add({
-    descricao: desc,
-    valor: val,
-    categoria: cat,
+  if(dir === "PT_STP") {
+    let dbEntregar = eur * taxa;
+    cambioResumoTxt.innerText = `${eur} € ➔ ${dbEntregar.toLocaleString('pt-PT')} Db`;
+    cambioLucroEstimadoTxt.innerText = "Recebe em € / Entregas em Dobras em STP";
+  } else {
+    let dbCobrar = eur * taxa;
+    let custoBaseDb = eur * 26.0;
+    let lucro = dbCobrar - custoBaseDb;
+    cambioResumoTxt.innerText = `Envia ${eur} € ➔ Cliente Paga: ${dbCobrar.toLocaleString('pt-PT')} Db`;
+    cambioLucroEstimadoTxt.innerText = `Lucro Líquido de Câmbio: ${lucro.toLocaleString('pt-PT')} Db`;
+  }
+}
+
+function registrarOperacaoCambio() {
+  let dir = cambioDirecao.value;
+  let eur = Number(cambioQtdEur.value) || 0;
+  let taxa = Number(cambioTaxa.value) || 26.0;
+  let cli = cambioCliente.value.trim() || "Cliente Remessa";
+
+  if(eur <= 0) return alert("Informe a quantidade de Euros!");
+
+  let totalDb = eur * taxa;
+  let lucroCalculado = 0;
+
+  if(dir === "STP_PT") {
+    let custoBase = eur * 26.0;
+    lucroCalculado = totalDb - custoBase;
+  }
+
+  db.collection("movimentacoes").add({
+    produto: `Câmbio (${dir === 'PT_STP' ? 'PT ➔ STP' : 'STP ➔ PT'})`,
+    tipo: "cambio",
+    quantidade: eur,
+    valor: totalDb,
+    lucroCambio: lucroCalculado,
+    formaPagamento: `Remessa (${eur}€ @ ${taxa}Db)`,
+    cliente: cli,
     usuario: auth.currentUser.email,
     uid: auth.currentUser.uid,
     role: usuarioRole,
-    data: new Date()
+    data: new Date(),
+    caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
+  }).then(() => {
+    cambioQtdEur.value = "";
+    cambioCliente.value = "";
+    calcularCalculoCambioSimulado();
+    alert("Operação de câmbio registada com sucesso!");
+  });
+}
+
+function renderizarHistorico(listaMovs) {
+  let htmlBuffer = "";
+  let prodLookup = {};
+  todosProdutos.forEach(p => { prodLookup[p.nome] = p; });
+
+  listaMovs.forEach(m => {
+    if(!m.data) return;
+    let d = m.data.toDate();
+    let dataFmt = d.toLocaleString('pt-PT');
+    let valor = Number(m.valor) || 0;
+    let fPag = m.formaPagamento || "Dinheiro";
+    let ft = prodLookup[m.produto] ? prodLookup[m.produto].foto : "";
+    let fotoSrc = ft || "https://via.placeholder.com/40?text=Serviço";
+
+    let tipoCor = "#10b981";
+    if(m.tipo === "saida") tipoCor = "#ef4444";
+    if(m.tipo === "compra") tipoCor = "#2563eb";
+    if(m.tipo === "cambio") tipoCor = "#8b5cf6";
+
+    let btnRecibo = (m.tipo === 'saida') ? `
+      <button class="btn-secondary btn-acao" onclick="reimprimirReciboHistorico('${m.produto.replace(/'/g, "\\'")}', ${m.quantidade}, ${valor}, '${fPag}', '${(m.cliente || "Consumidor Final").replace(/'/g, "\\'")}', '${m.usuario}', '${dataFmt}')">PDF</button>
+    ` : '-';
+
+    htmlBuffer += `
+      <tr>
+        <td><img src="${fotoSrc}" class="img-thumb" loading="lazy" alt="Foto"></td>
+        <td><b>${m.produto}</b></td>
+        <td><span style="color:${tipoCor}; font-weight:bold;">${m.tipo.toUpperCase()}</span></td>
+        <td><b>${m.quantidade} ${m.tipo === 'cambio' ? '€' : ''}</b></td>
+        <td><small>${fPag}</small></td>
+        <td><b>${valor} Db</b></td>
+        <td><small>${m.usuario}</small></td>
+        <td><small>${dataFmt}</small></td>
+        <td>${btnRecibo}</td>
+      </tr>
+    `;
+  });
+  historico.innerHTML = htmlBuffer;
+}
+
+function filtrarHistoricoIntervalo() {
+  let inVal = histDataInicio.value;
+  let fimVal = histDataFim.value;
+  if(!inVal || !fimVal) return alert("Por favor, selecione a Data Inicial e a Data Final!");
+
+  let dInicio = new Date(inVal + "T00:00:00");
+  let dFim = new Date(fimVal + "T23:59:59");
+
+  let filtrados = todasMovimentacoes.filter(m => {
+    if(!m.data) return false;
+    let d = m.data.toDate();
+    return d >= dInicio && d <= dFim;
+  });
+
+  renderizarHistorico(filtrados);
+}
+
+function filtrarHistoricoHoje() {
+  let hojeStr = new Date().toISOString().split('T')[0];
+  histDataInicio.value = hojeStr;
+  histDataFim.value = hojeStr;
+  filtrarHistoricoIntervalo();
+}
+
+function limparFiltroHistorico() {
+  histDataInicio.value = "";
+  histDataFim.value = "";
+  renderizarHistorico(todasMovimentacoes);
+}
+
+function abrirModalVenda(id, nome, estoque, precoVenda) {
+  if (!caixaAtualDoc) {
+    return alert("Atenção: É necessário abrir um caixa de turno antes de realizar vendas!");
+  }
+  if(estoque <= 0) return alert("Produto sem estoque disponível!");
+
+  produtoVendaAtual = { id, nome, estoque, precoVenda };
+  modalProdNome.innerText = nome;
+  modalProdQtd.value = 1;
+  modalProdQtd.max = estoque;
+  modalValorRecebido.value = "";
+  modalNomeCliente.value = "";
+  modalFormaPagamento.value = "Dinheiro";
+  alternarCampoTroco();
+  calcularTotalVendaModal();
+  modalVenda.classList.remove("hidden");
+}
+
+function fecharModalVenda() {
+  modalVenda.classList.add("hidden");
+  produtoVendaAtual = null;
+}
+
+function alternarCampoTroco() {
+  if(modalFormaPagamento.value === "Dinheiro") {
+    boxCalculoTroco.classList.remove("hidden");
+  } else {
+    boxCalculoTroco.classList.add("hidden");
+  }
+}
+
+function calcularTotalVendaModal() {
+  if(!produtoVendaAtual) return;
+  let q = +modalProdQtd.value || 1;
+  let total = q * produtoVendaAtual.precoVenda;
+  modalTotalPagar.innerText = total.toLocaleString('pt-PT') + " Db";
+  calcularTroco();
+}
+
+function calcularTroco() {
+  let total = (+modalProdQtd.value || 1) * produtoVendaAtual.precoVenda;
+  let recebido = +modalValorRecebido.value || 0;
+  let troco = recebido - total;
+  lblTroco.innerText = (troco > 0 ? troco : 0) + " Db";
+}
+
+// TRANSACTION DE VENDA: VERIFICA ESTOQUE, ASSOCIA AO CAIXA E EXECUTA BAIXA ATÔMICA
+function confirmarVendaModal() {
+  if(!produtoVendaAtual) return;
+
+  if(!caixaAtualDoc) {
+    return alert("Atenção: O seu caixa precisa estar aberto para confirmar a venda!");
+  }
+
+  let q = +modalProdQtd.value;
+  if(!q || q <= 0) return alert("Quantidade inválida.");
+
+  let btnConf = document.getElementById("btnConfirmarVenda");
+  btnConf.disabled = true;
+
+  let formaPag = modalFormaPagamento.value;
+  let totalval = q * produtoVendaAtual.precoVenda;
+  let clienteVal = modalNomeCliente.value.trim() || "Consumidor Final";
+  let recebidoVal = +modalValorRecebido.value || totalval;
+  let trocoVal = recebidoVal - totalval;
+
+  let caixaIdAtivo = caixaAtualDoc.id;
+
+  db.runTransaction(function(transaction) {
+    let prodRef = db.collection("produtos").doc(produtoVendaAtual.id);
+
+    return transaction.get(prodRef).then(function(prodDoc) {
+      if (!prodDoc.exists) throw "O produto não foi encontrado no banco de dados.";
+      
+      let estoqueAtualBanco = Number(prodDoc.data().estoque) || 0;
+
+      if (estoqueAtualBanco < q) {
+        throw "Estoque insuficiente no momento da confirmação. Restantes: " + estoqueAtualBanco;
+      }
+
+      let novoEstoque = estoqueAtualBanco - q;
+      transaction.update(prodRef, { estoque: novoEstoque });
+
+      let movRef = db.collection("movimentacoes").doc();
+      transaction.set(movRef, {
+        produto: produtoVendaAtual.nome,
+        tipo: "saida",
+        quantidade: q,
+        valor: totalval,
+        formaPagamento: formaPag,
+        cliente: clienteVal,
+        usuario: auth.currentUser.email,
+        uid: auth.currentUser.uid,
+        role: usuarioRole,
+        data: new Date(),
+        caixaId: caixaIdAtivo
+      });
+    });
+  }).then(() => {
+    btnConf.disabled = false;
+    preencherEImprimirRecibo(
+      new Date().toLocaleString('pt-PT'),
+      clienteVal,
+      auth.currentUser.email,
+      produtoVendaAtual.nome,
+      q,
+      produtoVendaAtual.precoVenda,
+      totalval,
+      formaPag,
+      trocoVal
+    );
+    fecharModalVenda();
+  }).catch(e => {
+    btnConf.disabled = false;
+    alert("Falha na venda: " + e);
+  });
+}
+
+function preencherEImprimirRecibo(dataStr, cliente, vendedor, produto, qtd, precoUnit, total, formaPag, troco) {
+  reciboData.innerText = dataStr;
+  reciboCliente.innerText = cliente;
+  reciboVendedor.innerText = vendedor;
+  reciboItem.innerText = produto;
+  reciboQtd.innerText = qtd;
+  reciboPrecoUnit.innerText = precoUnit + " Db";
+  reciboTotalItem.innerText = total;
+  reciboTotal.innerText = total;
+  reciboPagamento.innerText = formaPag;
+  reciboTroco.innerText = (troco > 0 ? troco : 0);
+
+  if(formaPag === "Dinheiro") reciboTrocoRow.classList.remove("hidden");
+  else reciboTrocoRow.classList.add("hidden");
+
+  window.print();
+}
+
+function reimprimirReciboHistorico(produto, qtd, total, formaPag, cliente, vendedor, dataFmt) {
+  let pUnit = (qtd > 0) ? (total / qtd) : total;
+  preencherEImprimirRecibo(dataFmt, cliente, vendedor, produto, qtd, pUnit, total, formaPag, 0);
+}
+
+function salvarDespesa() {
+  let d = despDescricao.value.trim();
+  let v = Number(despValor.value) || 0;
+  let c = despCategoria.value;
+
+  if(!d || v <= 0) return alert("Preencha a descrição e o valor da despesa!");
+
+  db.collection("despesas").add({
+    descricao: d,
+    valor: v,
+    categoria: c,
+    usuario: auth.currentUser.email,
+    uid: auth.currentUser.uid,
+    role: usuarioRole,
+    data: new Date(),
+    caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
   }).then(() => {
     despDescricao.value = "";
     despValor.value = "";
@@ -2620,90 +2762,28 @@ function salvarDespesa() {
   });
 }
 
-function atualizarRotulosCambio() {
-  let dir = cambioDirecao.value;
-  if(dir === "PT_STP") {
-    cambioQtdEur.placeholder = "Quantidade a receber em Euros (€)";
-  } else {
-    cambioQtdEur.placeholder = "Quantidade a entregar em Euros (€)";
-  }
-  calcularCalculoCambioSimulado();
-}
-
-function calcularCalculoCambioSimulado() {
-  let eur = Number(cambioQtdEur.value) || 0;
-  let taxa = Number(cambioTaxa.value) || 26.0;
-  let dir = cambioDirecao.value;
-
-  let taxaOficial = 24.5;
-  let stnTotal = Math.round(eur * taxa);
-
-  let lucroComissao = Math.round(eur * Math.abs(taxa - taxaOficial));
-
-  if(dir === "PT_STP") {
-    cambioResumoTxt.innerText = `${eur} € ➔ Entrega ao Cliente: ${stnTotal} Db`;
-  } else {
-    cambioResumoTxt.innerText = `Recebe do Cliente: ${stnTotal} Db ➔ Entrega em PT: ${eur} €`;
-  }
-
-  cambioLucroEstimadoTxt.innerText = `Lucro Estimado de Câmbio: ${lucroComissao} Db (Margem vs Cotação Oficial)`;
-}
-
-function registrarOperacaoCambio() {
-  let eur = Number(cambioQtdEur.value) || 0;
-  let taxa = Number(cambioTaxa.value) || 26.0;
-  let cli = cambioCliente.value.trim() || "Cliente Remessa";
-  let dir = cambioDirecao.value;
-
-  if(eur <= 0 || taxa <= 0) return alert("Informe a quantidade em Euros e a taxa de câmbio!");
-
-  let taxaOficial = 24.5;
-  let stnTotal = Math.round(eur * taxa);
-  let lucroComissao = Math.round(eur * Math.abs(taxa - taxaOficial));
-
-  let payload = {
-    produto: `Remessa ${dir === 'PT_STP' ? 'PT➔STP' : 'STP➔PT'}: ${eur}€ (${taxa} Db/€)`,
-    tipo: "cambio",
-    quantidade: eur,
-    valor: stnTotal,
-    lucroCambio: lucroComissao,
-    formaPagamento: dir === 'PT_STP' ? 'Recebido EUR / Entregue STN' : 'Recebido STN / Entregue EUR',
-    cliente: cli,
-    usuario: auth.currentUser.email,
-    uid: auth.currentUser.uid,
-    role: usuarioRole,
-    data: new Date(),
-    caixaId: caixaAtualDoc ? caixaAtualDoc.id : null
-  };
-
-  db.collection("movimentacoes").add(payload).then(() => {
-    cambioQtdEur.value = "";
-    cambioCliente.value = "";
-    alert("Operação de câmbio registrada com sucesso no caixa!");
-  });
-}
-
 function carregarFuncionarios() {
   listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
     let htmlBuffer = "";
     s.forEach(d => {
-      let u = d.data();
-      u.id = d.id;
-
-      let isDesativado = (u.status === "desativado");
-      let btnStatus = isDesativado ? 
-        `<button class="btn-status-ativo" onclick="alterarStatusUsuario('${u.id}', 'ativo')">Ativar</button>` :
-        `<button class="btn-status-inativo" onclick="alterarStatusUsuario('${u.id}', 'desativado')">Desativar</button>`;
+      let f = d.data();
+      let id = d.id;
+      let emailTxt = f.email || "Sem E-mail";
+      let statusAtual = f.status || "ativo";
+      
+      let statusBtn = (statusAtual === "desativado") ? 
+        `<button class="btn-status-inativo btn-acao" onclick="alternarStatusFunc('${id}', '${statusAtual}', '${emailTxt}')">Inativo</button>` :
+        `<button class="btn-status-ativo btn-acao" onclick="alternarStatusFunc('${id}', '${statusAtual}', '${emailTxt}')">Ativo</button>`;
 
       htmlBuffer += `
-        <tr class="${isDesativado ? 'desativado' : ''}">
-          <td><b>${u.email}</b></td>
-          <td><small style="font-weight:bold; text-transform:uppercase;">${u.role}</small></td>
-          <td><span style="color:${isDesativado ? '#ef4444' : '#10b981'}; font-weight:bold;">${isDesativado ? 'Inativo' : 'Ativo'}</span></td>
+        <tr class="${statusAtual === 'desativado' ? 'desativado' : ''}">
+          <td><b>${emailTxt}</b></td>
+          <td><b>${(f.role || 'venda1').toUpperCase()}</b></td>
+          <td>${statusBtn}</td>
           <td>
             <div class="acoes-cell">
-              <button class="btn-warning btn-acao" onclick="editarFuncionario('${u.id}', '${u.email}', '${u.role}')">✏️</button>
-              ${btnStatus}
+              <button class="btn-secondary btn-acao" onclick="prepararEditarFunc('${id}', '${emailTxt}', '${f.role || 'venda1'}')">✏️ Edit</button>
+              <button class="btn-danger btn-acao" onclick="apagarFuncionario('${id}', '${emailTxt}')">🗑️</button>
             </div>
           </td>
         </tr>
@@ -2713,174 +2793,104 @@ function carregarFuncionarios() {
   });
 }
 
+// CRIAÇÃO DE FUNCIONÁRIOS REATORADA (Firebase Secundário para preservar sessão Admin)
 function salvarFuncionario() {
-  let e = funcEmail.value.trim();
-  let s = funcSenha.value.trim();
-  let r = funcRole.value;
+  let emailVal = funcEmail.value.toLowerCase().trim();
+  let senhaVal = funcSenha.value;
+  let roleVal = funcRole.value;
 
-  if(!e) return alert("Preencha o e-mail do funcionário!");
+  if(!emailVal) return alert("Informe o e-mail do funcionário!");
 
   if(editandoFuncId) {
-    db.collection("usuarios").doc(editandoFuncId).update({ role: r }).then(() => {
-      cancelarEdicaoFunc();
-      alert("Função do funcionário atualizada com sucesso!");
-    });
+    db.collection("usuarios").doc(editandoFuncId).update({ email: emailVal, role: roleVal }).then(() => cancelarEdicaoFunc());
   } else {
-    if(!s || s.length < 6) return alert("A senha inicial deve conter pelo menos 6 caracteres!");
+    if(!senhaVal) return alert("Informe a senha inicial!");
 
-    let secondaryApp = firebase.initializeApp(firebaseConfig, "SecondaryApp");
-    secondaryApp.auth().createUserWithEmailAndPassword(e, s)
-      .then(userCredential => {
-        let uid = userCredential.user.uid;
-        return db.collection("usuarios").doc(uid).set({
-          email: e,
-          role: r,
-          status: "ativo",
-          criadoEm: new Date()
-        });
+    let secondaryApp = null;
+    try {
+      secondaryApp = firebase.initializeApp(firebaseConfig, "SecondaryApp");
+    } catch(e) {
+      secondaryApp = firebase.app("SecondaryApp");
+    }
+
+    secondaryApp.auth().createUserWithEmailAndPassword(emailVal, senhaVal)
+      .then(r => {
+        let newUid = r.user.uid;
+        secondaryApp.auth().signOut();
+        return db.collection("usuarios").doc(newUid).set({ email: emailVal, role: roleVal, status: "ativo" });
       })
       .then(() => {
-        secondaryApp.delete();
-        cancelarEdicaoFunc();
+        funcEmail.value = ""; funcSenha.value = "";
         alert("Funcionário criado com sucesso!");
       })
-      .catch(err => {
-        secondaryApp.delete();
-        alert("Erro ao criar funcionário: " + err.message);
-      });
+      .catch(e => alert("Erro ao criar funcionário: " + e.message));
   }
 }
 
-function editarFuncionario(id, email, role) {
+function prepararEditarFunc(id, email, role) {
   editandoFuncId = id;
   funcEmail.value = email;
-  funcEmail.disabled = true;
-  funcSenha.classList.add("hidden");
+  funcSenha.disabled = true;
   funcRole.value = role;
-  btnSalvarFunc.innerText = "Atualizar Função";
+  btnSalvarFunc.innerText = "Atualizar";
   btnCancelarFunc.classList.remove("hidden");
 }
 
 function cancelarEdicaoFunc() {
   editandoFuncId = null;
   funcEmail.value = "";
-  funcEmail.disabled = false;
   funcSenha.value = "";
-  funcSenha.classList.remove("hidden");
+  funcSenha.disabled = false;
   btnSalvarFunc.innerText = "Criar Funcionário";
   btnCancelarFunc.classList.add("hidden");
 }
 
-function alterarStatusUsuario(id, novoStatus) {
-  if(confirm(`Deseja alterar o estado do utilizador para "${novoStatus.toUpperCase()}"?`)) {
-    db.collection("usuarios").doc(id).update({ status: novoStatus });
+function alternarStatusFunc(id, status, emailFunc) {
+  if(emailFunc === auth.currentUser.email) {
+    return alert("Ação bloqueada: Não pode desativar a sua própria conta de Administrador!");
+  }
+  db.collection("usuarios").doc(id).update({ status: status === "desativado" ? "ativo" : "desativado" });
+}
+
+function apagarFuncionario(id, emailFunc) {
+  if(emailFunc === auth.currentUser.email) {
+    return alert("Ação bloqueada: Não pode excluir a sua própria conta!");
+  }
+  if(confirm("Deseja realmente excluir este funcionário?")) {
+    db.collection("usuarios").doc(id).delete();
   }
 }
 
-function renderizarHistorico(listaMovs) {
-  let htmlBuffer = "";
-  let prodLookup = {};
-  todosProdutos.forEach(p => { prodLookup[p.nome] = p; });
+function del(id){ if(usuarioRole === "admin" && confirm("Excluir produto do estoque?")) db.collection("produtos").doc(id).delete(); }
 
-  listaMovs.forEach(m => {
-    let dt = m.data ? m.data.toDate().toLocaleString('pt-PT') : '-';
-    let fotoSrc = (prodLookup[m.produto] && prodLookup[m.produto].foto) ? prodLookup[m.produto].foto : "https://via.placeholder.com/40?text=MD";
-
-    let badgeTipo = '';
-    if(m.tipo === "saida") badgeTipo = '<span style="color:#10b981; font-weight:bold;">Venda</span>';
-    else if(m.tipo === "entrada") badgeTipo = '<span style="color:#2563eb; font-weight:bold;">Entrada Estoque</span>';
-    else if(m.tipo === "compra") badgeTipo = '<span style="color:#ef4444; font-weight:bold;">Compra Fornecedor</span>';
-    else if(m.tipo === "cambio") badgeTipo = '<span style="color:#8b5cf6; font-weight:bold;">Câmbio/Remessa</span>';
-
-    let btnApagar = (usuarioRole === "admin") ? 
-      `<button class="btn-danger btn-acao" onclick="apagarMovimentacao('${m.id}')">🗑️</button>` : '-';
-
-    htmlBuffer += `
-      <tr>
-        <td><img src="${fotoSrc}" class="img-thumb" loading="lazy"></td>
-        <td><b>${m.produto}</b></td>
-        <td>${badgeTipo}</td>
-        <td><b>${m.quantidade}</b></td>
-        <td><small>${m.formaPagamento || 'Dinheiro'}</small></td>
-        <td><b>${m.valor} Db</b></td>
-        <td><small>${m.usuario}</small></td>
-        <td><small>${dt}</small></td>
-        <td>${btnApagar}</td>
-      </tr>
-    `;
+function exportarEstoque(){
+  db.collection("produtos").get().then(s => {
+    let c = "Produto,Categoria,Qtd,Min,Compra,Venda\n";
+    s.forEach(d => {
+      let p = d.data();
+      c += `"${p.nome}","${p.categoria||'Geral'}",${p.estoque},${p.minimo},${p.compra||0},${p.venda}\n`;
+    });
+    baixar(c, "estoque.csv");
   });
-
-  historico.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma movimentação encontrada.</td></tr>';
 }
 
-function apagarMovimentacao(id) {
-  if(confirm("Deseja apagar este registo do histórico?")) {
-    db.collection("movimentacoes").doc(id).delete();
-  }
-}
-
-function filtrarHistoricoIntervalo() {
-  let inVal = histDataInicio.value;
-  let fimVal = histDataFim.value;
-  if(!inVal || !fimVal) return alert("Selecione a data inicial e final.");
-
-  let dIn = new Date(inVal + "T00:00:00");
-  let dFim = new Date(fimVal + "T23:59:59");
-
-  let filtradas = todasMovimentacoes.filter(m => {
-    if(!m.data) return false;
-    let d = m.data.toDate();
-    return d >= dIn && d <= dFim;
+function exportarHistorico(){
+  db.collection("movimentacoes").get().then(s => {
+    let c = "Produto,Tipo,Qtd,Forma Pag,Valor,Usuario,Data\n";
+    s.forEach(d => {
+      let m = d.data();
+      let dt = m.data ? m.data.toDate().toLocaleString('pt-PT') : '';
+      c += `"${m.produto}","${m.tipo}",${m.quantidade},"${m.formaPagamento||'Dinheiro'}",${m.valor},"${m.usuario}","${dt}"\n`;
+    });
+    baixar(c, "historico.csv");
   });
-
-  renderizarHistorico(filtradas);
 }
 
-function filtrarHistoricoHoje() {
-  let hojeStr = new Date().toISOString().split('T')[0];
-  let filtradas = todasMovimentacoes.filter(m => {
-    if(!m.data) return false;
-    let dStr = m.data.toDate().toISOString().split('T')[0];
-    return dStr === hojeStr;
-  });
-  renderizarHistorico(filtradas);
-}
-
-function limparFiltroHistorico() {
-  histDataInicio.value = "";
-  histDataFim.value = "";
-  renderizarHistorico(todasMovimentacoes);
-}
-
-function exportarEstoque() {
-  let csvContent = "data:text/csv;charset=utf-8,Produto,Categoria,Estoque,EstoqueMinimo,PrecoCompra,PrecoVenda,TotalEstoque\n";
-  todosProdutos.forEach(p => {
-    let row = `"${p.nome}","${p.categoria}",${p.estoque},${p.minimo},${p.compra},${p.venda},${p.estoque * p.venda}`;
-    csvContent += row + "\n";
-  });
-  let encodedUri = encodeURI(csvContent);
-  let link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `Estoque_MundoDigitalSTP_${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-function exportarHistorico() {
-  let csvContent = "data:text/csv;charset=utf-8,Data,Produto,Tipo,Quantidade,FormaPagamento,ValorTotal,Usuario\n";
-  todasMovimentacoes.forEach(m => {
-    let dt = m.data ? m.data.toDate().toLocaleString('pt-PT').replace(',', '') : '';
-    let row = `"${dt}","${m.produto}","${m.tipo}",${m.quantidade},"${m.formaPagamento||''}",${m.valor},"${m.usuario}"`;
-    csvContent += row + "\n";
-  });
-  let encodedUri = encodeURI(csvContent);
-  let link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `Historico_MundoDigitalSTP_${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+function baixar(c, n){
+  let a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([c], { type: 'text/csv;charset=utf-8;' }));
+  a.download = n;
+  a.click();
 }
 </script>
 </body>
