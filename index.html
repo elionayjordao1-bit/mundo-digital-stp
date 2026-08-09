@@ -130,6 +130,7 @@ header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px
 .kpi-card.red { border-left-color: #ef4444; background: #fef2f2; }
 .kpi-card.orange { border-left-color: #f59e0b; background: #fffbe6; }
 .kpi-card.teal { border-left-color: #0d9488; background: #f0fdfa; }
+.kpi-card.emerald { border-left-color: #059669; background: #ecfdf5; }
 
 .kpi-title { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 .kpi-value { font-size: 20px; color: #1e293b; font-weight: 700; margin-top: 4px; display: block; }
@@ -308,8 +309,27 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
     <!-- BARRA SUPERIOR DE BOTÕES -->
     <div class="top-action-bar">
+      <button onclick="togglePainelCaixa()" class="btn-success" id="btnToggleCaixa" style="background:#059669;">💵 Gerir Caixa Físico</button>
       <button onclick="toggleAlertasEstoque()" class="btn-warning" id="btnToggleAlertas">⚠️ Alertas de Estoque (0)</button>
       <button id="btnToggleFunc" onclick="toggleFuncionarios()" class="btn-secondary hidden">👥 Gerir Equipa / Funcionários</button>
+    </div>
+
+    <!-- PAINEL DE CONTROLE DE CAIXA / SANGRIA / SUPRIMENTO -->
+    <div class="card hidden" id="cardControleCaixa" style="border-top: 4px solid #059669;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+        <h3 style="color:#059669; margin:0; border:none; font-size:16px;">💵 Gestão Operacional de Caixa & Gaveta</h3>
+        <button onclick="fecharCaixaDiario()" class="btn-secondary" style="background:#0f172a; font-size:12px; padding:6px 12px;">🔒 Realizar Fechamento do Dia</button>
+      </div>
+
+      <div class="form-grid" style="margin-bottom: 15px; background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0;">
+        <select id="caixaTipoOperacao">
+          <option value="suprimento">➕ Suprimento (Entrada / Troco Inicial)</option>
+          <option value="sangria">➖ Sangria (Retirada / Pagamento Físico)</option>
+        </select>
+        <input id="caixaValor" type="number" placeholder="Valor em Dinheiro (Db)">
+        <input id="caixaMotivo" placeholder="Motivo / Observação (Ex: Troco inicial, Pagamento Fornecedor)">
+        <button onclick="registrarMovimentoCaixa()" class="btn-success" style="background:#059669; grid-column: span 2;">💾 Registrar Movimento no Caixa</button>
+      </div>
     </div>
 
     <!-- PAINEL DE ALERTAS DE ESTOQUE -->
@@ -361,6 +381,12 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
 
       <div class="kpi-grid">
+        <div class="kpi-card emerald">
+          <span class="kpi-title">Caixa Físico Hoje (Gaveta)</span>
+          <span id="saldoCaixaFisicoKpi" class="kpi-value">0 Db</span>
+          <span style="font-size: 11px; color:#059669;">Dinheiro físico disponível</span>
+        </div>
+
         <div class="kpi-card orange">
           <span class="kpi-title">Valor Total em Estoque</span>
           <span id="valorTotalEstoqueKpi" class="kpi-value">0 Db</span>
@@ -849,6 +875,7 @@ function resetarInterface() {
   btnToggleFunc.classList.add("hidden");
   cardFuncionarios.classList.add("hidden");
   cardAlertaEstoque.classList.add("hidden");
+  cardControleCaixa.classList.add("hidden");
   btnExportarEstoque.classList.add("hidden");
   btnExportarHistorico.classList.add("hidden");
   cardEstoque.classList.add("hidden");
@@ -872,6 +899,7 @@ function logout(){
 
 function toggleFuncionarios() { cardFuncionarios.classList.toggle("hidden"); }
 function toggleAlertasEstoque() { cardAlertaEstoque.classList.toggle("hidden"); }
+function togglePainelCaixa() { cardControleCaixa.classList.toggle("hidden"); }
 
 auth.onAuthStateChanged(u => {
   if(u){
@@ -990,6 +1018,79 @@ function carregar(){
     renderizarHistorico(todasMovimentacoes);
     processarDashboard();
   });
+}
+
+/* =========================================================================
+   LÓGICA DE CONTROLE DE CAIXA (SANGRIA, SUPRIMENTO E FECHAMENTO)
+   ========================================================================= */
+
+function registrarMovimentoCaixa() {
+  let tipo = caixaTipoOperacao.value;
+  let valor = Number(caixaValor.value) || 0;
+  let obs = caixaMotivo.value.trim() || (tipo === "suprimento" ? "Suprimento de Caixa" : "Sangria de Caixa");
+
+  if(valor <= 0) return alert("Informe um valor válido para a operação!");
+
+  let payload = {
+    produto: tipo === "suprimento" ? "➕ SUPRIMENTO CAIXA" : "➖ SANGRIA CAIXA",
+    tipo: tipo,
+    quantidade: 1,
+    valor: valor,
+    formaPagamento: "Dinheiro (Gaveta)",
+    observacao: obs,
+    usuario: auth.currentUser.email,
+    data: new Date()
+  };
+
+  db.collection("movimentacoes").add(payload).then(() => {
+    caixaValor.value = "";
+    caixaMotivo.value = "";
+    alert(`Operação de ${tipo.toUpperCase()} registada no caixa com sucesso!`);
+  }).catch(e => alert("Erro ao registar no caixa: " + e.message));
+}
+
+function fecharCaixaDiario() {
+  let hojeStr = new Date().toISOString().split('T')[0];
+  let vendasDinheiro = 0;
+  let vendasTransf = 0;
+  let vendasCartao = 0;
+  let suprimentos = 0;
+  let sangrias = 0;
+
+  todasMovimentacoes.forEach(m => {
+    if(!m.data) return;
+    let dStr = m.data.toDate().toISOString().split('T')[0];
+    if(dStr === hojeStr) {
+      let v = Number(m.valor) || 0;
+      let fp = m.formaPagamento || "Dinheiro";
+
+      if(m.tipo === "saida") {
+        if(fp.includes("Dinheiro")) vendasDinheiro += v;
+        else if(fp.includes("Transferencia")) vendasTransf += v;
+        else if(fp.includes("Cartao")) vendasCartao += v;
+        else vendasDinheiro += v;
+      } else if(m.tipo === "suprimento") {
+        suprimentos += v;
+      } else if(m.tipo === "sangria") {
+        sangrias += v;
+      }
+    }
+  });
+
+  let saldoFisicoEsperado = (vendasDinheiro + suprimentos) - sangrias;
+
+  let resumo = `🔒 FECHAMENTO DE CAIXA DIÁRIO (${new Date().toLocaleDateString('pt-PT')})\n\n` +
+    `(+) Vendas Dinheiro: ${vendasDinheiro.toLocaleString('pt-PT')} Db\n` +
+    `(+) Suprimentos / Reforços: ${suprimentos.toLocaleString('pt-PT')} Db\n` +
+    `(-) Sangrias / Retiradas: ${sangrias.toLocaleString('pt-PT')} Db\n` +
+    `--------------------------------------\n` +
+    `💵 SALDO FÍSICO ESPERADO GAVETA: ${saldoFisicoEsperado.toLocaleString('pt-PT')} Db\n\n` +
+    `💳 Vendas em Transferência / DobraPay: ${vendasTransf.toLocaleString('pt-PT')} Db\n` +
+    `💳 Vendas em Cartão Multicaixa: ${vendasCartao.toLocaleString('pt-PT')} Db\n` +
+    `--------------------------------------\n` +
+    `📊 TOTAL FATURADO HOJE: ${(vendasDinheiro + vendasTransf + vendasCartao).toLocaleString('pt-PT')} Db`;
+
+  alert(resumo);
 }
 
 /* =========================================================================
@@ -1524,6 +1625,7 @@ function processarDashboard() {
   let totalVendasPeriodo = 0, totalLucroVendasPeriodo = 0;
   let totalLucroCambioPeriodo = 0;
   let pagDin = 0, pagTrans = 0, pagCart = 0;
+  let caixaFisicoHoje = 0;
 
   let mapaProdutos = {};
   let mapaEquipe = {};
@@ -1539,6 +1641,17 @@ function processarDashboard() {
     let dStr = d.toISOString().split('T')[0];
 
     let isEncomendaMov = (m.formaPagamento && m.formaPagamento.includes("Encomenda"));
+
+    // Cálculo do Caixa Físico (Gaveta Hoje)
+    if(dStr === hojeStr) {
+      if(m.tipo === "saida" && (m.formaPagamento || "Dinheiro").includes("Dinheiro")) {
+        caixaFisicoHoje += val;
+      } else if(m.tipo === "suprimento") {
+        caixaFisicoHoje += val;
+      } else if(m.tipo === "sangria") {
+        caixaFisicoHoje -= val;
+      }
+    }
 
     if(m.tipo === "saida") {
       if(dStr === hojeStr) {
@@ -1600,6 +1713,7 @@ function processarDashboard() {
 
   let lucroLiquidoFinal = (totalLucroVendasPeriodo + totalLucroCambioPeriodo + totalLucroEncomendas) - totalDespesasPeriodo;
 
+  saldoCaixaFisicoKpi.innerText = caixaFisicoHoje.toLocaleString('pt-PT') + " Db";
   vendasHoje.innerText = totalVendasHoje.toLocaleString('pt-PT') + " Db";
   qtdVendasHoje.innerText = `${qtdVendasHojeVal} transações`;
 
@@ -1721,7 +1835,7 @@ function renderizarTabelaEstoque() {
     `;
   });
 
-  lista.innerHTML = htmlBuffer || '<tr><td colspan="12" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>';
+  lista.innerHTML = htmlBuffer || '<tr><td colspan="12" style="color:#94a3b8;">Nenum produto encontrado.</td></tr>';
   
   infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas} (${produtosFiltrados.length} itens)`;
   btnPagAnt.disabled = (paginaAtual === 1);
@@ -1938,12 +2052,14 @@ function renderizarHistorico(listaMovs) {
     let valor = Number(m.valor) || 0;
     let fPag = m.formaPagamento || "Dinheiro";
     let ft = prodLookup[m.produto] ? prodLookup[m.produto].foto : "";
-    let fotoSrc = ft || "https://via.placeholder.com/40?text=Serviço";
+    let fotoSrc = ft || "https://via.placeholder.com/40?text=Operação";
 
     let tipoCor = "#10b981";
     if(m.tipo === "saida") tipoCor = "#ef4444";
     if(m.tipo === "compra") tipoCor = "#2563eb";
     if(m.tipo === "cambio") tipoCor = "#8b5cf6";
+    if(m.tipo === "suprimento") tipoCor = "#059669";
+    if(m.tipo === "sangria") tipoCor = "#d97706";
 
     let btnRecibo = (m.tipo === 'saida') ? `
       <button class="btn-secondary btn-acao" onclick="reimprimirReciboHistorico('${m.produto.replace(/'/g, "\\'")}', ${m.quantidade}, ${valor}, '${fPag}', '${(m.cliente || "Consumidor Final").replace(/'/g, "\\'")}', '${m.usuario}', '${dataFmt}')">PDF</button>
@@ -1955,7 +2071,7 @@ function renderizarHistorico(listaMovs) {
         <td><b>${m.produto}</b></td>
         <td><span style="color:${tipoCor}; font-weight:bold;">${m.tipo.toUpperCase()}</span></td>
         <td><b>${m.quantidade} ${m.tipo === 'cambio' ? '€' : ''}</b></td>
-        <td><small>${fPag}</small></td>
+        <td><small>${fPag} ${m.observacao ? ' - ' + m.observacao : ''}</small></td>
         <td><b>${valor} Db</b></td>
         <td><small>${m.usuario}</small></td>
         <td><small>${dataFmt}</small></td>
