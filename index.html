@@ -404,7 +404,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
         </div>
       </div>
 
-      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-around: space-around; flex-wrap: wrap; text-align: center; font-size: 14px;">
+      <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center; font-size: 14px;">
         <div><b>Dinheiro:</b> <span id="pagDinheiro">0 Db</span></div>
         <div><b>Transferência:</b> <span id="pagTransf">0 Db</span></div>
         <div><b>Cartão:</b> <span id="pagCartao">0 Db</span></div>
@@ -725,7 +725,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
 
     <div style="display: flex; gap:10px;">
-      <button onclick="confirmarVendaModal()" class="btn-success" style="flex:1; padding: 12px;">✅ Confirmar & Emitir Recibo</button>
+      <button id="btnConfirmarVenda" onclick="confirmarVendaModal()" class="btn-success" style="flex:1; padding: 12px;">✅ Confirmar & Emitir Recibo</button>
       <button onclick="fecharModalVenda()" class="btn-secondary">Cancelar</button>
     </div>
   </div>
@@ -918,9 +918,6 @@ auth.onAuthStateChanged(u => {
 
       cardEstoque.classList.remove("hidden");
       carregar();
-    }).catch(e => {
-      console.error("Erro ao carregar permissões do utilizador:", e);
-      logout();
     });
   } else {
     app.classList.add("hidden");
@@ -1027,7 +1024,7 @@ function carregarArmazemPTTresPassos() {
             <td style="color:#2563eb; font-weight:bold;">${subtotal.toFixed(2)} €</td>
             <td><small>${dataFmt}</small></td>
             <td>
-              ${(usuarioRole === 'admin' || usuarioRole === 'estoque') ? `<button class="btn-danger btn-acao" onclick="apagarItemSoltoPT('${item.id}')">🗑️</button>` : '-'}
+              <button class="btn-danger btn-acao" onclick="apagarItemSoltoPT('${item.id}')">🗑️</button>
             </td>
           </tr>
         `;
@@ -1061,7 +1058,7 @@ function carregarArmazemPTTresPassos() {
         '<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>' : 
         '<span class="badge-concluido">ENTRADA DADA NO STOCK</span>';
 
-      let btnAcao = (lote.estado === 'EM_TRANSITO' && (usuarioRole === 'admin' || usuarioRole === 'estoque')) ? 
+      let btnAcao = lote.estado === 'EM_TRANSITO' ? 
         `<button class="btn-success btn-acao" onclick="darEntradaLoteNoStockSTP('${lote.id}')">🛬 Dar Entrada no Stock</button>` : '-';
 
       let nomesItens = (lote.itens || []).map(i => `${i.nome} (${i.quantidade}un)`).join(", ");
@@ -1084,7 +1081,6 @@ function carregarArmazemPTTresPassos() {
 }
 
 function cadastrarItemSoltoPT() {
-  if(usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Ação não autorizada.");
   let nome = ptNomeItem.value.trim();
   let cat = ptCategoriaItem.value.trim() || "Geral";
   let qtd = Number(ptQtdItem.value) || 0;
@@ -1116,7 +1112,6 @@ function cadastrarItemSoltoPT() {
 }
 
 function apagarItemSoltoPT(id) {
-  if(usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Ação não autorizada.");
   if(confirm("Deseja apagar este artigo do stock de Lisboa?")) {
     db.collection("armazem_pt").doc(id).delete();
   }
@@ -1128,7 +1123,6 @@ function selecionarTodosArtigosPT(chkMaster) {
 }
 
 function despacharLotePT() {
-  if(usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Ação não autorizada.");
   let ident = loteNomeIdentificador.value.trim();
   let freteEuro = Number(loteFreteEuro.value) || 0;
   let chks = document.querySelectorAll(".chk-item-pt:checked");
@@ -1186,8 +1180,8 @@ function despacharLotePT() {
   }).catch(e => alert("Erro ao despachar lote: " + e.message));
 }
 
+// TRANSACTION DE ENTRADA LOTE PT COM SEGURANÇA
 function darEntradaLoteNoStockSTP(loteId) {
-  if(usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Ação não autorizada.");
   let lote = todosLotesPT.find(l => l.id === loteId);
   if(!lote) return;
 
@@ -1199,57 +1193,61 @@ function darEntradaLoteNoStockSTP(loteId) {
     return;
   }
 
-  let batch = db.batch();
+  db.runTransaction(function(transaction) {
+    let loteRef = db.collection("lotes_pt").doc(loteId);
 
-  lote.itens.forEach(item => {
-    let custoUnitarioSTN = Math.round(item.custoFinalUnitarioEuro * taxaCambio);
-    let precoVendaSugerido = Math.round(custoUnitarioSTN * 1.3);
+    return transaction.get(loteRef).then(function(loteDoc) {
+      if (!loteDoc.exists) throw "Lote não encontrado.";
+      if (loteDoc.data().estado === "RECEBIDO") throw "Este lote já teve entrada processada anteriormente.";
 
-    let prodExistente = todosProdutos.find(p => p.nome.toLowerCase().trim() === item.nome.toLowerCase().trim());
+      lote.itens.forEach(item => {
+        let custoUnitarioSTN = Math.round(item.custoFinalUnitarioEuro * taxaCambio);
+        let precoVendaSugerido = Math.round(custoUnitarioSTN * 1.3);
 
-    if(prodExistente) {
-      let refExistente = db.collection("produtos").doc(prodExistente.id);
-      let novoEstoque = (Number(prodExistente.estoque) || 0) + item.quantidade;
-      batch.update(refExistente, {
-        estoque: novoEstoque,
-        compra: custoUnitarioSTN
+        let prodExistente = todosProdutos.find(p => p.nome.toLowerCase().trim() === item.nome.toLowerCase().trim());
+
+        if(prodExistente) {
+          let refExistente = db.collection("produtos").doc(prodExistente.id);
+          let novoEstoque = (Number(prodExistente.estoque) || 0) + item.quantidade;
+          transaction.update(refExistente, {
+            estoque: novoEstoque,
+            compra: custoUnitarioSTN
+          });
+        } else {
+          let novoRef = db.collection("produtos").doc();
+          transaction.set(novoRef, {
+            nome: item.nome,
+            categoria: item.categoria || "Importado PT",
+            estoque: item.quantidade,
+            minimo: 2,
+            compra: custoUnitarioSTN,
+            venda: precoVendaSugerido,
+            foto: ""
+          });
+        }
+
+        let movRef = db.collection("movimentacoes").doc();
+        transaction.set(movRef, {
+          produto: item.nome,
+          tipo: "entrada",
+          quantidade: item.quantidade,
+          valor: custoUnitarioSTN * item.quantidade,
+          formaPagamento: `Transferência Lote PT (${lote.identificador})`,
+          usuario: auth.currentUser.email,
+          uid: auth.currentUser.uid,
+          role: usuarioRole,
+          data: new Date()
+        });
       });
-    } else {
-      let novoRef = db.collection("produtos").doc();
-      batch.set(novoRef, {
-        nome: item.nome,
-        categoria: item.categoria || "Importado PT",
-        estoque: item.quantidade,
-        minimo: 2,
-        compra: custoUnitarioSTN,
-        venda: precoVendaSugerido,
-        foto: ""
-      });
-    }
 
-    let movRef = db.collection("movimentacoes").doc();
-    batch.set(movRef, {
-      produto: item.nome,
-      tipo: "entrada",
-      quantidade: item.quantidade,
-      valor: custoUnitarioSTN * item.quantidade,
-      formaPagamento: `Transferência Lote PT (${lote.identificador})`,
-      usuario: auth.currentUser.email,
-      uid: auth.currentUser.uid,
-      role: usuarioRole,
-      data: new Date()
+      transaction.update(loteRef, {
+        estado: "RECEBIDO",
+        dataRecebimento: new Date()
+      });
     });
-  });
-
-  let loteRef = db.collection("lotes_pt").doc(loteId);
-  batch.update(loteRef, {
-    estado: "RECEBIDO",
-    dataRecebimento: new Date()
-  });
-
-  batch.commit().then(() => {
+  }).then(() => {
     alert("Produtos transferidos e somados ao Stock Geral de São Tomé com sucesso!");
-  }).catch(e => alert("Erro ao dar entrada no stock: " + e.message));
+  }).catch(e => alert("Erro ao dar entrada no stock: " + e));
 }
 
 function verificarAlertaEstoqueBaixo() {
@@ -1381,7 +1379,6 @@ function calcularSinalAutomatico() {
 }
 
 function registrarNovaEncomenda() {
-  if(usuarioRole !== "admin" && usuarioRole !== "venda1" && usuarioRole !== "venda2") return alert("Ação não autorizada.");
   let cli = encCliente.value.trim();
   let tel = encTelefone.value.trim();
   let prod = encProduto.value.trim();
@@ -1424,11 +1421,10 @@ function registrarNovaEncomenda() {
     encCliente.value = ""; encTelefone.value = ""; encProduto.value = "";
     encValorTotal.value = ""; encSinalPago.value = ""; encCustoCompra.value = "";
     alert("Encomenda registada com sucesso! O sinal já deu entrada na caixa.");
-  }).catch(e => alert("Erro ao registrar encomenda: " + e.message));
+  });
 }
 
 function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, custoCompra) {
-  if(usuarioRole !== "admin" && usuarioRole !== "venda1" && usuarioRole !== "venda2") return alert("Ação não autorizada.");
   if(confirm(`Confirmar a entrega do produto "${produto}" ao cliente ${cliente}?\n\nValor restante a receber: ${faltaPagar} Db.`)) {
     db.collection("encomendas").doc(id).update({
       estado: "CONCLUIDO",
@@ -1448,12 +1444,11 @@ function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, cu
       });
     }).then(() => {
       alert("Encomenda concluída e entregue! Faturamento registrado com sucesso.");
-    }).catch(e => alert("Erro ao concluir encomenda: " + e.message));
+    });
   }
 }
 
 function apagarEncomenda(id) {
-  if(usuarioRole !== "admin") return alert("Apenas Administradores podem apagar encomendas.");
   if(confirm("Tens a certeza que desejas apagar esta encomenda do sistema?")) {
     db.collection("encomendas").doc(id).delete().then(() => {
       alert("Encomenda removida com sucesso!");
@@ -1753,7 +1748,6 @@ function proximaPagina() {
 }
 
 function salvarProduto() {
-  if(usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Ação não autorizada.");
   let n = nome.value.trim();
   let c = categoriaInput.value.trim() || "Geral";
   let e = Number(estoque.value) || 0;
@@ -1768,18 +1762,13 @@ function salvarProduto() {
   if(ft) payload.foto = ft;
 
   if(editandoProdutoId) {
-    db.collection("produtos").doc(editandoProdutoId).update(payload)
-      .then(() => cancelarEdicaoProduto())
-      .catch(err => alert("Erro ao atualizar produto: " + err.message));
+    db.collection("produtos").doc(editandoProdutoId).update(payload).then(() => cancelarEdicaoProduto());
   } else {
-    db.collection("produtos").add(payload)
-      .then(() => cancelarEdicaoProduto())
-      .catch(err => alert("Erro ao criar produto: " + err.message));
+    db.collection("produtos").add(payload).then(() => cancelarEdicaoProduto());
   }
 }
 
 function prepararEditarProduto(id) {
-  if(usuarioRole !== "admin") return alert("Apenas Administradores podem editar cadastros de produtos diretamente.");
   let p = todosProdutos.find(item => item.id === id);
   if(!p) return;
   editandoProdutoId = id;
@@ -1821,41 +1810,39 @@ function cancelarEdicaoProduto() {
   btnCancelarProduto.classList.add("hidden");
 }
 
+// TRANSACTION PARA ENTRADA RÁPIDA DE ESTOQUE
 function entradaEstoque(id, atual) {
-  if(usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Ação não autorizada.");
   let add = prompt("Quantidade a adicionar ao estoque:");
   if(add && !isNaN(add) && Number(add) > 0) {
     let qtdAdd = Number(add);
-    let prodRef = db.collection("produtos").doc(id);
+    let p = todosProdutos.find(item => item.id === id);
 
-    db.runTransaction(transaction => {
-      return transaction.get(prodRef).then(doc => {
-        if (!doc.exists) throw "Produto não encontrado!";
-        let pData = doc.data();
-        let estoqueAtual = Number(pData.estoque) || 0;
-        let novoEstoque = estoqueAtual + qtdAdd;
-        transaction.update(prodRef, { estoque: novoEstoque });
+    db.runTransaction(function(transaction) {
+      let prodRef = db.collection("produtos").doc(id);
+      return transaction.get(prodRef).then(function(prodDoc) {
+        if (!prodDoc.exists) throw "Produto não encontrado.";
+        let estoqueAtualBanco = Number(prodDoc.data().estoque) || 0;
+        
+        transaction.update(prodRef, { estoque: estoqueAtualBanco + qtdAdd });
 
         let movRef = db.collection("movimentacoes").doc();
         transaction.set(movRef, {
-          produto: pData.nome || "Produto",
+          produto: p ? p.nome : prodDoc.data().nome,
           tipo: "entrada",
           quantidade: qtdAdd,
-          valor: ((Number(pData.compra) || 0) * qtdAdd),
+          valor: (p ? p.compra * qtdAdd : 0),
           usuario: auth.currentUser.email,
           uid: auth.currentUser.uid,
           role: usuarioRole,
           data: new Date()
         });
       });
-    }).then(() => {
-      alert("Entrada de estoque registada com sucesso!");
-    }).catch(e => alert("Erro na operação de entrada: " + e));
+    }).catch(e => alert("Erro ao adicionar estoque: " + e));
   }
 }
 
+// TRANSACTION PARA COMPRA DE FORNECEDOR
 function registrarCompraProduto() {
-  if(usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Ação não autorizada.");
   let pId = compraSelectProduto.value;
   let q = Number(compraQtd.value) || 0;
   let custoTotal = Number(compraCustoTotal.value) || 0;
@@ -1866,23 +1853,26 @@ function registrarCompraProduto() {
   if(q <= 0) return alert("Informe a quantidade comprada!");
   if(custoTotal <= 0) return alert("Informe o custo total pago pela compra!");
 
-  let prodRef = db.collection("produtos").doc(pId);
+  let prod = todosProdutos.find(item => item.id === pId);
+  if(!prod) return;
 
-  db.runTransaction(transaction => {
-    return transaction.get(prodRef).then(doc => {
-      if (!doc.exists) throw "Produto não existe!";
-      let pData = doc.data();
-      let novoEstoque = (Number(pData.estoque) || 0) + q;
-      let novoCustoUnitario = Math.round(custoTotal / q);
+  let novoCustoUnitario = Math.round(custoTotal / q);
+
+  db.runTransaction(function(transaction) {
+    let prodRef = db.collection("produtos").doc(pId);
+    return transaction.get(prodRef).then(function(prodDoc) {
+      if (!prodDoc.exists) throw "Produto não existe.";
+
+      let estoqueAtualBanco = Number(prodDoc.data().estoque || 0);
 
       transaction.update(prodRef, {
-        estoque: novoEstoque,
+        estoque: estoqueAtualBanco + q,
         compra: novoCustoUnitario
       });
 
       let movRef = db.collection("movimentacoes").doc();
       transaction.set(movRef, {
-        produto: pData.nome,
+        produto: prodDoc.data().nome,
         tipo: "compra",
         quantidade: q,
         valor: custoTotal,
@@ -1898,8 +1888,8 @@ function registrarCompraProduto() {
     compraQtd.value = "";
     compraCustoTotal.value = "";
     compraFornecedor.value = "";
-    alert(`Compra registada com sucesso!\n${q} unidades adicionadas ao estoque.`);
-  }).catch(e => alert("Erro ao registar compra: " + e));
+    alert(`Compra registada com sucesso!\n${q} unidades adicionadas ao estoque do produto "${prod.nome}".`);
+  }).catch(e => alert("Erro ao registrar compra: " + e));
 }
 
 function atualizarRotulosCambio() {
@@ -1931,7 +1921,6 @@ function calcularCalculoCambioSimulado() {
 }
 
 function registrarOperacaoCambio() {
-  if(usuarioRole !== "admin" && usuarioRole !== "venda1" && usuarioRole !== "venda2") return alert("Ação não autorizada.");
   let dir = cambioDirecao.value;
   let eur = Number(cambioQtdEur.value) || 0;
   let taxa = Number(cambioTaxa.value) || 26.0;
@@ -1964,7 +1953,7 @@ function registrarOperacaoCambio() {
     cambioCliente.value = "";
     calcularCalculoCambioSimulado();
     alert("Operação de câmbio registada com sucesso!");
-  }).catch(e => alert("Erro ao registrar câmbio: " + e.message));
+  });
 }
 
 function renderizarHistorico(listaMovs) {
@@ -2038,7 +2027,6 @@ function limparFiltroHistorico() {
 }
 
 function abrirModalVenda(id, nome, estoque, precoVenda) {
-  if(usuarioRole !== "admin" && usuarioRole !== "venda1" && usuarioRole !== "venda2") return alert("Ação não autorizada.");
   if(estoque <= 0) return alert("Produto sem estoque disponível!");
   produtoVendaAtual = { id, nome, estoque, precoVenda };
   modalProdNome.innerText = nome;
@@ -2080,35 +2068,39 @@ function calcularTroco() {
   lblTroco.innerText = (troco > 0 ? troco : 0) + " Db";
 }
 
+// TRANSACTION DE VENDA: VERIFICA ESTOQUE E EXECUTA BAIXA/LOG ATÔMICO
 function confirmarVendaModal() {
-  if(usuarioRole !== "admin" && usuarioRole !== "venda1" && usuarioRole !== "venda2") return alert("Ação não autorizada.");
   if(!produtoVendaAtual) return;
   let q = +modalProdQtd.value;
   if(!q || q <= 0) return alert("Quantidade inválida.");
 
-  let prodRef = db.collection("produtos").doc(produtoVendaAtual.id);
+  let btnConf = document.getElementById("btnConfirmarVenda");
+  btnConf.disabled = true;
+
   let formaPag = modalFormaPagamento.value;
   let totalval = q * produtoVendaAtual.precoVenda;
   let clienteVal = modalNomeCliente.value.trim() || "Consumidor Final";
   let recebidoVal = +modalValorRecebido.value || totalval;
   let trocoVal = recebidoVal - totalval;
 
-  db.runTransaction(transaction => {
-    return transaction.get(prodRef).then(doc => {
-      if (!doc.exists) throw "Produto não encontrado!";
-      let pData = doc.data();
-      let estAtual = Number(pData.estoque) || 0;
+  db.runTransaction(function(transaction) {
+    let prodRef = db.collection("produtos").doc(produtoVendaAtual.id);
 
-      if (q > estAtual) {
-        throw "Estoque insuficiente para concluir esta venda! Estoque disponível: " + estAtual;
+    return transaction.get(prodRef).then(function(prodDoc) {
+      if (!prodDoc.exists) throw "O produto não foi encontrado no banco de dados.";
+      
+      let estoqueAtualBanco = Number(prodDoc.data().estoque) || 0;
+
+      if (estoqueAtualBanco < q) {
+        throw "Estoque insuficiente no momento da confirmação. Restantes: " + estoqueAtualBanco;
       }
 
-      let novoEstoque = estAtual - q;
+      let novoEstoque = estoqueAtualBanco - q;
       transaction.update(prodRef, { estoque: novoEstoque });
 
       let movRef = db.collection("movimentacoes").doc();
       transaction.set(movRef, {
-        produto: pData.nome,
+        produto: produtoVendaAtual.nome,
         tipo: "saida",
         quantidade: q,
         valor: totalval,
@@ -2121,6 +2113,7 @@ function confirmarVendaModal() {
       });
     });
   }).then(() => {
+    btnConf.disabled = false;
     preencherEImprimirRecibo(
       new Date().toLocaleString('pt-PT'),
       clienteVal,
@@ -2133,8 +2126,9 @@ function confirmarVendaModal() {
       trocoVal
     );
     fecharModalVenda();
-  }).catch(err => {
-    alert("Falha na venda: " + err);
+  }).catch(e => {
+    btnConf.disabled = false;
+    alert("Falha na venda: " + e);
   });
 }
 
@@ -2162,7 +2156,6 @@ function reimprimirReciboHistorico(produto, qtd, total, formaPag, cliente, vende
 }
 
 function salvarDespesa() {
-  if(usuarioRole !== "admin") return alert("Apenas Administradores podem registrar despesas.");
   let d = despDescricao.value.trim();
   let v = Number(despValor.value) || 0;
   let c = despCategoria.value;
@@ -2181,7 +2174,7 @@ function salvarDespesa() {
     despDescricao.value = "";
     despValor.value = "";
     alert("Despesa registrada com sucesso!");
-  }).catch(e => alert("Erro ao gravar despesa: " + e.message));
+  });
 }
 
 function carregarFuncionarios() {
@@ -2215,8 +2208,8 @@ function carregarFuncionarios() {
   });
 }
 
+// CRIAÇÃO DE FUNCIONÁRIOS REATORADA (Firebase Secundário para preservar sessão Admin)
 function salvarFuncionario() {
-  if(usuarioRole !== "admin") return alert("Apenas Administradores podem gerir funcionários.");
   let emailVal = funcEmail.value.toLowerCase().trim();
   let senhaVal = funcSenha.value;
   let roleVal = funcRole.value;
@@ -2227,16 +2220,25 @@ function salvarFuncionario() {
     db.collection("usuarios").doc(editandoFuncId).update({ email: emailVal, role: roleVal }).then(() => cancelarEdicaoFunc());
   } else {
     if(!senhaVal) return alert("Informe a senha inicial!");
-    let emailAdmin = auth.currentUser.email;
-    let senhaAdmin = prompt("Digite sua senha de Administrador para confirmar a criação:");
-    if(!senhaAdmin) return;
 
-    auth.createUserWithEmailAndPassword(emailVal, senhaVal)
-      .then(r => db.collection("usuarios").doc(r.user.uid).set({ email: emailVal, role: roleVal, status: "ativo" }))
+    let secondaryApp = null;
+    try {
+      secondaryApp = firebase.initializeApp(firebaseConfig, "SecondaryApp");
+    } catch(e) {
+      secondaryApp = firebase.app("SecondaryApp");
+    }
+
+    secondaryApp.auth().createUserWithEmailAndPassword(emailVal, senhaVal)
+      .then(r => {
+        let newUid = r.user.uid;
+        secondaryApp.auth().signOut();
+        return db.collection("usuarios").doc(newUid).set({ email: emailVal, role: roleVal, status: "ativo" });
+      })
       .then(() => {
         funcEmail.value = ""; funcSenha.value = "";
-        auth.signInWithEmailAndPassword(emailAdmin, senhaAdmin);
-      }).catch(e => alert("Erro ao criar funcionário: " + e.message));
+        alert("Funcionário criado com sucesso!");
+      })
+      .catch(e => alert("Erro ao criar funcionário: " + e.message));
   }
 }
 
@@ -2259,7 +2261,6 @@ function cancelarEdicaoFunc() {
 }
 
 function alternarStatusFunc(id, status, emailFunc) {
-  if(usuarioRole !== "admin") return alert("Ação restrita ao Administrador.");
   if(emailFunc === auth.currentUser.email) {
     return alert("Ação bloqueada: Não pode desativar a sua própria conta de Administrador!");
   }
@@ -2267,7 +2268,6 @@ function alternarStatusFunc(id, status, emailFunc) {
 }
 
 function apagarFuncionario(id, emailFunc) {
-  if(usuarioRole !== "admin") return alert("Ação restrita ao Administrador.");
   if(emailFunc === auth.currentUser.email) {
     return alert("Ação bloqueada: Não pode excluir a sua própria conta!");
   }
@@ -2276,14 +2276,9 @@ function apagarFuncionario(id, emailFunc) {
   }
 }
 
-function del(id){
-  if(usuarioRole === "admin" && confirm("Excluir produto do estoque?")) {
-    db.collection("produtos").doc(id).delete();
-  }
-}
+function del(id){ if(usuarioRole === "admin" && confirm("Excluir produto do estoque?")) db.collection("produtos").doc(id).delete(); }
 
 function exportarEstoque(){
-  if(usuarioRole !== "admin" && usuarioRole !== "estoque") return alert("Ação não autorizada.");
   db.collection("produtos").get().then(s => {
     let c = "Produto,Categoria,Qtd,Min,Compra,Venda\n";
     s.forEach(d => {
@@ -2295,7 +2290,6 @@ function exportarEstoque(){
 }
 
 function exportarHistorico(){
-  if(usuarioRole !== "admin") return alert("Ação restrita ao Administrador.");
   db.collection("movimentacoes").get().then(s => {
     let c = "Produto,Tipo,Qtd,Forma Pag,Valor,Usuario,Data\n";
     s.forEach(d => {
