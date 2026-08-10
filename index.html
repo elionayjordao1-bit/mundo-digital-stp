@@ -899,6 +899,31 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
+
+<!-- FASE 3.2: MODAL RECEBIMENTO + PAGAMENTO FÁBRICA -->
+<div id="modalRecebimentoLoteST" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h3 id="recebimentoLoteTitulo" style="margin-top:0;color:#1e293b;border-bottom:2px solid #f1f5f9;padding-bottom:8px;">Receber lote</h3>
+    <input type="hidden" id="recebimentoLoteId">
+    <label style="font-size:12px;font-weight:600;">Cotação do Euro (Db/€):</label>
+    <input type="number" id="recebimentoTaxaCambio" min="0.01" step="0.01" value="26.0" style="margin:4px 0 12px;">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:8px;margin-bottom:12px;">
+      <b style="color:#166534;">💰 Acerto / Pagamento da Fábrica</b>
+      <p style="font-size:11px;color:#64748b;margin:4px 0 10px;">Se o pagamento for em dinheiro, será lançado como saída do caixa aberto.</p>
+      <label style="font-size:12px;font-weight:600;">Valor pago (Db):</label>
+      <input type="number" id="recebimentoPagamentoValor" min="0" value="0" style="margin:4px 0 8px;">
+      <label style="font-size:12px;font-weight:600;">Forma de pagamento:</label>
+      <select id="recebimentoPagamentoForma" style="margin:4px 0 8px;"><option value="Dinheiro">Dinheiro</option><option value="Transferencia">Transferência Bancária</option></select>
+      <label style="font-size:12px;font-weight:600;">Observação:</label>
+      <input type="text" id="recebimentoPagamentoObs" placeholder="Ex: Acerto pago na fábrica / fornecedor">
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button id="btnConfirmarRecebimentoLoteST" onclick="confirmarRecebimentoLoteST()" class="btn-success" style="flex:1;min-width:160px;">🛬 Confirmar Receção</button>
+      <button onclick="fecharModalRecebimentoLoteST()" class="btn-secondary" style="min-width:100px;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL FECHAR CAIXA -->
 <div id="modalFecharCaixa" class="modal-overlay hidden">
   <div class="modal-content">
@@ -3131,6 +3156,276 @@ function exportarHistorico() {
   link.download = `Historico_Movimentacoes_${new Date().toISOString().split('T')[0]}.csv`;
   link.click();
 }
+
+/* FASE 3.2 — correções cirúrgicas sem reescrever a base */
+
+function usuarioPodeArmazemPT() {
+  return usuarioRole === "admin" || usuarioRole === "estoque";
+}
+
+function navegarPara(paginaId) {
+  if (paginaId === "paginaArmazemPT" && !usuarioPodeArmazemPT()) {
+    alert("Acesso restrito: o Armazém Portugal é exclusivo do Administrador e do Estoque.");
+    return;
+  }
+  ["paginaPrincipal","paginaCaixa","paginaArmazemPT"].forEach(id => document.getElementById(id)?.classList.add("hidden"));
+  ["btnPageMain","btnPageCaixa","btnPageArmazem"].forEach(id => document.getElementById(id)?.classList.remove("active"));
+  const mapa = {
+    paginaPrincipal: ["paginaPrincipal","btnPageMain"],
+    paginaCaixa: ["paginaCaixa","btnPageCaixa"],
+    paginaArmazemPT: ["paginaArmazemPT","btnPageArmazem"]
+  };
+  const par = mapa[paginaId];
+  if (!par) return;
+  document.getElementById(par[0])?.classList.remove("hidden");
+  document.getElementById(par[1])?.classList.add("active");
+}
+
+// Sobrescreve o carregamento para que vendedores não consultem o Armazém PT.
+function carregar() {
+  if(listenerProdutos) listenerProdutos();
+  if(listenerMovimentacoes) listenerMovimentacoes();
+  if(listenerDespesas) listenerDespesas();
+  if(listenerEncomendas) listenerEncomendas();
+
+  const isAdmin = usuarioRole === "admin";
+  const isEstoque = usuarioRole === "estoque";
+  const podeAdicionarEstoque = isAdmin || isEstoque;
+  const podeVender = isAdmin || usuarioRole === "venda1" || usuarioRole === "venda2";
+
+  cabecalhoTabela.innerHTML = `<tr>
+    <th>Foto</th><th>Produto</th><th>Cód. Barras</th><th>Categoria</th><th>Qtd</th><th>Min</th>
+    ${isAdmin ? '<th>Compra</th>' : ''}<th>Venda</th>${isAdmin ? '<th>Lucro</th>' : ''}<th>Total</th>
+    ${podeAdicionarEstoque ? '<th>+</th>' : ''}${podeVender ? '<th>Vender</th>' : ''}${isAdmin ? '<th>Ações</th>' : ''}
+  </tr>`;
+
+  if(isAdmin) {
+    carregarFuncionarios();
+    carregarDespesas();
+    carregarAuditoriaCaixasAdmin();
+  }
+  carregarEncomendas();
+  if(usuarioPodeArmazemPT()) carregarArmazemPTTresPassos();
+  carregarCaixaDoUsuario();
+
+  listenerProdutos = db.collection("produtos").onSnapshot(s => {
+    todosProdutos = [];
+    const categoriasSet = new Set();
+    const selectComp = document.getElementById("compraSelectProduto");
+    if(selectComp) selectComp.innerHTML = '<option value="">-- Selecionar Produto a Reabastecer --</option>';
+    s.forEach(d => {
+      const p = d.data(); p.id = d.id; p.categoria = p.categoria || "Geral"; p.barcode = p.barcode || "";
+      todosProdutos.push(p); categoriasSet.add(p.categoria);
+      if(selectComp) selectComp.innerHTML += `<option value="${p.id}">${p.nome} (Estoque atual: ${p.estoque})</option>`;
+    });
+    const catSelect = document.getElementById("selectCategoriaFiltro");
+    if(catSelect) {
+      const atual = catSelect.value;
+      catSelect.innerHTML = '<option value="">Todas as Categorias</option>';
+      categoriasSet.forEach(c => catSelect.innerHTML += `<option value="${c}">${c}</option>`);
+      catSelect.value = atual;
+    }
+    verificarAlertaEstoqueBaixo(); renderizarTabelaEstoque(); processarDashboard();
+  }, err => console.warn("Produtos: modo offline/erro", err));
+
+  listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc").onSnapshot(s => {
+    todasMovimentacoes = [];
+    s.forEach(d => { const m = d.data(); m.id = d.id; todasMovimentacoes.push(m); });
+    renderizarHistorico(todasMovimentacoes); processarDashboard(); atualizarKpiCaixaAbertoLocal();
+  }, err => console.warn("Movimentações: modo offline/erro", err));
+}
+
+// Corrige a proteção do próprio administrador.
+function carregarFuncionarios() {
+  if(listenerFuncionarios) listenerFuncionarios();
+  listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
+    const tbody = document.getElementById("listaFuncionarios");
+    let html = "";
+    const uidAtual = auth.currentUser?.uid;
+    s.forEach(d => {
+      const f = d.data();
+      const proprioAdmin = usuarioRole === "admin" && d.id === uidAtual;
+      const desativado = f.status === "desativado";
+      const status = desativado ? '<span style="color:#ef4444;font-weight:bold;">Desativado</span>' : '<span style="color:#10b981;font-weight:bold;">Ativo</span>';
+      let acoes = proprioAdmin ? '<span style="color:#64748b;font-size:11px;font-weight:700;">🔒 CONTA ADMIN PROTEGIDA</span>' :
+        `<button class="btn-secondary btn-acao" onclick="editarFuncionario('${d.id}', '${String(f.email||'').replace(/'/g,"\\'")}', '${f.role||'venda1'}')">✏️</button>
+         ${desativado ? `<button class="btn-success btn-acao" onclick="alterarStatusFunc('${d.id}','ativo')">Ativar</button>` : `<button class="btn-warning btn-acao" onclick="alterarStatusFunc('${d.id}','desativado')">Desativar</button>`}`;
+      html += `<tr class="${desativado?'desativado':''}"><td><b>${f.email||'-'}</b></td><td><small>${String(f.role||'venda1').toUpperCase()}</small></td><td>${status}</td><td><div class="acoes-cell">${acoes}</div></td></tr>`;
+    });
+    if(tbody) tbody.innerHTML = html || '<tr><td colspan="4" style="color:#94a3b8;">Nenhum funcionário cadastrado.</td></tr>';
+  }, err => console.warn("Funcionários: erro", err));
+}
+
+function editarFuncionario(id, email, role) {
+  if(id === auth.currentUser?.uid) return alert("Ação negada: a conta do Administrador atualmente logado está protegida.");
+  editandoFuncId = id;
+  funcEmail.value = email; funcEmail.disabled = true;
+  funcSenha.placeholder = "Senha não alterável por aqui"; funcSenha.disabled = true;
+  funcRole.value = role; btnSalvarFunc.innerText = "Atualizar Função"; btnCancelarFunc.classList.remove("hidden");
+}
+
+function alterarStatusFunc(id, novoStatus) {
+  if(id === auth.currentUser?.uid) return alert("Ação negada: você não pode desativar a própria conta.");
+  db.collection("usuarios").doc(id).update({status: novoStatus})
+    .then(() => carregarFuncionarios())
+    .catch(e => alert("Erro ao alterar status: " + e.message));
+}
+
+// Caixa: pagamentos de fábrica em dinheiro entram como saída do caixa.
+function atualizarKpiCaixaAbertoLocal() {
+  if(!caixaAtualObj) return;
+  const valInicial = Number(caixaAtualObj.valorInicial) || 0;
+  let entradas = 0, saidas = 0;
+  todasMovimentacoes.forEach(m => {
+    if(m.caixaId !== caixaAtualObj.id) return;
+    const v = Number(m.valor) || 0, f = String(m.formaPagamento || "");
+    if(m.tipo === "despesa_caixa") { if(f.includes("Dinheiro")) saidas += v; }
+    else if(m.tipo === "saida" && (f.includes("Dinheiro") || (!f.includes("Transferencia") && !f.includes("Cartao")))) entradas += v;
+  });
+  kpiCaixaInicial.innerText = valInicial.toLocaleString('pt-PT') + " Db";
+  kpiCaixaVendasDinheiro.innerText = entradas.toLocaleString('pt-PT') + " Db";
+  kpiCaixaDinheiroEsperado.innerText = (valInicial + entradas - saidas).toLocaleString('pt-PT') + " Db";
+}
+
+// Fechamento recalculado diretamente do Firestore, incluindo saídas de caixa.
+function confirmarFechamentoCaixa() {
+  if(!navigator.onLine) return alert("O fechamento exige conexão com a internet.");
+  if(!caixaAtualObj) return;
+  const btn = document.getElementById("btnConfirmarFecharCaixa");
+  btn.disabled = true;
+  const contado = Number(modalDinheiroContado.value);
+  if(modalDinheiroContado.value === "" || isNaN(contado) || contado < 0) { btn.disabled=false; return alert("Digite o valor contado fisicamente."); }
+  const obs = modalObservacaoFechamento.value.trim(), user = auth.currentUser;
+  db.runTransaction(async transaction => {
+    const caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
+    const caixaDoc = await transaction.get(caixaRef);
+    if(!caixaDoc.exists) throw new Error("Caixa não encontrado.");
+    if(caixaDoc.data().estado === "fechado") throw new Error("Este caixa já foi fechado.");
+    const movSnap = await db.collection("movimentacoes").where("caixaId","==",caixaAtualObj.id).get();
+    let entradas=0, saidas=0;
+    movSnap.forEach(d => { const m=d.data(), v=Number(m.valor)||0, f=String(m.formaPagamento||""); if(m.tipo==="despesa_caixa") {if(f.includes("Dinheiro")) saidas+=v;} else if(m.tipo==="saida" && (f.includes("Dinheiro") || (!f.includes("Transferencia")&&!f.includes("Cartao")))) entradas+=v; });
+    const esperado = (Number(caixaDoc.data().valorInicial)||0) + entradas - saidas;
+    transaction.update(caixaRef,{estado:"fechado",dinheiroEsperado:esperado,dinheiroContado:contado,diferenca:contado-esperado,observacaoFechamento:obs,fechadoPorUid:user.uid,fechadoPorUsuario:user.email,dataFechamento:new Date()});
+  }).then(()=>{btn.disabled=false; fecharModalFecharCaixa(); alert("Caixa fechado com sucesso e auditoria gravada!");}).catch(e=>{btn.disabled=false;alert("Erro ao fechar caixa: "+(e.message||e));});
+}
+
+// Corrige o bug do recibo: guarda os dados ANTES de fechar o modal, que limpa produtoVendaAtual.
+async function confirmarVendaModal() {
+  if(!produtoVendaAtual) return;
+  const btn = document.getElementById("btnConfirmarVenda"); btn.disabled = true;
+  try {
+    const user = auth.currentUser;
+    if(!user) throw new Error("Sessão expirada.");
+    const produtoId = produtoVendaAtual.id;
+    const produtoNome = produtoVendaAtual.nome || "Produto";
+    const precoUnit = Number(produtoVendaAtual.venda) || 0;
+    const estoqueCache = Number(produtoVendaAtual.estoque) || 0;
+    const qtd = Number(modalProdQtd.value)||0, forma = modalFormaPagamento.value, recebido=Number(modalValorRecebido.value)||0;
+    const cliente = modalNomeCliente.value.trim() || "Consumidor Final";
+    if(qtd<=0) throw new Error("Informe uma quantidade válida.");
+    if(qtd>estoqueCache) throw new Error(`Quantidade solicitada (${qtd}) é maior que o estoque disponível (${estoqueCache}).`);
+    const total=qtd*precoUnit;
+    if(forma==="Dinheiro" && recebido<total) throw new Error(`Valor recebido (${recebido} Db) é menor que o total (${total} Db).`);
+    const troco=forma==="Dinheiro" ? recebido-total : 0;
+    const caixaId=caixaAtualObj?.id||null;
+    if(usuarioRole!=="admin" && !caixaId) throw new Error("É obrigatório ter um Caixa/Turno aberto para vender.");
+    const prodRef=db.collection("produtos").doc(produtoId);
+    await db.runTransaction(async transaction=>{
+      if(caixaId){
+        const caixaRef=db.collection("caixas").doc(caixaId), caixaDoc=await transaction.get(caixaRef);
+        if(!caixaDoc.exists) throw new Error("Caixa ativo não encontrado.");
+        const c=caixaDoc.data();
+        if(c.estado!=="aberto") throw new Error("O caixa já está fechado.");
+        if(usuarioRole!=="admin" && c.uid!==user.uid) throw new Error("O caixa ativo não pertence ao usuário atual.");
+      }
+      const prodDoc=await transaction.get(prodRef);
+      if(!prodDoc.exists) throw new Error("Produto não existe mais no estoque.");
+      const p=prodDoc.data(), estoque=Number(p.estoque)||0;
+      if(estoque<qtd) throw new Error(`Estoque insuficiente! Restam apenas ${estoque} unidades.`);
+      transaction.update(prodRef,{estoque:estoque-qtd});
+      const movRef=db.collection("movimentacoes").doc();
+      transaction.set(movRef,{produto:produtoNome,tipo:"saida",quantidade:qtd,valor:total,formaPagamento:forma,cliente,usuario:user.email,uid:user.uid,role:usuarioRole,data:new Date(),...(caixaId?{caixaId}: {})});
+    });
+    const recibo={data:new Date().toLocaleString('pt-PT'),cliente,vendedor:user.email,item:produtoNome,qtd,precoUnit,total,pagamento:forma,troco};
+    fecharModalVenda();
+    emitirReciboComprovativo(recibo);
+  }catch(e){ alert("Erro ao processar venda: "+(e.message||e)); }
+  finally{ btn.disabled=false; }
+}
+
+// Histórico sem exclusão: apenas visualização e auditoria.
+function renderizarHistorico(listaMovs) {
+  let html="";
+  listaMovs.forEach(m=>{
+    const dt=m.data?m.data.toDate().toLocaleString('pt-PT'):'-';
+    const prod=todosProdutos.find(p=>p.nome===m.produto);
+    const foto=prod?.foto?`<img src="${prod.foto}" class="img-thumb">`:'📜';
+    let badge, cor="#2563eb";
+    if(m.tipo==="saida"){badge='<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">VENDA</span>';cor="#10b981";}
+    else if(m.tipo==="despesa_caixa"){badge='<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">SAÍDA CAIXA</span>';cor="#dc2626";}
+    else if(m.tipo==="cambio_comissao"){badge='<span style="background:#f3e8ff;color:#7e22ce;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">CÂMBIO</span>';cor="#10b981";}
+    else badge='<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">ENTRADA</span>';
+    html+=`<tr><td>${foto}</td><td><b>${m.produto||'-'}</b></td><td>${badge}</td><td><b>${m.quantidade||0}</b></td><td><small>${m.formaPagamento||'Geral'}</small></td><td style="font-weight:bold;color:${cor};">${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</td><td><small>${m.usuario||'-'}</small></td><td><small>${dt}</small></td></tr>`;
+  });
+  historico.innerHTML=html||'<tr><td colspan="8" style="color:#94a3b8;">Nenhuma movimentação registada.</td></tr>';
+}
+
+// Armazém PT: novo fluxo de receção + pagamento/acerto da fábrica.
+function abrirModalRecebimentoLoteST(loteId){
+  if(!usuarioPodeArmazemPT()) return alert("Acesso restrito ao Administrador / Estoque.");
+  const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote) return alert("Lote não encontrado.");
+  if(lote.estado==="RECEBIDO") return alert("Este lote já foi recebido.");
+  recebimentoLoteId.value=loteId; recebimentoLoteTitulo.innerText=`Receber lote: ${lote.identificador||loteId}`;
+  recebimentoTaxaCambio.value="26.0"; recebimentoPagamentoValor.value="0"; recebimentoPagamentoForma.value="Dinheiro"; recebimentoPagamentoObs.value="";
+  modalRecebimentoLoteST.classList.remove("hidden");
+}
+function fecharModalRecebimentoLoteST(){modalRecebimentoLoteST.classList.add("hidden");}
+async function confirmarRecebimentoLoteST(){
+  if(!usuarioPodeArmazemPT()) return alert("Acesso restrito ao Administrador / Estoque.");
+  const loteId=recebimentoLoteId.value, taxa=Number(recebimentoTaxaCambio.value)||0, valorPag=Number(recebimentoPagamentoValor.value)||0, formaPag=recebimentoPagamentoForma.value, obs=recebimentoPagamentoObs.value.trim();
+  if(taxa<=0||valorPag<0) return alert("Informe valores válidos.");
+  const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote) return alert("Lote não encontrado.");
+  if(valorPag>0 && formaPag==="Dinheiro" && !caixaAtualObj) return alert("Para pagar em dinheiro, abra primeiro um Caixa/Turno.");
+  if(!confirm(`Confirmar receção do lote "${lote.identificador}" e pagamento de ${valorPag.toLocaleString('pt-PT')} Db?`)) return;
+  const btn=document.getElementById("btnConfirmarRecebimentoLoteST"); btn.disabled=true;
+  try{
+    await db.runTransaction(async transaction=>{
+      const loteRef=db.collection("lotes_pt").doc(loteId), loteDoc=await transaction.get(loteRef);
+      if(!loteDoc.exists) throw new Error("Lote não encontrado.");
+      const ld=loteDoc.data(); if(ld.estado==="RECEBIDO") throw new Error("Este lote já foi recebido.");
+      for(const item of (ld.itens||[])){
+        const qtd=Number(item.quantidade)||0, custo=Math.round((Number(item.custoFinalUnitarioEuro)||0)*taxa), venda=Math.round(custo*1.3);
+        const existente=todosProdutos.find(p=>String(p.nome||'').toLowerCase().trim()===String(item.nome||'').toLowerCase().trim());
+        if(existente) transaction.update(db.collection("produtos").doc(existente.id),{estoque:(Number(existente.estoque)||0)+qtd,compra:custo});
+        else transaction.set(db.collection("produtos").doc(),{nome:item.nome||"Importado PT",barcode:"",categoria:item.categoria||"Importado PT",estoque:qtd,minimo:2,compra:custo,venda,foto:""});
+        transaction.set(db.collection("movimentacoes").doc(),{produto:item.nome||"Importado PT",tipo:"entrada",quantidade:qtd,valor:custo*qtd,formaPagamento:`Entrada Stock Lote PT (${ld.identificador||loteId})`,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:new Date(),loteId});
+      }
+      if(valorPag>0){
+        transaction.set(db.collection("pagamentos_despacho").doc(),{loteId,identificadorLote:ld.identificador||loteId,valor:valorPag,formaPagamento:formaPag,observacao:obs,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:new Date()});
+        if(formaPag==="Dinheiro") transaction.set(db.collection("movimentacoes").doc(),{produto:`Pagamento Fábrica / Lote ${ld.identificador||loteId}`,tipo:"despesa_caixa",quantidade:1,valor:valorPag,formaPagamento:"Dinheiro - Pagamento Fábrica",usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:new Date(),caixaId:caixaAtualObj.id,loteId,observacao:obs});
+      }
+      transaction.update(loteRef,{estado:"RECEBIDO",dataRecebimento:new Date(),taxaCambioRecebimento:taxa,pagamentoFabrica:valorPag,formaPagamentoFabrica:valorPag>0?formaPag:null,recebidoPorUid:auth.currentUser.uid,recebidoPorUsuario:auth.currentUser.email});
+    });
+    fecharModalRecebimentoLoteST(); alert("Lote recebido no Stock de São Tomé e acerto financeiro registado.");
+  }catch(e){alert("Erro ao receber lote: "+(e.message||e));}finally{btn.disabled=false;}
+}
+
+// Mantém compatibilidade com qualquer botão/ligação antiga.
+function darEntradaLoteNoStockSTP(loteId){ abrirModalRecebimentoLoteST(loteId); }
+
+
+// Esconde o Armazém Portugal para VENDA1/VENDA2 também no menu.
+auth.onAuthStateChanged(function(u){
+  if(!u) return;
+  db.collection("usuarios").doc(u.uid).get().then(function(doc){
+    const role=String((doc.data()||{}).role||"venda1").toLowerCase();
+    const btn=document.getElementById("btnPageArmazem");
+    const permitido=(role==="admin"||role==="estoque");
+    btn?.classList.toggle("hidden",!permitido);
+    if(!permitido && document.getElementById("paginaArmazemPT") && !document.getElementById("paginaArmazemPT").classList.contains("hidden")) navegarPara("paginaPrincipal");
+  }).catch(()=>{});
+});
+
 </script>
 </body>
 </html>
