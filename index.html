@@ -63,7 +63,7 @@ header {
 }
 header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
 
-/* MENU DE NAVEGAÇÃO ENTRE PÁGINAS / ABAS (FASE 3: TOUCH FRIENDLY) */
+/* MENU DE NAVEGAÇÃO ENTRE PÁGINAS / ABAS */
 .main-nav {
   display: flex;
   gap: 8px;
@@ -78,7 +78,7 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
 .nav-btn {
   flex: 1;
   min-width: 140px;
-  min-height: 48px; /* Touch target otimizado */
+  min-height: 48px;
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 14px;
@@ -118,7 +118,6 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
   padding-bottom: 8px;
 }
 
-/* ESTILOS ESPECÍFICOS DO ARMAZÉM PT */
 .pt-step-card {
   border-left: 5px solid #2563eb;
   background: #ffffff;
@@ -138,7 +137,6 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
   font-size: 12px;
 }
 
-/* BARRA DE BOTÕES DE AÇÃO NO TOPO */
 .top-action-bar {
   display: flex;
   justify-content: flex-end;
@@ -147,7 +145,6 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
   flex-wrap: wrap;
 }
 
-/* KPI GRID RESPONSIVO */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -171,7 +168,6 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
 .kpi-value { font-size: 18px; color: #1e293b; font-weight: 700; margin-top: 4px; display: block; word-break: break-word; }
 .kpi-sub { font-size: 11px; color: #10b981; font-weight: 600; margin-top: 2px; display: block; }
 
-/* PAINEL DE ALERTA MODERNO */
 .alerta-container { display: flex; flex-direction: column; gap: 12px; }
 .alerta-grupo { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
 .alerta-titulo { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; min-width: 140px; padding-top: 4px; }
@@ -197,23 +193,22 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
   align-items: center;
 }
 
-/* FASE 3: OTIMIZAÇÃO MOBILE PARA FORMULÁRIOS E BOTÕES */
-input, select {
+input, select, textarea {
   width: 100%;
-  padding: 12px 14px; /* Maior área de toque */
+  padding: 12px 14px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  font-size: 15px; /* Evita auto-zoom do iOS */
+  font-size: 15px;
   outline: none;
   background-color: #ffffff;
   min-height: 48px;
 }
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 button {
-  min-height: 48px; /* Touch friendly */
+  min-height: 48px;
   padding: 10px 16px;
   border-radius: 8px;
   font-size: 14px;
@@ -237,7 +232,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-warning { background: #d97706; color: #fff; }
 .btn-success { background: #10b981; color: #fff; }
 
-/* FASE 3: TABELAS ADAPTADAS E RESPONSIVAS */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
@@ -304,15 +298,16 @@ tr:nth-child(even) { background-color: #f8fafc; }
 .badge-em-transito { background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
 .badge-concluido { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
 
-/* ESTILOS DA FASE 2: CAIXA E TURNO */
 .status-caixa-aberto { background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
 .status-caixa-fechado { background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+
+.status-cliente-ativo { background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+.status-cliente-bloqueado { background: #fef2f2; color: #991b1b; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
 
 .dif-certo { color: #10b981; font-weight: bold; }
 .dif-quebra { color: #ef4444; font-weight: bold; }
 .dif-sobra { color: #d97706; font-weight: bold; }
 
-/* FASE 3: MODAIS ALTAMENTE RESPONSIVOS NO MOBILE */
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
@@ -327,7 +322,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
 }
 .modal-content.large { max-width: 800px; }
 
-/* FASE 3: PAINEL POS OTIMIZADO PARA BALCÃO / MOBILE */
 .pos-search-box {
   background: #eff6ff;
   border: 2px solid #2563eb;
@@ -391,9 +385,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 <div id="app" class="hidden no-print">
 
-  <!-- NAVEGAÇÃO PRINCIPAL -->
+  <!-- NAVEGAÇÃO PRINCIPAL (FASE 4.1: ABA CLIENTES ADICIONADA) -->
   <nav class="main-nav">
     <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas</button>
+    <button class="nav-btn" id="btnPageClientes" onclick="navegarPara('paginaClientes')">👤 Clientes & Fiado</button>
     <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Gestão de Caixa</button>
     <button class="nav-btn" id="btnPageArmazem" onclick="navegarPara('paginaArmazemPT')">🇵🇹 Armazém Portugal</button>
   </nav>
@@ -401,7 +396,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   <!-- PÁGINA PRINCIPAL -->
   <div id="paginaPrincipal">
 
-    <!-- FASE 3: PAINEL POS DE LEITURA RÁPIDA DE CÓDIGO DE BARRAS NO BALCÃO -->
+    <!-- POS DE LEITURA RÁPIDA -->
     <div class="card pos-search-box">
       <h3 style="margin: 0 0 10px 0; border: none; color: #1e3a8a;">🔍 POS Balcão — Leitor de Código de Barras</h3>
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -517,12 +512,26 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <span id="lucroLiquidoReal" class="kpi-value">0 Db</span>
           <span style="font-size: 11px; color:#10b981;">(Vendas + Import + Câmbio - Desp)</span>
         </div>
+
+        <!-- FASE 4.1: NOVOS INDICADORES DO DASHBOARD PARA CLIENTES -->
+        <div class="kpi-card teal">
+          <span class="kpi-title">Clientes Ativos</span>
+          <span id="kpiClientesAtivos" class="kpi-value">0</span>
+          <span id="kpiClientesBloqueados" style="font-size: 11px; color:#ef4444;">0 bloqueados</span>
+        </div>
+
+        <div class="kpi-card red">
+          <span class="kpi-title">Total em Dívida (Fiado)</span>
+          <span id="kpiTotalDivida" class="kpi-value">0 Db</span>
+          <span id="kpiClientesProximosLimite" style="font-size: 11px; color:#d97706;">0 prox. do limite</span>
+        </div>
       </div>
 
       <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; display: flex; justify-content: space-around; flex-wrap: wrap; text-align: center; font-size: 14px; gap: 8px;">
         <div><b>Dinheiro:</b> <span id="pagDinheiro">0 Db</span></div>
         <div><b>Transferência:</b> <span id="pagTransf">0 Db</span></div>
         <div><b>Cartão:</b> <span id="pagCartao">0 Db</span></div>
+        <div><b style="color:#d97706;">Fiado:</b> <span id="pagFiado" style="color:#d97706;">0 Db</span></div>
       </div>
 
       <div class="dash-columns">
@@ -637,7 +646,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
-    <!-- NOVO / EDITAR PRODUTO (FASE 3: SUPORTE A CÓDIGO DE BARRAS) -->
+    <!-- NOVO / EDITAR PRODUTO -->
     <div class="card hidden" id="cardNovoProduto">
       <h3 id="tituloFormProduto">📦 Novo Produto</h3>
       <div class="form-grid">
@@ -714,6 +723,53 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
 
   </div> <!-- FIM PAGINA PRINCIPAL -->
+
+
+  <!-- FASE 4.1: PÁGINA DE GESTÃO DE CLIENTES E FIADO -->
+  <div id="paginaClientes" class="hidden">
+    
+    <!-- CARD: NOVO / EDITAR CLIENTE (SOMENTE ADMIN CRIA/EDITA/LIMITE) -->
+    <div class="card" id="cardFormCliente">
+      <h3 id="tituloFormCliente">👤 Novo Cliente</h3>
+      <div class="form-grid">
+        <input id="clienteNomeInput" placeholder="Nome Completo do Cliente *">
+        <input id="clienteTelefoneInput" placeholder="Telefone / WhatsApp">
+        <input id="clienteMoradaInput" placeholder="Morada / Endereço">
+        <input id="clienteNifInput" placeholder="NIF (Número de Identificação Fiscal)">
+        <input id="clienteLimiteInput" type="number" placeholder="Limite de Crédito (Db) *" value="0" min="0">
+        <select id="clienteStatusInput">
+          <option value="ativo">Ativo (Permite compras a fiado)</option>
+          <option value="bloqueado">Bloqueado (Impedir compras a crédito)</option>
+        </select>
+        <textarea id="clienteObservacoesInput" placeholder="Observações internas..." style="grid-column: 1 / -1; min-height: 60px; font-family: inherit;"></textarea>
+
+        <div style="grid-column: 1 / -1; display: flex; gap: 10px;">
+          <button id="btnSalvarCliente" onclick="salvarCliente()" class="btn-success" style="flex:1;">💾 Salvar Cliente</button>
+          <button id="btnCancelarCliente" onclick="cancelarEdicaoCliente()" class="btn-secondary hidden" style="min-width: 120px;">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD: LISTA DE CLIENTES -->
+    <div class="card">
+      <h3>📋 Carteira de Clientes Cadastrados</h3>
+      <div class="search-container">
+        <input type="text" id="inputBuscaCliente" class="search-input" placeholder="🔍 Pesquisar por Nome, Telefone ou NIF..." oninput="filtrarTabelaClientes()">
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th><th>Telefone</th><th>NIF</th><th>Limite Crédito</th>
+              <th>Dívida Atual</th><th>Crédito Disponível</th><th>Estado</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="listaClientesTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div> <!-- FIM PAGINA CLIENTES -->
 
 
   <!-- PÁGINA: GESTÃO DE CAIXA & TURNO -->
@@ -860,7 +916,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 </div>
 
-<!-- MODAL POS -->
+<!-- MODAL POS (FASE 4.1: SUPORTE INTEGRADO A FIADO) -->
 <div id="modalVenda" class="modal-overlay hidden">
   <div class="modal-content">
     <h3 style="margin-top:0; color:#1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">🛒 Registrar Venda (POS)</h3>
@@ -874,7 +930,21 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <option value="Dinheiro">Dinheiro (Numerário)</option>
       <option value="Transferencia">Transferência / DobraPay</option>
       <option value="Cartao">Cartão Multicaixa</option>
+      <option value="Fiado">💳 Fiado / Conta de Cliente</option>
     </select>
+
+    <!-- FASE 4.1: CAMPO DINÂMICO DE SELEÇÃO DE CLIENTE PARA FIADO -->
+    <div id="boxClienteFiadoSelect" class="hidden" style="background: #fffbe6; padding: 10px; border-radius: 8px; border: 1px solid #fde68a; margin-bottom: 10px;">
+      <label style="font-size: 12px; font-weight:700; color:#92400e;">👤 Selecionar Cliente para Fiado *:</label>
+      <select id="modalSelectClienteFiado" onchange="atualizarInfoClienteFiadoModal()" style="margin-top:4px; margin-bottom:6px;">
+        <option value="">-- Selecione o Cliente --</option>
+      </select>
+      <div id="boxDetalhesCreditoCliente" style="font-size:12px; color:#475569;" class="hidden">
+        <div>Limite Crédito: <b id="lblFiadoClienteLimite">0 Db</b></div>
+        <div>Dívida Atual: <b id="lblFiadoClienteDivida" style="color:#ef4444;">0 Db</b></div>
+        <div>Crédito Disponível: <b id="lblFiadoClienteDisponivel" style="color:#10b981;">0 Db</b></div>
+      </div>
+    </div>
 
     <div id="boxCalculoTroco">
       <label style="font-size: 12px; font-weight:600;">Valor Entregue pelo Cliente (Db):</label>
@@ -884,8 +954,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
-    <label style="font-size: 12px; font-weight:600;">Nome do Cliente (Opcional):</label>
-    <input type="text" id="modalNomeCliente" placeholder="Ex: João Silva" style="margin-bottom: 15px;">
+    <div id="boxNomeClienteOpcional">
+      <label style="font-size: 12px; font-weight:600;">Nome do Cliente (Opcional):</label>
+      <input type="text" id="modalNomeCliente" placeholder="Ex: João Silva" style="margin-bottom: 15px;">
+    </div>
 
     <div style="background:#eff6ff; padding: 12px; border-radius:8px; text-align:center; margin-bottom:15px;">
       <span style="font-size: 13px; color:#64748b;">TOTAL A PAGAR:</span>
@@ -895,6 +967,62 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div style="display: flex; gap:10px; flex-wrap: wrap;">
       <button id="btnConfirmarVenda" onclick="confirmarVendaModal()" class="btn-success" style="flex:1; padding: 12px; min-width: 140px;">✅ Confirmar & Emitir Recibo</button>
       <button onclick="fecharModalVenda()" class="btn-secondary" style="min-width: 100px;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FASE 4.1: MODAL DE REGISTRO DE PAGAMENTO DE DÍVIDA -->
+<div id="modalPagamentoDivida" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h3 style="margin-top:0; color:#1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">💰 Registrar Pagamento de Dívida</h3>
+    <p style="margin: 5px 0 10px 0;">Cliente: <b id="modalPagClienteNome" style="color:#2563eb;"></b></p>
+    
+    <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:12px; font-size:13px;">
+      <div>Dívida Atual: <b id="modalPagDividaAtual" style="color:#ef4444;">0 Db</b></div>
+    </div>
+
+    <label style="font-size: 12px; font-weight:600;">Valor a Pagar (Db) *:</label>
+    <input type="number" id="modalPagValor" placeholder="Ex: 1000" min="1" style="margin-bottom: 10px;">
+
+    <label style="font-size: 12px; font-weight:600;">Forma de Recebimento *:</label>
+    <select id="modalPagForma" style="margin-bottom: 10px;">
+      <option value="Dinheiro">Dinheiro (Entra no Caixa Atual)</option>
+      <option value="Transferencia">Transferência Bancária / DobraPay</option>
+      <option value="Cartao">Cartão Multicaixa</option>
+    </select>
+
+    <label style="font-size: 12px; font-weight:600;">Observação / Comprovativo:</label>
+    <input type="text" id="modalPagObservacao" placeholder="Ex: Pagamento parcial via balcão" style="margin-bottom: 15px;">
+
+    <div style="display: flex; gap:10px; flex-wrap: wrap;">
+      <button id="btnConfirmarPagamentoDivida" onclick="confirmarPagamentoDivida()" class="btn-success" style="flex:1; padding: 12px;">✅ Confirmar Pagamento</button>
+      <button onclick="fecharModalPagamentoDivida()" class="btn-secondary" style="min-width: 100px;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FASE 4.1: MODAL DE EXTRATO DO CLIENTE -->
+<div id="modalExtratoCliente" class="modal-overlay hidden">
+  <div class="modal-content large">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 15px;">
+      <h3 style="margin:0; color:#1e293b;" id="extratoTituloModal">📜 Extrato do Cliente</h3>
+      <button onclick="fecharModalExtrato()" class="btn-secondary" style="padding: 4px 10px; min-height: 36px;">✕ Fechar</button>
+    </div>
+
+    <div id="extratoResumoBox" class="kpi-grid" style="margin-bottom: 15px;">
+      <!-- KPIs dinâmicos do cliente -->
+    </div>
+
+    <h4 style="margin: 10px 0 8px 0; color:#1e293b;">📋 Histórico Financeiro do Cliente</h4>
+    <div class="table-responsive">
+      <table style="min-width:100%;">
+        <thead>
+          <tr>
+            <th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Saldo Anterior</th><th>Saldo Posterior</th><th>Usuário</th>
+          </tr>
+        </thead>
+        <tbody id="listaExtratoClienteBody"></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -1004,7 +1132,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// FASE 3: ATIVAR PERSISTÊNCIA OFFLINE SEGURA NO FIRESTORE
+// FASE 3: PERSISTÊNCIA OFFLINE
 db.enablePersistence({ synchronizeTabs: true }).catch(err => {
   if (err.code == 'failed-precondition') {
     console.warn("Persistência em múltiplas abas não suportada simultaneamente.");
@@ -1016,6 +1144,7 @@ db.enablePersistence({ synchronizeTabs: true }).catch(err => {
 let usuarioRole = null;
 let editandoFuncId = null;
 let editandoProdutoId = null;
+let editandoClienteId = null; // FASE 4.1
 
 let listenerProdutos = null;
 let listenerMovimentacoes = null;
@@ -1024,9 +1153,10 @@ let listenerDespesas = null;
 let listenerEncomendas = null;
 let listenerArmazemPT = null;
 let listenerLotesPT = null;
-
 let listenerCaixaAtual = null;
 let listenerCaixasAuditoria = null;
+let listenerClientes = null; // FASE 4.1
+let listenerMovimentosClientes = null; // FASE 4.1
 
 let todosProdutos = [];
 let todasMovimentacoes = [];
@@ -1034,9 +1164,13 @@ let todasDespesas = [];
 let todasEncomendas = [];
 let todosItensSoltosPT = [];
 let todosLotesPT = [];
+let todosClientes = []; // FASE 4.1
+let todosMovimentosClientes = []; // FASE 4.1
 
 let caixaAtualObj = null;
 let todosCaixasAuditoria = [];
+let clientePagamentoAtualObj = null; // FASE 4.1
+let clienteExtratoAtualObj = null; // FASE 4.1
 
 let produtoVendaAtual = null;
 let dataFiltroInicioDash = null;
@@ -1046,7 +1180,6 @@ let filtrarApenasBaixoEstoque = false;
 let paginaAtual = 1;
 const itensPorPagina = 10;
 
-// FASE 3: MONITORAMENTO DE CONEXÃO ONLINE/OFFLINE E ESTRUTURA DE FILA LOCAL
 let isSystemOnline = navigator.onLine;
 
 function atualizarStatusConexao() {
@@ -1068,7 +1201,6 @@ function atualizarStatusConexao() {
 window.addEventListener('online', atualizarStatusConexao);
 window.addEventListener('offline', atualizarStatusConexao);
 
-// FASE 3: ESTRUTURA LOCAL DE PREPARAÇÃO PARA FILA DE SINCRONIZAÇÃO
 function obterFilaLocalSinc() {
   try {
     return JSON.parse(localStorage.getItem("stp_sync_queue") || "[]");
@@ -1099,16 +1231,21 @@ function login(){
 
 function navegarPara(paginaId) {
   document.getElementById("paginaPrincipal").classList.add("hidden");
+  document.getElementById("paginaClientes").classList.add("hidden");
   document.getElementById("paginaCaixa").classList.add("hidden");
   document.getElementById("paginaArmazemPT").classList.add("hidden");
 
   document.getElementById("btnPageMain").classList.remove("active");
+  document.getElementById("btnPageClientes").classList.remove("active");
   document.getElementById("btnPageCaixa").classList.remove("active");
   document.getElementById("btnPageArmazem").classList.remove("active");
 
   if(paginaId === 'paginaPrincipal') {
     document.getElementById("paginaPrincipal").classList.remove("hidden");
     document.getElementById("btnPageMain").classList.add("active");
+  } else if(paginaId === 'paginaClientes') {
+    document.getElementById("paginaClientes").classList.remove("hidden");
+    document.getElementById("btnPageClientes").classList.add("active");
   } else if(paginaId === 'paginaCaixa') {
     document.getElementById("paginaCaixa").classList.remove("hidden");
     document.getElementById("btnPageCaixa").classList.add("active");
@@ -1133,6 +1270,9 @@ function resetarInterface() {
   btnExportarHistorico.classList.add("hidden");
   cardEstoque.classList.add("hidden");
   cardAuditoriaCaixas.classList.add("hidden");
+  if(document.getElementById("cardFormCliente")) {
+    document.getElementById("cardFormCliente").classList.add("hidden");
+  }
 }
 
 function logout(){
@@ -1145,6 +1285,8 @@ function logout(){
   if(listenerLotesPT) listenerLotesPT();
   if(listenerCaixaAtual) listenerCaixaAtual();
   if(listenerCaixasAuditoria) listenerCaixasAuditoria();
+  if(listenerClientes) listenerClientes();
+  if(listenerMovimentosClientes) listenerMovimentosClientes();
 
   usuarioRole = null;
   caixaAtualObj = null;
@@ -1191,6 +1333,9 @@ auth.onAuthStateChanged(u => {
         btnExportarHistorico.classList.remove("hidden");
         cardAuditoriaCaixas.classList.remove("hidden");
         encCustoCompra.classList.remove("hidden");
+        if(document.getElementById("cardFormCliente")) {
+          document.getElementById("cardFormCliente").classList.remove("hidden");
+        }
       } else if(usuarioRole === "estoque") {
         cardCompras.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
@@ -1198,11 +1343,17 @@ auth.onAuthStateChanged(u => {
         btnExportarEstoque.classList.remove("hidden");
         cardAuditoriaCaixas.classList.add("hidden");
         encCustoCompra.classList.add("hidden");
+        if(document.getElementById("cardFormCliente")) {
+          document.getElementById("cardFormCliente").classList.add("hidden");
+        }
       } else {
         cardCambio.classList.remove("hidden");
         cardEncomendas.classList.remove("hidden");
         cardAuditoriaCaixas.classList.add("hidden");
         encCustoCompra.classList.add("hidden");
+        if(document.getElementById("cardFormCliente")) {
+          document.getElementById("cardFormCliente").classList.add("hidden");
+        }
       }
 
       cardEstoque.classList.remove("hidden");
@@ -1251,6 +1402,7 @@ function carregar(){
   carregarEncomendas();
   carregarArmazemPTTresPassos();
   carregarCaixaDoUsuario();
+  carregarModuloClientes(); // FASE 4.1
 
   listenerProdutos = db.collection("produtos").onSnapshot(s => {
     todosProdutos = [];
@@ -1293,457 +1445,1635 @@ function carregar(){
 }
 
 /* =========================================================================
-   FASE 3: SUPORTE COMPLETO A CÓDIGO DE BARRAS NO POS & CADASTRO
+   FASE 4.1 — CLIENTES & FIADO IMPLEMENTAÇÃO DEDICADA
    ========================================================================= */
 
-function tratarKeyPressBarcodePOS(event) {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    buscarProdutoPorBarcodeManual();
+function carregarModuloClientes() {
+  if(listenerClientes) listenerClientes();
+  if(listenerMovimentosClientes) listenerMovimentosClientes();
+
+  listenerClientes = db.collection("clientes").orderBy("nome", "asc").onSnapshot(s => {
+    todosClientes = [];
+    s.forEach(doc => {
+      let c = doc.data();
+      c.id = doc.id;
+      todosClientes.push(c);
+    });
+
+    renderizarTabelaClientes();
+    atualizarSelectClientesFiadoModal();
+    processarDashboard();
+  }, err => console.warn("Erro ao ouvir clientes offline:", err));
+
+  listenerMovimentosClientes = db.collection("movimentos_clientes").orderBy("data", "desc").onSnapshot(s => {
+    todosMovimentosClientes = [];
+    s.forEach(doc => {
+      let m = doc.data();
+      m.id = doc.id;
+      todosMovimentosClientes.push(m);
+    });
+
+    if(clienteExtratoAtualObj) {
+      renderizarExtratoClienteBody(clienteExtratoAtualObj.id);
+    }
+  }, err => console.warn("Erro ao ouvir movimentos de clientes:", err));
+}
+
+function renderizarTabelaClientes() {
+  let tbody = document.getElementById("listaClientesTable");
+  if(!tbody) return;
+
+  let filtro = (document.getElementById("inputBuscaCliente")?.value || "").toLowerCase().trim();
+  let html = "";
+  let isAdmin = (usuarioRole === "admin");
+
+  let filtrados = todosClientes.filter(c => {
+    let n = (c.nome || "").toLowerCase();
+    let t = (c.telefone || "").toLowerCase();
+    let nif = (c.nif || "").toLowerCase();
+    return n.includes(filtro) || t.includes(filtro) || nif.includes(filtro);
+  });
+
+  filtrados.forEach(c => {
+    let lim = Number(c.limiteCredito) || 0;
+    let div = Number(c.saldoDevedor) || 0;
+    let disp = lim - div; if(disp < 0) disp = 0;
+
+    let isBloq = (c.status === "bloqueado");
+    let badgeStatus = isBloq ? 
+      '<span class="status-cliente-bloqueado">🔒 BLOQUEADO</span>' : 
+      '<span class="status-cliente-ativo">🟢 ATIVO</span>';
+
+    html += `
+      <tr>
+        <td><b>${c.nome}</b></td>
+        <td>${c.telefone || '-'}</td>
+        <td>${c.nif || '-'}</td>
+        <td><b>${lim.toLocaleString('pt-PT')} Db</b></td>
+        <td style="color:#ef4444; font-weight:bold;">${div.toLocaleString('pt-PT')} Db</td>
+        <td style="color:#10b981; font-weight:bold;">${disp.toLocaleString('pt-PT')} Db</td>
+        <td>${badgeStatus}</td>
+        <td>
+          <div class="acoes-cell">
+            <button class="btn-success btn-acao" onclick="abrirModalPagamentoDivida('${c.id}')" title="Registrar Pagamento">💰 Pagar</button>
+            <button class="btn-secondary btn-acao" onclick="abrirModalExtratoCliente('${c.id}')" title="Ver Extrato">📜 Extrato</button>
+            ${isAdmin ? `
+              <button class="btn-secondary btn-acao" onclick="prepararEdicaoCliente('${c.id}')" title="Editar Cliente">✏️</button>
+              <button class="${isBloq ? 'btn-success' : 'btn-warning'} btn-acao" onclick="alternarStatusCliente('${c.id}')">${isBloq ? '🔓 Ativar' : '🔒 Bloquear'}</button>
+              <button class="btn-danger btn-acao" onclick="apagarCliente('${c.id}')" title="Apagar Cliente">🗑️</button>
+            ` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html || '<tr><td colspan="8" style="color:#94a3b8;">Nenhum cliente encontrado.</td></tr>';
+}
+
+function filtrarTabelaClientes() {
+  renderizarTabelaClientes();
+}
+
+function salvarCliente() {
+  if(usuarioRole !== "admin") return alert("Apenas Administradores podem cadastrar/editar clientes.");
+
+  let nome = clienteNomeInput.value.trim();
+  let telefone = clienteTelefoneInput.value.trim();
+  let morada = clienteMoradaInput.value.trim();
+  let nif = clienteNifInput.value.trim();
+  let limiteVal = Number(clienteLimiteInput.value);
+  let statusVal = clienteStatusInput.value;
+  let obsVal = clienteObservacoesInput.value.trim();
+
+  if(!nome) return alert("Por favor, informe o nome do cliente!");
+  if(isNaN(limiteVal) || limiteVal < 0) return alert("Informe um limite de crédito válido (maior ou igual a 0)!");
+
+  let user = auth.currentUser;
+
+  if(editandoClienteId) {
+    let cliAntigo = todosClientes.find(c => c.id === editandoClienteId);
+    let payloadUpdate = {
+      nome: nome,
+      telefone: telefone,
+      morada: morada,
+      nif: nif,
+      limiteCredito: limiteVal,
+      status: statusVal,
+      observacoes: obsVal,
+      ultimaAtualizacao: new Date()
+    };
+
+    db.collection("clientes").doc(editandoClienteId).update(payloadUpdate).then(() => {
+      registrarAuditoriaGeral("EDITAR_CLIENTE", `Cliente ${nome} atualizado. Limite alterado de ${cliAntigo?.limiteCredito || 0} Db para ${limiteVal} Db. Status: ${statusVal}`, editandoClienteId, nome, limiteVal);
+      cancelarEdicaoCliente();
+      alert("Cliente atualizado com sucesso!");
+    }).catch(e => alert("Erro ao atualizar cliente: " + e.message));
+  } else {
+    let payloadNew = {
+      nome: nome,
+      telefone: telefone,
+      morada: morada,
+      nif: nif,
+      limiteCredito: limiteVal,
+      saldoDevedor: 0,
+      status: statusVal,
+      observacoes: obsVal,
+      criadoPor: user.email,
+      criadoPorUid: user.uid,
+      dataCriacao: new Date(),
+      ultimaAtualizacao: new Date()
+    };
+
+    db.collection("clientes").add(payloadNew).then(ref => {
+      registrarAuditoriaGeral("CRIAR_CLIENTE", `Cliente ${nome} criado com limite de ${limiteVal} Db.`, ref.id, nome, limiteVal);
+      cancelarEdicaoCliente();
+      alert("Cliente cadastrado com sucesso!");
+    }).catch(e => alert("Erro ao cadastrar cliente: " + e.message));
   }
 }
 
-function buscarProdutoPorBarcodeManual() {
-  let input = document.getElementById("posBarcodeScanner");
-  let barcode = input.value.trim().toLowerCase();
-  let boxRes = document.getElementById("posBarcodeResult");
+function prepararEdicaoCliente(id) {
+  if(usuarioRole !== "admin") return alert("Apenas Administradores podem editar clientes.");
+  let c = todosClientes.find(item => item.id === id);
+  if(!c) return;
 
-  if(!barcode) {
-    boxRes.classList.add("hidden");
+  editandoClienteId = id;
+  tituloFormCliente.innerText = "✏️ Editar Cliente: " + c.nome;
+  clienteNomeInput.value = c.nome || "";
+  clienteTelefoneInput.value = c.telefone || "";
+  clienteMoradaInput.value = c.morada || "";
+  clienteNifInput.value = c.nif || "";
+  clienteLimiteInput.value = c.limiteCredito || 0;
+  clienteStatusInput.value = c.status || "ativo";
+  clienteObservacoesInput.value = c.observacoes || "";
+
+  btnSalvarCliente.innerText = "💾 Atualizar Cliente";
+  btnCancelarCliente.classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelarEdicaoCliente() {
+  editandoClienteId = null;
+  tituloFormCliente.innerText = "👤 Novo Cliente";
+  clienteNomeInput.value = "";
+  clienteTelefoneInput.value = "";
+  clienteMoradaInput.value = "";
+  clienteNifInput.value = "";
+  clienteLimiteInput.value = "0";
+  clienteStatusInput.value = "ativo";
+  clienteObservacoesInput.value = "";
+
+  btnSalvarCliente.innerText = "💾 Salvar Cliente";
+  btnCancelarCliente.classList.add("hidden");
+}
+
+function alternarStatusCliente(id) {
+  if(usuarioRole !== "admin") return alert("Apenas Administradores podem alterar status de clientes.");
+  let c = todosClientes.find(item => item.id === id);
+  if(!c) return;
+
+  let novoStatus = (c.status === "bloqueado") ? "ativo" : "bloqueado";
+  let acaoTxt = novoStatus === "bloqueado" ? "BLOQUEAR" : "ATIVAR/DESBLOQUEAR";
+
+  if(confirm(`Tem certeza que deseja ${acaoTxt} o cliente "${c.nome}"?`)) {
+    db.collection("clientes").doc(id).update({
+      status: novoStatus,
+      ultimaAtualizacao: new Date()
+    }).then(() => {
+      registrarAuditoriaGeral(novoStatus === "bloqueado" ? "BLOQUEAR_CLIENTE" : "DESBLOQUEAR_CLIENTE", `Cliente ${c.nome} alterado para ${novoStatus}.`, id, c.nome, 0);
+      alert(`Cliente ${novoStatus === 'bloqueado' ? 'bloqueado' : 'desbloqueado'} com sucesso!`);
+    });
+  }
+}
+
+function apagarCliente(id) {
+  if(usuarioRole !== "admin") return alert("Apenas Administradores podem apagar clientes.");
+  let c = todosClientes.find(item => item.id === id);
+  if(!c) return;
+
+  if((c.saldoDevedor || 0) > 0) {
+    return alert(`❌ Não é possível apagar o cliente "${c.nome}" porque ele possui uma dívida ativa de ${c.saldoDevedor} Db. Solvide a dívida primeiro.`);
+  }
+
+  if(confirm(`Tem certeza que deseja APAGAR permanentemente a ficha do cliente "${c.nome}"?`)) {
+    db.collection("clientes").doc(id).delete().then(() => {
+      registrarAuditoriaGeral("APAGAR_CLIENTE", `Ficha do cliente ${c.nome} apagada.`, id, c.nome, 0);
+      alert("Cliente removido com sucesso!");
+    });
+  }
+}
+
+function atualizarSelectClientesFiadoModal() {
+  let select = document.getElementById("modalSelectClienteFiado");
+  if(!select) return;
+
+  let valAtual = select.value;
+  select.innerHTML = '<option value="">-- Selecione o Cliente --</option>';
+
+  todosClientes.forEach(c => {
+    let lim = Number(c.limiteCredito) || 0;
+    let div = Number(c.saldoDevedor) || 0;
+    let disp = lim - div; if(disp < 0) disp = 0;
+    let stTag = c.status === "bloqueado" ? " [BLOQUEADO]" : "";
+
+    select.innerHTML += `<option value="${c.id}">${c.nome}${stTag} - Disp: ${disp.toLocaleString('pt-PT')} Db</option>`;
+  });
+
+  select.value = valAtual;
+}
+
+function atualizarInfoClienteFiadoModal() {
+  let select = document.getElementById("modalSelectClienteFiado");
+  let boxInfo = document.getElementById("boxDetalhesCreditoCliente");
+  if(!select || !boxInfo) return;
+
+  let idCli = select.value;
+  if(!idCli) {
+    boxInfo.classList.add("hidden");
     return;
   }
 
-  // Busca o produto por código de barras ou nome exato
-  let prod = todosProdutos.find(p => 
-    (p.barcode && p.barcode.toLowerCase() === barcode) || 
-    p.nome.toLowerCase() === barcode
-  );
-
-  if(prod) {
-    document.getElementById("posResNome").innerText = prod.nome + (prod.barcode ? ` [${prod.barcode}]` : '');
-    document.getElementById("posResPreco").innerText = (Number(prod.venda) || 0).toLocaleString('pt-PT') + " Db";
-    document.getElementById("posResEstoque").innerText = `Estoque disponível: ${prod.estoque} un`;
-
-    let btnVenda = document.getElementById("posResBtnVender");
-    btnVenda.onclick = function() {
-      abrirModalVenda(prod.id);
-    };
-
-    boxRes.classList.remove("hidden");
-    input.value = ""; // Limpa para a próxima leitura do leitor físico
-  } else {
-    alert("Produto não localizado para o Código de Barras / Termo: " + barcode);
-    boxRes.classList.add("hidden");
+  let c = todosClientes.find(item => item.id === idCli);
+  if(!c) {
+    boxInfo.classList.add("hidden");
+    return;
   }
+
+  let lim = Number(c.limiteCredito) || 0;
+  let div = Number(c.saldoDevedor) || 0;
+  let disp = lim - div; if(disp < 0) disp = 0;
+
+  lblFiadoClienteLimite.innerText = lim.toLocaleString('pt-PT') + " Db";
+  lblFiadoClienteDivida.innerText = div.toLocaleString('pt-PT') + " Db";
+  lblFiadoClienteDisponivel.innerText = disp.toLocaleString('pt-PT') + " Db";
+
+  boxInfo.classList.remove("hidden");
 }
 
 /* =========================================================================
-   LÓGICA DA FASE 2: GESTÃO DE CAIXA + AUDITORIA DE TURNO
+   PAGAMENTO DE DÍVIDAS DE CLIENTE & INTEGRAÇÃO CAIXA
    ========================================================================= */
 
-function carregarCaixaDoUsuario() {
-  if(listenerCaixaAtual) listenerCaixaAtual();
-  let user = auth.currentUser;
-  if(!user) return;
+function abrirModalPagamentoDivida(id) {
+  let c = todosClientes.find(item => item.id === id);
+  if(!c) return;
 
-  listenerCaixaAtual = db.collection("caixas")
-    .where("uid", "==", user.uid)
-    .where("estado", "==", "aberto")
-    .limit(1)
-    .onSnapshot(s => {
-      if(!s.empty) {
-        let doc = s.docs[0];
-        caixaAtualObj = doc.data();
-        caixaAtualObj.id = doc.id;
-        renderizarPainelCaixaAberto();
-      } else {
-        caixaAtualObj = null;
-        renderizarPainelCaixaFechado();
-      }
-    });
-}
-
-function renderizarPainelCaixaFechado() {
-  formAberturaCaixa.classList.remove("hidden");
-  painelCaixaAberto.classList.add("hidden");
-
-  let canOpen = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
-  if(!canOpen) {
-    statusTurnoBox.innerHTML = `<p style="margin:0; color:#ef4444; font-weight:bold;">⚠️ A sua função (${usuarioRole.toUpperCase()}) não realiza operações de caixa.</p>`;
-    formAberturaCaixa.classList.add("hidden");
-    return;
+  if((c.saldoDevedor || 0) <= 0) {
+    return alert(`O cliente "${c.nome}" não possui dívida pendente de pagamento.`);
   }
 
-  statusTurnoBox.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-      <div>
-        <span class="status-caixa-fechado">CAIXA FECHADO</span>
-        <span style="margin-left:10px; font-weight:600; font-size:14px;">Você não possui nenhum turno aberto no momento.</span>
-      </div>
-    </div>
-  `;
+  clientePagamentoAtualObj = c;
+  modalPagClienteNome.innerText = c.nome;
+  modalPagDividaAtual.innerText = (c.saldoDevedor || 0).toLocaleString('pt-PT') + " Db";
+  modalPagValor.value = "";
+  modalPagObservacao.value = "";
+
+  modalPagamentoDivida.classList.remove("hidden");
 }
 
-function renderizarPainelCaixaAberto() {
-  formAberturaCaixa.classList.add("hidden");
-  painelCaixaAberto.classList.remove("hidden");
-
-  let dtAbertura = caixaAtualObj.dataAbertura ? caixaAtualObj.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
-
-  statusTurnoBox.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-      <div>
-        <span class="status-caixa-aberto">🟢 CAIXA ABERTO</span>
-        <span style="margin-left:10px; font-weight:bold; font-size:14px;">Turno de ${caixaAtualObj.usuario}</span>
-        <small style="display:block; color:#64748b; margin-top:2px;">Aberto em: ${dtAbertura}</small>
-      </div>
-      <div style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 10px; border-radius:6px; font-weight:600;">
-        ID Turno: ${caixaAtualObj.id.substring(0,8)}...
-      </div>
-    </div>
-  `;
-
-  atualizarKpiCaixaAbertoLocal();
+function fecharModalPagamentoDivida() {
+  modalPagamentoDivida.classList.add("hidden");
+  clientePagamentoAtualObj = null;
 }
 
-function atualizarKpiCaixaAbertoLocal() {
-  if(!caixaAtualObj) return;
+function confirmarPagamentoDivida() {
+  if(!clientePagamentoAtualObj) return;
 
-  let valInicial = Number(caixaAtualObj.valorInicial) || 0;
-  let totalVendasDinheiro = 0;
-
-  todasMovimentacoes.forEach(m => {
-    if(m.caixaId === caixaAtualObj.id && m.tipo === "saida") {
-      let fPag = m.formaPagamento || "";
-      if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
-        totalVendasDinheiro += Number(m.valor) || 0;
-      }
-    }
-  });
-
-  let dinheiroEsperado = valInicial + totalVendasDinheiro;
-
-  kpiCaixaInicial.innerText = valInicial.toLocaleString('pt-PT') + " Db";
-  kpiCaixaVendasDinheiro.innerText = totalVendasDinheiro.toLocaleString('pt-PT') + " Db";
-  kpiCaixaDinheiroEsperado.innerText = dinheiroEsperado.toLocaleString('pt-PT') + " Db";
-}
-
-function abrirCaixa() {
-  if(!navigator.onLine) return alert("Erro de conexão: É necessária internet ativa para abrir o caixa de forma segura.");
-
-  let u = auth.currentUser;
-  if(!u) return;
-
-  let valInicial = Number(aberturaValorInicial.value) || 0;
-  if(valInicial < 0) return alert("Por favor, informe um valor inicial válido!");
-
-  db.collection("caixas")
-    .where("uid", "==", u.uid)
-    .where("estado", "==", "aberto")
-    .get()
-    .then(snap => {
-      if(!snap.empty) {
-        alert("Já possui um caixa aberto! Feche o caixa atual antes de abrir um novo.");
-        return;
-      }
-
-      let payload = {
-        uid: u.uid,
-        usuario: u.email,
-        role: usuarioRole,
-        dataAbertura: new Date(),
-        valorInicial: valInicial,
-        estado: "aberto"
-      };
-
-      return db.collection("caixas").add(payload).then(() => {
-        aberturaValorInicial.value = "0";
-        alert("Caixa / Turno aberto com sucesso!");
-      });
-    })
-    .catch(e => alert("Erro ao abrir caixa: " + e.message));
-}
-
-function abrirModalFecharCaixa() {
-  if(!caixaAtualObj) return alert("Nenhum caixa aberto para fechar.");
-
-  let valInicial = Number(caixaAtualObj.valorInicial) || 0;
-  let totalVendasDinheiro = 0;
-
-  todasMovimentacoes.forEach(m => {
-    if(m.caixaId === caixaAtualObj.id && m.tipo === "saida") {
-      let fPag = m.formaPagamento || "";
-      if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
-        totalVendasDinheiro += Number(m.valor) || 0;
-      }
-    }
-  });
-
-  let dinheiroEsperado = valInicial + totalVendasDinheiro;
-
-  lblModalValorInicial.innerText = valInicial.toLocaleString('pt-PT') + " Db";
-  lblModalVendasDinheiro.innerText = totalVendasDinheiro.toLocaleString('pt-PT') + " Db";
-  lblModalDinheiroEsperado.innerText = dinheiroEsperado.toLocaleString('pt-PT') + " Db";
-  
-  modalDinheiroContado.value = "";
-  modalObservacaoFechamento.value = "";
-  
-  calcularDiferencaFechamento();
-  modalFecharCaixa.classList.remove("hidden");
-}
-
-function fecharModalFecharCaixa() {
-  modalFecharCaixa.classList.add("hidden");
-}
-
-function calcularDiferencaFechamento() {
-  if(!caixaAtualObj) return;
-
-  let valInicial = Number(caixaAtualObj.valorInicial) || 0;
-  let totalVendasDinheiro = 0;
-
-  todasMovimentacoes.forEach(m => {
-    if(m.caixaId === caixaAtualObj.id && m.tipo === "saida") {
-      let fPag = m.formaPagamento || "";
-      if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
-        totalVendasDinheiro += Number(m.valor) || 0;
-      }
-    }
-  });
-
-  let dinheiroEsperado = valInicial + totalVendasDinheiro;
-  let dinheiroContado = Number(modalDinheiroContado.value) || 0;
-  let diferenca = dinheiroContado - dinheiroEsperado;
-
-  let lbl = lblModalDiferenca;
-
-  if(diferenca === 0) {
-    lbl.className = "dif-certo";
-    lbl.innerText = "🟢 0 Db (Caixa certo)";
-  } else if(diferenca < 0) {
-    lbl.className = "dif-quebra";
-    lbl.innerText = `🔴 ${diferenca.toLocaleString('pt-PT')} Db (Falta / Quebra de Caixa)`;
-  } else {
-    lbl.className = "dif-sobra";
-    lbl.innerText = `🟡 +${diferenca.toLocaleString('pt-PT')} Db (Sobra de Caixa)`;
-  }
-}
-
-function confirmarFechamentoCaixa() {
-  if(!navigator.onLine) return alert("Erro: O fechamento de caixa exige conexão com a internet para validação da auditoria.");
-  if(!caixaAtualObj) return;
-
-  let btn = document.getElementById("btnConfirmarFecharCaixa");
+  let btn = document.getElementById("btnConfirmarPagamentoDivida");
   btn.disabled = true;
 
-  let dinheiroContadoVal = Number(modalDinheiroContado.value);
-  if(modalDinheiroContado.value === "" || isNaN(dinheiroContadoVal) || dinheiroContadoVal < 0) {
+  let valPagamento = Number(modalPagValor.value);
+  let formaPag = modalPagForma.value;
+  let obsVal = modalPagObservacao.value.trim();
+
+  if(isNaN(valPagamento) || valPagamento <= 0) {
     btn.disabled = false;
-    return alert("Por favor, digite o valor de dinheiro contado fisicamente!");
+    return alert("Informe um valor de pagamento válido maior que 0!");
   }
 
-  let obsVal = modalObservacaoFechamento.value.trim();
+  let clienteRef = db.collection("clientes").doc(clientePagamentoAtualObj.id);
   let user = auth.currentUser;
 
   db.runTransaction(function(transaction) {
-    let caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
+    return transaction.get(clienteRef).then(function(cDoc) {
+      if(!cDoc.exists) throw "Cliente não encontrado.";
+      let cData = cDoc.data();
+      let divAtual = Number(cData.saldoDevedor) || 0;
 
-    return transaction.get(caixaRef).then(function(caixaDoc) {
-      if(!caixaDoc.exists) throw "Caixa não encontrado.";
-      if(caixaDoc.data().estado === "fechado") throw "Este caixa já foi fechado anteriormente.";
+      if(valPagamento > divAtual) {
+        throw `❌ O pagamento (${valPagamento} Db) não pode ser superior à dívida atual (${divAtual} Db).`;
+      }
 
-      let cData = caixaDoc.data();
-      let valInicial = Number(cData.valorInicial) || 0;
+      let novoSaldoDevedor = divAtual - valPagamento;
+      if(novoSaldoDevedor < 0) novoSaldoDevedor = 0;
 
-      return db.collection("movimentacoes").where("caixaId", "==", caixaAtualObj.id).get().then(snapMovs => {
-        let totalVendasDinheiro = 0;
-        snapMovs.forEach(docM => {
-          let m = docM.data();
-          if(m.tipo === "saida") {
-            let fPag = m.formaPagamento || "";
-            if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
-              totalVendasDinheiro += Number(m.valor) || 0;
-            }
-          }
-        });
+      // Update cliente
+      transaction.update(clienteRef, {
+        saldoDevedor: novoSaldoDevedor,
+        ultimaAtualizacao: new Date()
+      });
 
-        let dinheiroEsperado = valInicial + totalVendasDinheiro;
-        let diferenca = dinheiroContadoVal - dinheiroEsperado;
+      // Novo movimento do cliente
+      let movCliRef = db.collection("movimentos_clientes").doc();
+      transaction.set(movCliRef, {
+        clienteId: clientePagamentoAtualObj.id,
+        clienteNome: cData.nome,
+        tipo: "pagamento_divida",
+        descricao: `Recebimento de Dívida (${formaPag}) ${obsVal ? '- ' + obsVal : ''}`,
+        valor: valPagamento,
+        formaPagamento: formaPag,
+        caixaId: caixaAtualObj ? caixaAtualObj.id : null,
+        usuario: user.email,
+        uid: user.uid,
+        role: usuarioRole,
+        data: new Date(),
+        saldoAnterior: divAtual,
+        saldoPosterior: novoSaldoDevedor
+      });
 
-        transaction.update(caixaRef, {
-          estado: "fechado",
-          dinheiroEsperado: dinheiroEsperado,
-          dinheiroContado: dinheiroContadoVal,
-          diferenca: diferenca,
-          observacaoFechamento: obsVal,
-          fechadoPorUid: user.uid,
-          fechadoPorUsuario: user.email,
-          dataFechamento: new Date()
-        });
+      // Registrar no histórico financeiro de movimentações para entrada no Caixa (Recebimento de Dívida)
+      let movGeralRef = db.collection("movimentacoes").doc();
+      transaction.set(movGeralRef, {
+        produto: `Recebimento Dívida - ${cData.nome}`,
+        quantidade: 1,
+        valor: valPagamento,
+        tipo: "saida", // "saida" é mantido como o identificador de faturamento/recebimento no caixa Fase 3
+        subTipo: "pagamento_divida",
+        formaPagamento: formaPag,
+        clienteId: clientePagamentoAtualObj.id,
+        clienteNome: cData.nome,
+        caixaId: caixaAtualObj ? caixaAtualObj.id : null,
+        usuario: user.email,
+        uid: user.uid,
+        data: new Date()
+      });
+
+      // Auditoria
+      let auditRef = db.collection("movimentacoes").doc();
+      transaction.set(auditRef, {
+        produto: `[AUDITORIA] PAGAMENTO DÍVIDA - ${cData.nome}`,
+        quantidade: 1,
+        valor: valPagamento,
+        tipo: "AUDITORIA",
+        acao: "PAGAMENTO_DIVIDA",
+        detalhes: `Recebido ${valPagamento} Db via ${formaPag}. Novo saldo devedor: ${novoSaldoDevedor} Db.`,
+        clienteId: clientePagamentoAtualObj.id,
+        clienteNome: cData.nome,
+        usuario: user.email,
+        uid: user.uid,
+        data: new Date()
       });
     });
   }).then(() => {
     btn.disabled = false;
-    fecharModalFecharCaixa();
-    alert("Caixa fechado com sucesso e auditoria gravada!");
+    fecharModalPagamentoDivida();
+    alert("Pagamento de dívida registrado com sucesso!");
   }).catch(e => {
     btn.disabled = false;
-    alert("Erro ao fechar caixa: " + e);
+    alert("Erro ao processar pagamento: " + e);
   });
 }
 
-function carregarAuditoriaCaixasAdmin() {
-  if(listenerCaixasAuditoria) listenerCaixasAuditoria();
-
-  listenerCaixasAuditoria = db.collection("caixas").orderBy("dataAbertura", "desc").onSnapshot(s => {
-    todosCaixasAuditoria = [];
-    let htmlBuffer = "";
-
-    s.forEach(d => {
-      let c = d.data();
-      c.id = d.id;
-      todosCaixasAuditoria.push(c);
-
-      let dtAberto = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
-      let dtFechado = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'EM ABERTO';
-      
-      let stBadge = c.estado === 'aberto' ? 
-        '<span class="status-caixa-aberto">ABERTO</span>' : 
-        '<span class="status-caixa-fechado">FECHADO</span>';
-
-      let difTxt = "-";
-      if(c.estado === "fechado") {
-        let dif = Number(c.diferenca) || 0;
-        if(dif === 0) difTxt = '<span class="dif-certo">0 Db</span>';
-        else if(dif < 0) difTxt = `<span class="dif-quebra">${dif} Db</span>`;
-        else difTxt = `<span class="dif-sobra">+${dif} Db</span>`;
-      }
-
-      htmlBuffer += `
-        <tr>
-          <td><b>Turno #${c.id.substring(0,5).toUpperCase()}</b></td>
-          <td><b>${c.usuario}</b></td>
-          <td><small>${(c.role || 'venda1').toUpperCase()}</small></td>
-          <td><small>${dtAberto}</small></td>
-          <td><small>${dtFechado}</small></td>
-          <td>${(Number(c.valorInicial)||0).toLocaleString('pt-PT')} Db</td>
-          <td>${c.dinheiroEsperado !== undefined ? Number(c.dinheiroEsperado).toLocaleString('pt-PT') + ' Db' : '-'}</td>
-          <td>${c.dinheiroContado !== undefined ? Number(c.dinheiroContado).toLocaleString('pt-PT') + ' Db' : '-'}</td>
-          <td>${difTxt}</td>
-          <td>${stBadge}</td>
-          <td>
-            <button class="btn-secondary btn-acao" onclick="abrirAuditoriaDetalhadaModal('${c.id}')">🔍 Ver Auditoria</button>
-          </td>
-        </tr>
-      `;
-    });
-
-    listaCaixasAuditoria.innerHTML = htmlBuffer || '<tr><td colspan="11" style="color:#94a3b8;">Nenhum registo de caixa encontrado.</td></tr>';
-  });
-}
-
-function abrirAuditoriaDetalhadaModal(caixaId) {
-  let c = todosCaixasAuditoria.find(item => item.id === caixaId);
+function abrirModalExtratoCliente(id) {
+  let c = todosClientes.find(item => item.id === id);
   if(!c) return;
 
-  auditTituloModal.innerText = `Auditoria do Turno #${caixaId.substring(0,8).toUpperCase()}`;
+  clienteExtratoAtualObj = c;
+  extratoTituloModal.innerText = `📜 Extrato Financeiro: ${c.nome}`;
+  renderizarExtratoClienteBody(id);
+  modalExtratoCliente.classList.remove("hidden");
+}
 
-  let dtAberto = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
-  let dtFechado = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'EM ABERTO';
+function fecharModalExtrato() {
+  modalExtratoCliente.classList.add("hidden");
+  clienteExtratoAtualObj = null;
+}
 
-  let vendasDoTurno = todasMovimentacoes.filter(m => m.caixaId === caixaId);
+function renderizarExtratoClienteBody(clienteId) {
+  let c = todosClientes.find(item => item.id === clienteId) || clienteExtratoAtualObj;
+  if(!c) return;
 
-  let totalVendasDinheiro = 0;
-  let htmlVendas = "";
+  let lim = Number(c.limiteCredito) || 0;
+  let div = Number(c.saldoDevedor) || 0;
+  let disp = lim - div; if(disp < 0) disp = 0;
 
-  vendasDoTurno.forEach(m => {
-    let dHora = m.data ? m.data.toDate().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'}) : '-';
+  extratoResumoBox.innerHTML = `
+    <div class="kpi-card blue">
+      <span class="kpi-title">Limite de Crédito</span>
+      <span class="kpi-value">${lim.toLocaleString('pt-PT')} Db</span>
+    </div>
+    <div class="kpi-card red">
+      <span class="kpi-title">Dívida Atual</span>
+      <span class="kpi-value">${div.toLocaleString('pt-PT')} Db</span>
+    </div>
+    <div class="kpi-card green">
+      <span class="kpi-title">Crédito Disponível</span>
+      <span class="kpi-value">${disp.toLocaleString('pt-PT')} Db</span>
+    </div>
+  `;
+
+  let movs = todosMovimentosClientes.filter(m => m.clienteId === clienteId);
+  let html = "";
+
+  movs.forEach(m => {
+    let dt = m.data ? m.data.toDate().toLocaleString('pt-PT') : '-';
     let val = Number(m.valor) || 0;
-    let fPag = m.formaPagamento || "Dinheiro";
+    let sAnt = Number(m.saldoAnterior) || 0;
+    let sPost = Number(m.saldoPosterior) || 0;
 
-    if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
-      totalVendasDinheiro += val;
-    }
+    let tipoBadge = m.tipo === 'fiado' ? 
+      '<span style="background:#fffbe6; color:#d97706; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:11px;">💳 FIADO</span>' :
+      (m.tipo === 'pagamento_divida' ? 
+        '<span style="background:#dcfce7; color:#15803d; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:11px;">💰 PAGAMENTO</span>' :
+        '<span style="background:#f1f5f9; color:#475569; padding:3px 8px; border-radius:12px; font-weight:bold; font-size:11px;">⚙️ AJUSTE</span>');
 
-    htmlVendas += `
+    html += `
       <tr>
-        <td>${dHora}</td>
-        <td><b>${m.produto}</b></td>
-        <td>${m.quantidade} un</td>
-        <td><b>${val.toLocaleString('pt-PT')} Db</b></td>
-        <td><small>${fPag}</small></td>
+        <td><small>${dt}</small></td>
+        <td>${tipoBadge}</td>
+        <td style="text-align:left;">${m.descricao || '-'}</td>
+        <td style="font-weight:bold;">${val.toLocaleString('pt-PT')} Db</td>
+        <td>${sAnt.toLocaleString('pt-PT')} Db</td>
+        <td style="font-weight:bold; color:${sPost > sAnt ? '#ef4444' : '#10b981'};">${sPost.toLocaleString('pt-PT')} Db</td>
         <td><small>${m.usuario}</small></td>
       </tr>
     `;
   });
 
-  let valInicial = Number(c.valorInicial) || 0;
-  let dinEsperadoCalculado = c.dinheiroEsperado !== undefined ? c.dinheiroEsperado : (valInicial + totalVendasDinheiro);
-
-  let htmlAudit = `
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:15px; font-size:13px;">
-      <div><b>Funcionário:</b> ${c.usuario}</div>
-      <div><b>Função:</b> ${(c.role||'venda1').toUpperCase()}</div>
-      <div><b>UID:</b> <small>${c.uid}</small></div>
-      <div><b>Abertura:</b> ${dtAberto}</div>
-      <div><b>Fechamento:</b> ${dtFechado}</div>
-      <div><b>Fechado Por:</b> ${c.fechadoPorUsuario || '-'}</div>
-    </div>
-
-    <div class="kpi-grid" style="margin-bottom: 15px;">
-      <div class="kpi-card blue">
-        <span class="kpi-title">Valor Inicial</span>
-        <span class="kpi-value">${valInicial.toLocaleString('pt-PT')} Db</span>
-      </div>
-      <div class="kpi-card green">
-        <span class="kpi-title">Vendas em Dinheiro</span>
-        <span class="kpi-value">${totalVendasDinheiro.toLocaleString('pt-PT')} Db</span>
-      </div>
-      <div class="kpi-card purple">
-        <span class="kpi-title">Dinheiro Esperado</span>
-        <span class="kpi-value">${dinEsperadoCalculado.toLocaleString('pt-PT')} Db</span>
-      </div>
-      <div class="kpi-card ${c.diferenca < 0 ? 'red' : (c.diferenca > 0 ? 'orange' : 'green')}">
-        <span class="kpi-title">Dinheiro Contado / Dif.</span>
-        <span class="kpi-value">${c.dinheiroContado !== undefined ? c.dinheiroContado.toLocaleString('pt-PT') + ' Db' : 'Em aberto'}</span>
-        <span class="kpi-sub" style="color:inherit;">
-          ${c.diferenca !== undefined ? 'Diferença: ' + c.diferenca + ' Db' : ''}
-        </span>
-      </div>
-    </div>
-
-    ${c.observacaoFechamento ? `
-      <div style="background:#fffbe6; padding:10px; border-radius:8px; border:1px solid #fde68a; margin-bottom:15px; font-size:13px; color:#92400e;">
-        <b>💬 Observação do Fechamento:</b> ${c.observacaoFechamento}
-      </div>
-    ` : ''}
-
-    <h4 style="margin: 15px 0 8px 0; color:#1e293b;">🛒 Vendas Realizadas Neste Turno (${vendasDoTurno.length})</h4>
-    <div class="table-responsive">
-      <table style="min-width:100%;">
-        <thead>
-          <tr>
-            <th>Horário</th><th>Produto</th><th>Qtd</th><th>Valor</th><th>Forma Pag.</th><th>Funcionário</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${htmlVendas || '<tr><td colspan="6" style="color:#94a3b8;">Nenhuma venda cadastrada neste turno.</td></tr>'}
-        </tbody>
-      </table>
-    </div>
-  `;
-
-  auditConteudoModal.innerHTML = htmlAudit;
-  modalAuditoriaDetalhes.classList.remove("hidden");
+  listaExtratoClienteBody.innerHTML = html || '<tr><td colspan="7" style="color:#94a3b8;">Nenhum movimento registrado para este cliente.</td></tr>';
 }
 
-function fecharModalAuditoria() {
-  modalAuditoriaDetalhes.classList.add("hidden");
+function registrarAuditoriaGeral(acao, detalhes, clienteId = null, clienteNome = null, valor = 0) {
+  let user = auth.currentUser;
+  if(!user) return;
+
+  db.collection("movimentacoes").add({
+    produto: `[AUDITORIA] ${acao}`,
+    quantidade: 1,
+    valor: Number(valor) || 0,
+    tipo: "AUDITORIA",
+    acao: acao,
+    detalhes: detalhes,
+    clienteId: clienteId,
+    clienteNome: clienteNome,
+    usuario: user.email,
+    uid: user.uid,
+    role: usuarioRole,
+    data: new Date()
+  }).catch(e => console.warn("Erro ao registrar auditoria:", e));
 }
 
 /* =========================================================================
-   LÓGICA DO ARMAZÉM PORTUGAL
+   ADAPTAÇÃO DA FUNÇÃO DE VENDA EXISTENTE PARA INCLUIR VENDA A FIADO
    ========================================================================= */
+
+function alternarCampoTroco() {
+  let fPag = modalFormaPagamento.value;
+  let boxTroco = document.getElementById("boxCalculoTroco");
+  let boxFiadoSelect = document.getElementById("boxClienteFiadoSelect");
+  let boxNomeOpcional = document.getElementById("boxNomeClienteOpcional");
+
+  if(fPag === "Dinheiro") {
+    boxTroco.classList.remove("hidden");
+    boxFiadoSelect.classList.add("hidden");
+    boxNomeOpcional.classList.remove("hidden");
+  } else if(fPag === "Fiado") {
+    boxTroco.classList.add("hidden");
+    boxFiadoSelect.classList.remove("hidden");
+    boxNomeOpcional.classList.add("hidden");
+    atualizarSelectClientesFiadoModal();
+    atualizarInfoClienteFiadoModal();
+  } else {
+    boxTroco.classList.add("hidden");
+    boxFiadoSelect.classList.add("hidden");
+    boxNomeOpcional.classList.remove("hidden");
+  }
+}
+
+function abrirModalVenda(produtoId) {
+  let canSell = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
+  if(!canSell) return alert("Sua função não possui permissão para realizar vendas.");
+
+  let prod = todosProdutos.find(p => p.id === produtoId);
+  if(!prod) return;
+
+  if(prod.estoque <= 0) return alert("Produto esgotado no estoque!");
+
+  produtoVendaAtual = prod;
+  modalProdNome.innerText = prod.nome;
+  modalProdQtd.value = 1;
+  modalProdQtd.max = prod.estoque;
+  modalFormaPagamento.value = "Dinheiro";
+  modalValorRecebido.value = "";
+  modalNomeCliente.value = "";
+  lblTroco.innerText = "0 Db";
+
+  alternarCampoTroco();
+  calcularTotalVendaModal();
+  modalVenda.classList.remove("hidden");
+}
+
+function fecharModalVenda() {
+  modalVenda.classList.add("hidden");
+  produtoVendaAtual = null;
+}
+
+function calcularTotalVendaModal() {
+  if(!produtoVendaAtual) return;
+  let qtd = Number(modalProdQtd.value) || 1;
+  let total = qtd * (Number(produtoVendaAtual.venda) || 0);
+  modalTotalPagar.innerText = total.toLocaleString('pt-PT') + " Db";
+  calcularTroco();
+}
+
+function calcularTroco() {
+  if(!produtoVendaAtual) return;
+  let qtd = Number(modalProdQtd.value) || 1;
+  let total = qtd * (Number(produtoVendaAtual.venda) || 0);
+  let rec = Number(modalValorRecebido.value) || 0;
+  let troco = rec - total;
+  lblTroco.innerText = (troco > 0 ? troco : 0).toLocaleString('pt-PT') + " Db";
+}
+
+function confirmarVendaModal() {
+  if(!navigator.onLine) {
+    return alert("Erro: Vendas exigem conexão com a internet para gravação segura no Firebase.");
+  }
+
+  if(!produtoVendaAtual) return;
+
+  let btn = document.getElementById("btnConfirmarVenda");
+  btn.disabled = true;
+
+  let qtd = Number(modalProdQtd.value) || 0;
+  let fPag = modalFormaPagamento.value;
+  let nomeCliente = modalNomeCliente.value.trim() || "Cliente Geral";
+  let totalPagar = qtd * (Number(produtoVendaAtual.venda) || 0);
+
+  if(qtd <= 0) {
+    btn.disabled = false;
+    return alert("Informe uma quantidade válida!");
+  }
+
+  if(fPag === "Dinheiro") {
+    let rec = Number(modalValorRecebido.value) || 0;
+    if(rec < totalPagar) {
+      btn.disabled = false;
+      return alert("O valor recebido em dinheiro é menor que o total a pagar!");
+    }
+  }
+
+  let clienteFiadoObj = null;
+  if(fPag === "Fiado") {
+    let idCliSelect = document.getElementById("modalSelectClienteFiado").value;
+    if(!idCliSelect) {
+      btn.disabled = false;
+      return alert("Por favor, selecione o cliente para realizar a venda a fiado!");
+    }
+
+    clienteFiadoObj = todosClientes.find(c => c.id === idCliSelect);
+    if(!clienteFiadoObj) {
+      btn.disabled = false;
+      return alert("Cliente selecionado não encontrado.");
+    }
+
+    if(clienteFiadoObj.status === "bloqueado") {
+      btn.disabled = false;
+      return alert("❌ Este cliente está bloqueado para compras a crédito.");
+    }
+
+    let lim = Number(clienteFiadoObj.limiteCredito) || 0;
+    let div = Number(clienteFiadoObj.saldoDevedor) || 0;
+    if(div + totalPagar > lim) {
+      btn.disabled = false;
+      return alert("❌ Crédito insuficiente para esta venda.");
+    }
+
+    nomeCliente = clienteFiadoObj.nome;
+  }
+
+  let user = auth.currentUser;
+  let pRef = db.collection("produtos").doc(produtoVendaAtual.id);
+  let clienteRef = clienteFiadoObj ? db.collection("clientes").doc(clienteFiadoObj.id) : null;
+
+  db.runTransaction(function(transaction) {
+    return transaction.get(pRef).then(function(pDoc) {
+      if (!pDoc.exists) throw "Produto não encontrado.";
+      
+      let pData = pDoc.data();
+      if (pData.estoque < qtd) {
+        throw "Estoque insuficiente para esta venda. Estoque atual: " + pData.estoque;
+      }
+
+      let execLógicaComCliente = function(clienteData = null) {
+        let novoEstoque = pData.estoque - qtd;
+        transaction.update(pRef, { estoque: novoEstoque });
+
+        let mRef = db.collection("movimentacoes").doc();
+        let payloadVenda = {
+          produto: pData.nome,
+          produtoId: pDoc.id,
+          quantidade: qtd,
+          valor: totalPagar,
+          precoUnitario: pData.venda,
+          tipo: "saida",
+          formaPagamento: fPag === "Fiado" ? "Fiado (Conta de Cliente)" : fPag,
+          nomeCliente: nomeCliente,
+          caixaId: caixaAtualObj ? caixaAtualObj.id : null,
+          usuario: user.email,
+          uid: user.uid,
+          data: new Date()
+        };
+
+        if(clienteFiadoObj) {
+          payloadVenda.clienteId = clienteFiadoObj.id;
+        }
+
+        transaction.set(mRef, payloadVenda);
+
+        if(clienteFiadoObj && clienteRef && clienteData) {
+          let divAtual = Number(clienteData.saldoDevedor) || 0;
+          let limCredito = Number(clienteData.limiteCredito) || 0;
+
+          if(clienteData.status === "bloqueado") {
+            throw "❌ Este cliente está bloqueado para compras a crédito.";
+          }
+
+          if(divAtual + totalPagar > limCredito) {
+            throw "❌ Crédito insuficiente para esta venda.";
+          }
+
+          let novoSaldoDevedor = divAtual + totalPagar;
+          transaction.update(clienteRef, {
+            saldoDevedor: novoSaldoDevedor,
+            ultimaAtualizacao: new Date()
+          });
+
+          let movCliRef = db.collection("movimentos_clientes").doc();
+          transaction.set(movCliRef, {
+            clienteId: clienteFiadoObj.id,
+            clienteNome: clienteData.nome,
+            tipo: "fiado",
+            descricao: `Venda a Fiado - ${qtd}x ${pData.nome}`,
+            valor: totalPagar,
+            vendaId: mRef.id,
+            caixaId: caixaAtualObj ? caixaAtualObj.id : null,
+            usuario: user.email,
+            uid: user.uid,
+            role: usuarioRole,
+            data: new Date(),
+            saldoAnterior: divAtual,
+            saldoPosterior: novoSaldoDevedor
+          });
+
+          let auditRef = db.collection("movimentacoes").doc();
+          transaction.set(auditRef, {
+            produto: `[AUDITORIA] VENDA FIADO - ${clienteData.nome}`,
+            quantidade: qtd,
+            valor: totalPagar,
+            tipo: "AUDITORIA",
+            acao: "VENDA_FIADO",
+            detalhes: `Venda de ${qtd}x ${pData.nome} a fiado no valor de ${totalPagar} Db. Novo saldo devedor: ${novoSaldoDevedor} Db.`,
+            clienteId: clienteFiadoObj.id,
+            clienteNome: clienteData.nome,
+            usuario: user.email,
+            uid: user.uid,
+            data: new Date()
+          });
+        }
+      };
+
+      if(clienteRef) {
+        return transaction.get(clienteRef).then(function(cDoc) {
+          if(!cDoc.exists) throw "Cliente selecionado não encontrado.";
+          execLógicaComCliente(cDoc.data());
+        });
+      } else {
+        execLógicaComCliente();
+      }
+    });
+  }).then(function() {
+    btn.disabled = false;
+    
+    let rec = Number(modalValorRecebido.value) || totalPagar;
+    let troco = rec - totalPagar;
+    prepararEImprimirRecibo(produtoVendaAtual.nome, qtd, produtoVendaAtual.venda, totalPagar, fPag === 'Fiado' ? 'Fiado (' + nomeCliente + ')' : fPag, nomeCliente, user.email, troco > 0 ? troco : 0);
+
+    fecharModalVenda();
+    alert("Venda realizada e registrada com sucesso!");
+  }).catch(function(error) {
+    btn.disabled = false;
+    alert("Erro ao realizar venda: " + error);
+  });
+}
+
+function prepararEImprimirRecibo(nomeProd, qtd, unit, total, fPag, cliente, vendedor, troco) {
+  reciboData.innerText = new Date().toLocaleString('pt-PT');
+  reciboCliente.innerText = cliente;
+  reciboVendedor.innerText = vendedor;
+  reciboItem.innerText = nomeProd;
+  reciboQtd.innerText = qtd;
+  reciboPrecoUnit.innerText = Number(unit).toLocaleString('pt-PT');
+  reciboTotalItem.innerText = Number(total).toLocaleString('pt-PT');
+  reciboTotal.innerText = Number(total).toLocaleString('pt-PT');
+  reciboPagamento.innerText = fPag;
+  reciboTroco.innerText = Number(troco).toLocaleString('pt-PT');
+
+  if(fPag.includes("Dinheiro")) {
+    reciboTrocoRow.style.display = "block";
+  } else {
+    reciboTrocoRow.style.display = "none";
+  }
+
+  setTimeout(() => { window.print(); }, 300);
+}
+
+/* =========================================================================
+   PAINEL DASHBOARD & KPI ATUALIZADOS COM DADOS DE CLIENTES
+   ========================================================================= */
+
+function processarDashboard() {
+  if(usuarioRole !== "admin") return;
+
+  let totalValorEstoque = 0;
+  let totalQtdEstoque = 0;
+
+  todosProdutos.forEach(p => {
+    let q = Number(p.estoque) || 0;
+    let v = Number(p.venda) || 0;
+    totalValorEstoque += (q * v);
+    totalQtdEstoque += q;
+  });
+
+  valorTotalEstoqueKpi.innerText = totalValorEstoque.toLocaleString('pt-PT') + " Db";
+  qtdTotalEstoqueKpi.innerText = `${todosProdutos.length} produtos (${totalQtdEstoque} un em estoque)`;
+
+  let agora = new Date();
+  let hojeStr = agora.toDateString();
+
+  let inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+  let fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59);
+
+  let dInicio = dataFiltroInicioDash ? new Date(dataFiltroInicioDash + "T00:00:00") : inicioMes;
+  let dFim = dataFiltroFimDash ? new Date(dataFiltroFimDash + "T23:59:59") : fimMes;
+
+  if(dataFiltroInicioDash || dataFiltroFimDash) {
+    tituloVendasPeriodo.innerText = "Vendas no Período";
+    tituloDespesasPeriodo.innerText = "Despesas no Período";
+  } else {
+    tituloVendasPeriodo.innerText = "Vendas do Mês";
+    tituloDespesasPeriodo.innerText = "Despesas (Mês)";
+  }
+
+  let totalVendasHoje = 0;
+  let qtdVendasHojeCont = 0;
+
+  let totalVendasPeriodo = 0;
+  let totalLucroBrutoPeriodo = 0;
+
+  let pagDin = 0;
+  let pagTrans = 0;
+  let pagCart = 0;
+  let pagFiad = 0;
+
+  let rankingProds = {};
+  let rankingEquipe = {};
+
+  todasMovimentacoes.forEach(m => {
+    if(m.tipo === "saida" && m.subTipo !== "pagamento_divida") {
+      let dt = m.data ? m.data.toDate() : null;
+      let val = Number(m.valor) || 0;
+      let q = Number(m.quantidade) || 1;
+      let fPag = m.formaPagamento || "Dinheiro";
+
+      if(dt && dt.toDateString() === hojeStr) {
+        totalVendasHoje += val;
+        qtdVendasHojeCont++;
+      }
+
+      if(dt && dt >= dInicio && dt <= dFim) {
+        totalVendasPeriodo += val;
+
+        let prodRef = todosProdutos.find(p => p.id === m.produtoId || p.nome === m.produto);
+        let custoUnit = prodRef ? (Number(prodRef.compra) || 0) : 0;
+        let lucroItem = val - (q * custoUnit);
+        totalLucroBrutoPeriodo += lucroItem;
+
+        if(fPag.includes("Dinheiro")) pagDin += val;
+        else if(fPag.includes("Transferencia")) pagTrans += val;
+        else if(fPag.includes("Cartao")) pagCart += val;
+        else if(fPag.includes("Fiado")) pagFiad += val;
+
+        let pNome = m.produto || "Desconhecido";
+        if(!rankingProds[pNome]) rankingProds[pNome] = { qtd: 0, total: 0 };
+        rankingProds[pNome].qtd += q;
+        rankingProds[pNome].total += val;
+
+        let vNome = m.usuario || "Desconhecido";
+        if(!rankingEquipe[vNome]) rankingEquipe[vNome] = { qtd: 0, total: 0 };
+        rankingEquipe[vNome].qtd += 1;
+        rankingEquipe[vNome].total += val;
+      }
+    }
+  });
+
+  vendasHoje.innerText = totalVendasHoje.toLocaleString('pt-PT') + " Db";
+  qtdVendasHoje.innerText = `${qtdVendasHojeCont} transações hoje`;
+
+  vendasMes.innerText = totalVendasPeriodo.toLocaleString('pt-PT') + " Db";
+  lucroMes.innerText = "Lucro Produtos: " + totalLucroBrutoPeriodo.toLocaleString('pt-PT') + " Db";
+
+  pagDinheiro.innerText = pagDin.toLocaleString('pt-PT') + " Db";
+  pagTransf.innerText = pagTrans.toLocaleString('pt-PT') + " Db";
+  pagCartao.innerText = pagCart.toLocaleString('pt-PT') + " Db";
+  if(document.getElementById("pagFiado")) {
+    document.getElementById("pagFiado").innerText = pagFiad.toLocaleString('pt-PT') + " Db";
+  }
+
+  // KPIs de Clientes no Dashboard
+  let clientesAtivosCount = 0;
+  let clientesBloqueadosCount = 0;
+  let totalDividaGeral = 0;
+  let clientesProxLimiteCount = 0;
+
+  todosClientes.forEach(c => {
+    if(c.status === "bloqueado") clientesBloqueadosCount++;
+    else clientesAtivosCount++;
+
+    let div = Number(c.saldoDevedor) || 0;
+    let lim = Number(c.limiteCredito) || 0;
+    totalDividaGeral += div;
+
+    if(lim > 0 && div >= (lim * 0.8)) {
+      clientesProxLimiteCount++;
+    }
+  });
+
+  if(document.getElementById("kpiClientesAtivos")) {
+    kpiClientesAtivos.innerText = clientesAtivosCount;
+    kpiClientesBloqueados.innerText = `${clientesBloqueadosCount} bloqueados`;
+    kpiTotalDivida.innerText = totalDividaGeral.toLocaleString('pt-PT') + " Db";
+    kpiClientesProximosLimite.innerText = `${clientesProxLimiteCount} prox. do limite`;
+  }
+
+  // Despesas
+  let totalDespesasPeriodo = 0;
+  todasDespesas.forEach(d => {
+    let dt = d.data ? d.data.toDate() : null;
+    if(dt && dt >= dInicio && dt <= dFim) {
+      totalDespesasPeriodo += Number(d.valor) || 0;
+    }
+  });
+  despesasMes.innerText = totalDespesasPeriodo.toLocaleString('pt-PT') + " Db";
+
+  // Encomendas
+  let lucroEncTotal = 0;
+  let encEmTransito = 0;
+  todasEncomendas.forEach(e => {
+    if(e.estado === "EM_TRANSITO") encEmTransito++;
+    let total = Number(e.valorTotal) || 0;
+    let custo = Number(e.custoCompraPT) || 0;
+    if(total > custo) lucroEncTotal += (total - custo);
+  });
+  lucroEncomendasKpi.innerText = lucroEncTotal.toLocaleString('pt-PT') + " Db";
+  subEncomendasKpi.innerText = `${encEmTransito} em trânsito`;
+
+  // Lucro Líquido Real
+  let lucroLiquidoRealVal = (totalLucroBrutoPeriodo + lucroEncTotal - totalDespesasPeriodo);
+  lucroLiquidoReal.innerText = lucroLiquidoRealVal.toLocaleString('pt-PT') + " Db";
+
+  // Top Produtos
+  let arrayProds = Object.keys(rankingProds).map(k => ({ nome: k, qtd: rankingProds[k].qtd, total: rankingProds[k].total }));
+  arrayProds.sort((a,b) => b.total - a.total);
+  let top5 = arrayProds.slice(0, 5);
+
+  let htmlTop = "";
+  top5.forEach(item => {
+    htmlTop += `<tr><td style="text-align:left;"><b>${item.nome}</b></td><td>${item.qtd} un</td><td><b>${item.total.toLocaleString('pt-PT')} Db</b></td></tr>`;
+  });
+  listaTopProdutos.innerHTML = htmlTop || '<tr><td colspan="3" style="color:#94a3b8;">Nenhum produto vendido no período.</td></tr>';
+
+  // Desempenho Equipe
+  let arrayEquipe = Object.keys(rankingEquipe).map(k => ({ nome: k, qtd: rankingEquipe[k].qtd, total: rankingEquipe[k].total }));
+  arrayEquipe.sort((a,b) => b.total - a.total);
+
+  let htmlEquipe = "";
+  arrayEquipe.forEach(item => {
+    htmlEquipe += `<tr><td style="text-align:left;"><b>${item.nome}</b></td><td>${item.qtd} vendas</td><td><b>${item.total.toLocaleString('pt-PT')} Db</b></td></tr>`;
+  });
+  listaDesempenhoEquipe.innerHTML = htmlEquipe || '<tr><td colspan="3" style="color:#94a3b8;">Sem dados de vendas.</td></tr>';
+}
+
+function filtrarDashboardData() {
+  dataFiltroInicioDash = dashDataInicio.value;
+  dataFiltroFimDash = dashDataFim.value;
+  processarDashboard();
+}
+
+function limparFiltroDashboard() {
+  dashDataInicio.value = "";
+  dashDataFim.value = "";
+  dataFiltroInicioDash = null;
+  dataFiltroFimDash = null;
+  processarDashboard();
+}
+
+/* =========================================================================
+   PRESERVAÇÃO INTEGRAL DE OUTRAS FUNÇÕES DA FASE 3
+   ========================================================================= */
+
+function verificarAlertaEstoqueBaixo() {
+  let container = document.getElementById("containerProdutosEmFalta");
+  let btnToggle = document.getElementById("btnToggleAlertas");
+  if(!container || !btnToggle) return;
+
+  let esgotados = [];
+  let criticos = [];
+
+  todosProdutos.forEach(p => {
+    let q = Number(p.estoque) || 0;
+    let min = Number(p.minimo) || 0;
+
+    if(q <= 0) esgotados.push(p);
+    else if(q <= min) criticos.push(p);
+  });
+
+  let totalAlertas = esgotados.length + criticos.length;
+  btnToggle.innerText = `⚠️ Alertas de Estoque (${totalAlertas})`;
+
+  if(totalAlertas === 0) {
+    container.innerHTML = '<p style="color:#10b981; margin:0; font-weight:600; font-size:13px;">🟢 Nenhum produto esgotado ou com estoque crítico.</p>';
+    return;
+  }
+
+  let html = "";
+  if(esgotados.length > 0) {
+    html += `<div class="alerta-grupo"><span class="alerta-titulo esgotado">🚨 Esgotados (${esgotados.length}):</span><div class="alerta-badges">`;
+    esgotados.forEach(p => {
+      html += `<span class="badge-alerta esgotado">${p.nome} <span class="qtd-tag">0 un</span></span>`;
+    });
+    html += `</div></div>`;
+  }
+
+  if(criticos.length > 0) {
+    html += `<div class="alerta-grupo"><span class="alerta-titulo critico">⚠️ Críticos / Baixo (${criticos.length}):</span><div class="alerta-badges">`;
+    criticos.forEach(p => {
+      html += `<span class="badge-alerta critico">${p.nome} <span class="qtd-tag">${p.estoque} / Mín: ${p.minimo} un</span></span>`;
+    });
+    html += `</div></div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function toggleApenasBaixoEstoque() {
+  filtrarApenasBaixoEstoque = !filtrarApenasBaixoEstoque;
+  let btn = document.getElementById("btnFiltroEstoqueBaixo");
+  if(filtrarApenasBaixoEstoque) {
+    btn.innerText = "📋 Ver Todos os Produtos";
+    btn.style.background = "#2563eb";
+  } else {
+    btn.innerText = "🚨 Ver Apenas Produtos Críticos";
+    btn.style.background = "#ef4444";
+  }
+  paginaAtual = 1;
+  renderizarTabelaEstoque();
+}
+
+function renderizarTabelaEstoque() {
+  let busca = (document.getElementById("inputBusca")?.value || "").toLowerCase().trim();
+  let catSel = document.getElementById("selectCategoriaFiltro")?.value || "";
+
+  let filtrados = todosProdutos.filter(p => {
+    let bateBusca = p.nome.toLowerCase().includes(busca) || (p.barcode && p.barcode.toLowerCase().includes(busca));
+    let bateCat = catSel === "" || p.categoria === catSel;
+    let bateCritico = !filtrarApenasBaixoEstoque || (p.estoque <= (p.minimo || 0));
+    return bateBusca && bateCat && bateCritico;
+  });
+
+  let totalPaginas = Math.ceil(filtrados.length / itensPorPagina) || 1;
+  if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+  let inicio = (paginaAtual - 1) * itensPorPagina;
+  let fim = inicio + itensPorPagina;
+  let paginaItens = filtrados.slice(inicio, fim);
+
+  let isAdmin = (usuarioRole === "admin");
+  let isEstoque = (usuarioRole === "estoque");
+  let podeAdicionarEstoque = (isAdmin || isEstoque);
+  let podeVender = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
+
+  let htmlBuffer = "";
+
+  paginaItens.forEach(p => {
+    let q = Number(p.estoque) || 0;
+    let min = Number(p.minimo) || 0;
+    let cVal = Number(p.compra) || 0;
+    let vVal = Number(p.venda) || 0;
+
+    let classeLinha = q <= 0 ? "baixo" : (q <= min ? "baixo" : "");
+    let fotoImg = p.foto ? `<img src="${p.foto}" class="img-thumb">` : `<div style="width:42px;height:42px;background:#e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;">Sem foto</div>`;
+
+    htmlBuffer += `<tr class="${classeLinha}">
+      <td>${fotoImg}</td>
+      <td style="text-align:left;"><b>${p.nome}</b></td>
+      <td>${p.barcode ? `<span class="barcode-badge">${p.barcode}</span>` : '-'}</td>
+      <td><small>${p.categoria}</small></td>
+      <td><b>${q} un</b></td>
+      <td>${min}</td>
+      ${isAdmin ? `<td>${cVal.toLocaleString('pt-PT')} Db</td>` : ''}
+      <td><b>${vVal.toLocaleString('pt-PT')} Db</b></td>
+      ${isAdmin ? `<td style="color:#10b981;">${(vVal - cVal).toLocaleString('pt-PT')} Db</td>` : ''}
+      <td><b>${(q * vVal).toLocaleString('pt-PT')} Db</b></td>
+      ${podeAdicionarEstoque ? `<td><button class="btn-success btn-acao" onclick="adicionarEstoqueFast('${p.id}')">➕</button></td>` : ''}
+      ${podeVender ? `<td><button class="btn-success btn-acao" onclick="abrirModalVenda('${p.id}')">🛒 Vender</button></td>` : ''}
+      ${isAdmin ? `<td><div class="acoes-cell"><button class="btn-secondary btn-acao" onclick="prepararEdicaoProduto('${p.id}')">✏️</button><button class="btn-danger btn-acao" onclick="apagarProduto('${p.id}')">🗑️</button></div></td>` : ''}
+    </tr>`;
+  });
+
+  lista.innerHTML = htmlBuffer || '<tr><td colspan="13" style="color:#94a3b8;">Nenhum produto cadastrado.</td></tr>';
+  infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas} (${filtrados.length} produtos)`;
+}
+
+function mudarFiltroOuBusca() {
+  paginaAtual = 1;
+  renderizarTabelaEstoque();
+}
+
+function paginaAnterior() {
+  if(paginaAtual > 1) { paginaAtual--; renderizarTabelaEstoque(); }
+}
+
+function proximaPagina() {
+  let busca = (document.getElementById("inputBusca")?.value || "").toLowerCase().trim();
+  let catSel = document.getElementById("selectCategoriaFiltro")?.value || "";
+  let filtrados = todosProdutos.filter(p => (p.nome.toLowerCase().includes(busca) || (p.barcode && p.barcode.toLowerCase().includes(busca))) && (catSel === "" || p.categoria === catSel));
+  let totalPaginas = Math.ceil(filtrados.length / itensPorPagina) || 1;
+
+  if(paginaAtual < totalPaginas) { paginaAtual++; renderizarTabelaEstoque(); }
+}
+
+function processarFotoOtimizada(e) {
+  let file = e.target.files[0];
+  if(!file) return;
+
+  let reader = new FileReader();
+  reader.onload = function(evt) {
+    let img = new Image();
+    img.onload = function() {
+      let canvas = document.createElement("canvas");
+      let ctx = canvas.getContext("2d");
+      let maxDim = 300;
+      let width = img.width;
+      let height = img.height;
+
+      if(width > height) {
+        if(width > maxDim) { height *= maxDim / width; width = maxDim; }
+      } else {
+        if(height > maxDim) { width *= maxDim / height; height = maxDim; }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      let dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+      fotoBase64.value = dataUrl;
+      previewFoto.src = dataUrl;
+      previewFoto.classList.remove("hidden");
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function salvarProduto() {
+  let n = nome.value.trim();
+  let bc = barcodeInput.value.trim();
+  let cat = categoriaInput.value.trim() || "Geral";
+  let est = Number(estoque.value) || 0;
+  let min = Number(minimo.value) || 0;
+  let cVal = Number(compra.value) || 0;
+  let vVal = Number(venda.value) || 0;
+  let ft = fotoBase64.value;
+
+  if(!n || vVal <= 0) return alert("Preencha o nome e o preço de venda!");
+
+  let payload = {
+    nome: n,
+    barcode: bc,
+    categoria: cat,
+    estoque: est,
+    minimo: min,
+    compra: cVal,
+    venda: vVal,
+    foto: ft,
+    ultimaAtualizacao: new Date()
+  };
+
+  if(editandoProdutoId) {
+    db.collection("produtos").doc(editandoProdutoId).update(payload).then(() => {
+      cancelarEdicaoProduto();
+      alert("Produto atualizado!");
+    });
+  } else {
+    db.collection("produtos").add(payload).then(() => {
+      cancelarEdicaoProduto();
+      alert("Produto salvo!");
+    });
+  }
+}
+
+function prepararEdicaoProduto(id) {
+  let p = todosProdutos.find(item => item.id === id);
+  if(!p) return;
+
+  editandoProdutoId = id;
+  tituloFormProduto.innerText = "✏️ Editar Produto: " + p.nome;
+  nome.value = p.nome;
+  barcodeInput.value = p.barcode || "";
+  categoriaInput.value = p.categoria || "";
+  estoque.value = p.estoque;
+  minimo.value = p.minimo;
+  compra.value = p.compra;
+  venda.value = p.venda;
+  fotoBase64.value = p.foto || "";
+
+  if(p.foto) {
+    previewFoto.src = p.foto;
+    previewFoto.classList.remove("hidden");
+  } else {
+    previewFoto.classList.add("hidden");
+  }
+
+  btnSalvarProduto.innerText = "Salvar Alterações";
+  btnCancelarProduto.classList.remove("hidden");
+}
+
+function cancelarEdicaoProduto() {
+  editandoProdutoId = null;
+  tituloFormProduto.innerText = "📦 Novo Produto";
+  nome.value = "";
+  barcodeInput.value = "";
+  categoriaInput.value = "";
+  estoque.value = "";
+  minimo.value = "";
+  compra.value = "";
+  venda.value = "";
+  fotoBase64.value = "";
+  previewFoto.classList.add("hidden");
+  btnSalvarProduto.innerText = "Salvar Produto";
+  btnCancelarProduto.classList.add("hidden");
+}
+
+function apagarProduto(id) {
+  if(confirm("Deseja mesmo apagar este produto?")) {
+    db.collection("produtos").doc(id).delete();
+  }
+}
+
+function adicionarEstoqueFast(id) {
+  let add = prompt("Quantas unidades deseja adicionar ao estoque?");
+  if(!add) return;
+  let q = Number(add);
+  if(isNaN(q) || q <= 0) return alert("Quantidade inválida!");
+
+  let pRef = db.collection("produtos").doc(id);
+
+  db.runTransaction(function(transaction) {
+    return transaction.get(pRef).then(function(pDoc) {
+      if(!pDoc.exists) throw "Produto não existe!";
+      let pData = pDoc.data();
+      let nEstoque = pData.estoque + q;
+
+      transaction.update(pRef, { estoque: nEstoque });
+
+      let mRef = db.collection("movimentacoes").doc();
+      transaction.set(mRef, {
+        produto: pData.nome,
+        produtoId: pDoc.id,
+        quantidade: q,
+        valor: q * (pData.compra || 0),
+        tipo: "entrada",
+        subTipo: "ajuste_manual",
+        usuario: auth.currentUser.email,
+        uid: auth.currentUser.uid,
+        data: new Date()
+      });
+    });
+  }).then(() => alert("Estoque adicionado com sucesso!")).catch(e => alert("Erro: " + e));
+}
+
+function registrarCompraProduto() {
+  let idProd = compraSelectProduto.value;
+  let qtd = Number(compraQtd.value) || 0;
+  let custo = Number(compraCustoTotal.value) || 0;
+  let fornecedor = compraFornecedor.value.trim() || "Fornecedor Local";
+  let fPag = compraFormaPag.value;
+
+  if(!idProd || qtd <= 0 || custo <= 0) {
+    return alert("Selecione o produto, quantidade e custo total da compra!");
+  }
+
+  let pRef = db.collection("produtos").doc(idProd);
+
+  db.runTransaction(function(transaction) {
+    return transaction.get(pRef).then(function(pDoc) {
+      if(!pDoc.exists) throw "Produto não encontrado.";
+      let pData = pDoc.data();
+      let nEstoque = pData.estoque + qtd;
+
+      transaction.update(pRef, { estoque: nEstoque });
+
+      let mRef = db.collection("movimentacoes").doc();
+      transaction.set(mRef, {
+        produto: pData.nome,
+        produtoId: pDoc.id,
+        quantidade: qtd,
+        valor: custo,
+        tipo: "compra",
+        fornecedor: fornecedor,
+        formaPagamento: fPag,
+        usuario: auth.currentUser.email,
+        uid: auth.currentUser.uid,
+        data: new Date()
+      });
+    });
+  }).then(() => {
+    compraQtd.value = "";
+    compraCustoTotal.value = "";
+    compraFornecedor.value = "";
+    alert("Compra registrada e estoque incrementado!");
+  }).catch(e => alert("Erro ao gravar compra: " + e));
+}
+
+function renderizarHistorico(listaMovs) {
+  let html = "";
+
+  listaMovs.forEach(m => {
+    let dt = m.data ? m.data.toDate().toLocaleString('pt-PT') : '-';
+    let prodRef = todosProdutos.find(p => p.id === m.produtoId || p.nome === m.produto);
+    let fotoImg = (prodRef && prodRef.foto) ? `<img src="${prodRef.foto}" class="img-thumb">` : `<div style="width:36px;height:36px;background:#e2e8f0;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#94a3b8;">Sem foto</div>`;
+
+    let tipoBadge = m.tipo === 'entrada' ? 
+      '<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:10px; font-weight:bold; font-size:11px;">🟢 ENTRADA</span>' :
+      (m.tipo === 'compra' ?
+        '<span style="background:#eff6ff; color:#1d4ed8; padding:2px 6px; border-radius:10px; font-weight:bold; font-size:11px;">🛒 COMPRA</span>' :
+        (m.tipo === 'AUDITORIA' ? 
+          '<span style="background:#fef3c7; color:#d97706; padding:2px 6px; border-radius:10px; font-weight:bold; font-size:11px;">📝 AUDITORIA</span>' :
+          '<span style="background:#fef2f2; color:#991b1b; padding:2px 6px; border-radius:10px; font-weight:bold; font-size:11px;">🔴 VENDA</span>'));
+
+    let detalhesTxt = m.formaPagamento || m.detalhes || m.fornecedor || '-';
+
+    html += `
+      <tr>
+        <td>${fotoImg}</td>
+        <td style="text-align:left;"><b>${m.produto}</b></td>
+        <td>${tipoBadge}</td>
+        <td><b>${m.quantidade} un</b></td>
+        <td><small>${detalhesTxt}</small></td>
+        <td><b>${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</b></td>
+        <td><small>${m.usuario}</small></td>
+        <td><small>${dt}</small></td>
+        <td>${usuarioRole === 'admin' ? `<button class="btn-danger btn-acao" onclick="apagarHistorico('${m.id}')">🗑️</button>` : '-'}</td>
+      </tr>
+    `;
+  });
+
+  historico.innerHTML = html || '<tr><td colspan="9" style="color:#94a3b8;">Nenhum histórico encontrado.</td></tr>';
+}
+
+function filtrarHistoricoIntervalo() {
+  let ini = histDataInicio.value;
+  let fim = histDataFim.value;
+  if(!ini || !fim) return alert("Selecione data de início e fim para filtrar!");
+
+  let dIni = new Date(ini + "T00:00:00");
+  let dFim = new Date(fim + "T23:59:59");
+
+  let filtrados = todasMovimentacoes.filter(m => {
+    let dt = m.data ? m.data.toDate() : null;
+    return dt && dt >= dIni && dt <= dFim;
+  });
+
+  renderizarHistorico(filtrados);
+}
+
+function filtrarHistoricoHoje() {
+  let hojeStr = new Date().toDateString();
+  let filtrados = todasMovimentacoes.filter(m => {
+    let dt = m.data ? m.data.toDate() : null;
+    return dt && dt.toDateString() === hojeStr;
+  });
+  renderizarHistorico(filtrados);
+}
+
+function limparFiltroHistorico() {
+  histDataInicio.value = "";
+  histDataFim.value = "";
+  renderizarHistorico(todasMovimentacoes);
+}
+
+function apagarHistorico(id) {
+  if(usuarioRole !== "admin") return alert("Apenas Administradores podem apagar movimentações.");
+  if(confirm("Tem certeza que deseja apagar este registo histórico?")) {
+    db.collection("movimentacoes").doc(id).delete();
+  }
+}
+
+function exportarEstoque() {
+  let csv = "Nome;CodigoBarras;Categoria;Estoque;EstoqueMinimo;PrecoCompra;PrecoVenda;ValorTotalEstoque\n";
+  todosProdutos.forEach(p => {
+    let q = Number(p.estoque) || 0;
+    let v = Number(p.venda) || 0;
+    csv += `"${p.nome}";"${p.barcode||''}";"${p.categoria}";${q};${p.minimo};${p.compra};${v};${q*v}\n`;
+  });
+
+  let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  let link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `Estoque_MundoDigitalSTP_${new Date().toISOString().substring(0,10)}.csv`;
+  link.click();
+}
+
+function exportarHistorico() {
+  let csv = "Data;Produto;Tipo;Quantidade;FormaPagamento_Detalhes;ValorTotal;Usuario\n";
+  todasMovimentacoes.forEach(m => {
+    let dt = m.data ? m.data.toDate().toLocaleString('pt-PT') : '';
+    csv += `"${dt}";"${m.produto}";"${m.tipo}";${m.quantidade};"${m.formaPagamento||m.detalhes||''}";${m.valor};"${m.usuario}"\n`;
+  });
+
+  let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  let link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `Historico_MundoDigitalSTP_${new Date().toISOString().substring(0,10)}.csv`;
+  link.click();
+}
+
+function carregarFuncionarios() {
+  if(listenerFuncionarios) listenerFuncionarios();
+  listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
+    let html = "";
+    s.forEach(d => {
+      let u = d.data();
+      u.id = d.id;
+      let st = u.status === 'desativado' ? '<span class="status-cliente-bloqueado">DESATIVADO</span>' : '<span class="status-cliente-ativo">ATIVO</span>';
+
+      html += `
+        <tr>
+          <td><b>${u.email}</b></td>
+          <td><small>${(u.role||'venda1').toUpperCase()}</small></td>
+          <td>${st}</td>
+          <td>
+            <div class="acoes-cell">
+              <button class="btn-secondary btn-acao" onclick="prepararEdicaoFunc('${u.id}')">✏️</button>
+              <button class="btn-warning btn-acao" onclick="alternarStatusFunc('${u.id}')">${u.status === 'desativado' ? 'Ativar' : 'Desativar'}</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+    listaFuncionarios.innerHTML = html || '<tr><td colspan="4">Nenhum funcionário cadastrado.</td></tr>';
+  });
+}
+
+function salvarFuncionario() {
+  let em = funcEmail.value.trim();
+  let pw = funcSenha.value.trim();
+  let rl = funcRole.value;
+
+  if(!em) return alert("Informe o e-mail do funcionário!");
+
+  if(editandoFuncId) {
+    db.collection("usuarios").doc(editandoFuncId).update({
+      role: rl
+    }).then(() => {
+      cancelarEdicaoFunc();
+      alert("Função do funcionário atualizada!");
+    });
+  } else {
+    if(!pw) return alert("Informe uma senha inicial!");
+    alert("⚠️ Para novos funcionários, crie primeiro o utilizador no Firebase Authentication ou utilize o console de Admin.");
+  }
+}
+
+function prepararEdicaoFunc(id) {
+  db.collection("usuarios").doc(id).get().then(doc => {
+    let u = doc.data();
+    editandoFuncId = id;
+    funcEmail.value = u.email;
+    funcEmail.disabled = true;
+    funcSenha.value = "";
+    funcSenha.placeholder = "(Senha inalterada)";
+    funcSenha.disabled = true;
+    funcRole.value = u.role || "venda1";
+
+    btnSalvarFunc.innerText = "Atualizar Função";
+    btnCancelarFunc.classList.remove("hidden");
+  });
+}
+
+function cancelarEdicaoFunc() {
+  editandoFuncId = null;
+  funcEmail.value = "";
+  funcEmail.disabled = false;
+  funcSenha.value = "";
+  funcSenha.placeholder = "Senha Inicial";
+  funcSenha.disabled = false;
+  funcRole.value = "venda1";
+
+  btnSalvarFunc.innerText = "Criar Funcionário";
+  btnCancelarFunc.classList.add("hidden");
+}
+
+function alternarStatusFunc(id) {
+  db.collection("usuarios").doc(id).get().then(doc => {
+    let u = doc.data();
+    let nSt = u.status === "desativado" ? "ativo" : "desativado";
+    db.collection("usuarios").doc(id).update({ status: nSt });
+  });
+}
+
+function carregarDespesas() {
+  if(listenerDespesas) listenerDespesas();
+  listenerDespesas = db.collection("despesas").orderBy("data", "desc").onSnapshot(s => {
+    todasDespesas = [];
+    s.forEach(d => { let desp = d.data(); desp.id = d.id; todasDespesas.push(desp); });
+    processarDashboard();
+  });
+}
+
+function salvarDespesa() {
+  let desc = despDescricao.value.trim();
+  let val = Number(despValor.value) || 0;
+  let cat = despCategoria.value;
+
+  if(!desc || val <= 0) return alert("Preencha a descrição e valor da despesa!");
+
+  db.collection("despesas").add({
+    descricao: desc,
+    valor: val,
+    categoria: cat,
+    usuario: auth.currentUser.email,
+    uid: auth.currentUser.uid,
+    data: new Date()
+  }).then(() => {
+    despDescricao.value = "";
+    despValor.value = "";
+    alert("Despesa registrada com sucesso!");
+  });
+}
+
+function carregarEncomendas() {
+  if(listenerEncomendas) listenerEncomendas();
+  listenerEncomendas = db.collection("encomendas").orderBy("data", "desc").onSnapshot(s => {
+    todasEncomendas = [];
+    let html = "";
+
+    s.forEach(d => {
+      let enc = d.data();
+      enc.id = d.id;
+      todasEncomendas.push(enc);
+
+      let total = Number(enc.valorTotal) || 0;
+      let sinal = Number(enc.sinalPago) || 0;
+      let falta = total - sinal;
+      if(falta < 0) falta = 0;
+
+      let stBadge = enc.estado === 'EM_TRANSITO' ? 
+        '<span class="badge-em-transito">EM TRÂNSITO</span>' : 
+        '<span class="badge-concluido">ENTREGUE / CONCLUÍDO</span>';
+
+      let btnAcao = enc.estado === 'EM_TRANSITO' ? 
+        `<button class="btn-success btn-acao" onclick="concluirEncomendaModal('${enc.id}')">✅ Entregar & Receber Restante</button>` : '-';
+
+      html += `
+        <tr>
+          <td><b>${enc.cliente}</b></td>
+          <td>${enc.produto}</td>
+          <td><b>${total.toLocaleString('pt-PT')} Db</b></td>
+          <td style="color:#10b981;">${sinal.toLocaleString('pt-PT')} Db</td>
+          <td style="color:#ef4444; font-weight:bold;">${falta.toLocaleString('pt-PT')} Db</td>
+          <td>${usuarioRole === 'admin' ? (Number(enc.custoCompraPT)||0).toLocaleString('pt-PT') + ' Db' : '-'}</td>
+          <td>${stBadge}</td>
+          <td><small>${enc.telefone || '-'}</small></td>
+          <td>${btnAcao}</td>
+        </tr>
+      `;
+    });
+
+    listaEncomendas.innerHTML = html || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma encomenda registrada.</td></tr>';
+    processarDashboard();
+  });
+}
+
+function calcularSinalAutomatico() {
+  let total = Number(encValorTotal.value) || 0;
+  encSinalPago.value = Math.round(total * 0.5);
+}
+
+function registrarNovaEncomenda() {
+  let cli = encCliente.value.trim();
+  let tel = encTelefone.value.trim();
+  let prod = encProduto.value.trim();
+  let total = Number(encValorTotal.value) || 0;
+  let sinal = Number(encSinalPago.value) || 0;
+  let custo = Number(encCustoCompra.value) || 0;
+
+  if(!cli || !prod || total <= 0 || sinal <= 0) {
+    return alert("Preencha o cliente, produto, valor total e o sinal pago!");
+  }
+
+  let payload = {
+    cliente: cli,
+    telefone: tel,
+    produto: prod,
+    valorTotal: total,
+    sinalPago: sinal,
+    custoCompraPT: custo,
+    estado: "EM_TRANSITO",
+    usuario: auth.currentUser.email,
+    uid: auth.currentUser.uid,
+    data: new Date()
+  };
+
+  db.collection("encomendas").add(payload).then(() => {
+    encCliente.value = "";
+    encTelefone.value = "";
+    encProduto.value = "";
+    encValorTotal.value = "";
+    encSinalPago.value = "";
+    encCustoCompra.value = "";
+    alert("Encomenda e sinal de 50% registrados com sucesso!");
+  });
+}
+
+function concluirEncomendaModal(id) {
+  let enc = todasEncomendas.find(e => e.id === id);
+  if(!enc) return;
+
+  let total = Number(enc.valorTotal) || 0;
+  let sinal = Number(enc.sinalPago) || 0;
+  let falta = total - sinal;
+
+  if(confirm(`Deseja confirmar a entrega e recebimento dos restantes ${falta.toLocaleString('pt-PT')} Db da encomenda do cliente ${enc.cliente}?`)) {
+    db.collection("encomendas").doc(id).update({
+      estado: "ENTREGUE",
+      dataEntrega: new Date()
+    }).then(() => {
+      alert("Encomenda marcada como concluída e entregue!");
+    });
+  }
+}
+
+function atualizarRotulosCambio() {
+  calcularCalculoCambioSimulado();
+}
+
+function calcularCalculoCambioSimulado() {
+  let dir = cambioDirecao.value;
+  let eur = Number(cambioQtdEur.value) || 0;
+  let tx = Number(cambioTaxa.value) || 26.0;
+
+  let dbEquiv = eur * tx;
+  let lucroEst = eur * (tx - 24.5); if(lucroEst < 0) lucroEst = 0;
+
+  if(dir === "PT_STP") {
+    cambioResumoTxt.innerText = `${eur.toLocaleString('pt-PT')} € ➔ Entrega ao Cliente: ${dbEquiv.toLocaleString('pt-PT')} Db`;
+  } else {
+    cambioResumoTxt.innerText = `Recebe do Cliente: ${dbEquiv.toLocaleString('pt-PT')} Db ➔ Entrega em PT: ${eur.toLocaleString('pt-PT')} €`;
+  }
+
+  cambioLucroEstimadoTxt.innerText = `Comissão / Lucro Câmbio Estimado: ${lucroEst.toLocaleString('pt-PT')} Db`;
+}
+
+function registrarOperacaoCambio() {
+  let dir = cambioDirecao.value;
+  let eur = Number(cambioQtdEur.value) || 0;
+  let tx = Number(cambioTaxa.value) || 26.0;
+  let cli = cambioCliente.value.trim() || "Cliente Geral";
+
+  if(eur <= 0 || tx <= 0) return alert("Informe o valor em Euros e a taxa de câmbio!");
+
+  let dbEquiv = eur * tx;
+
+  db.collection("movimentacoes").add({
+    produto: `Câmbio (${dir === 'PT_STP' ? 'EUR->STP' : 'STP->EUR'}) - ${cli}`,
+    quantidade: 1,
+    valor: dbEquiv,
+    tipo: "saida",
+    subTipo: "cambio",
+    detalhes: `${eur} EUR à taxa ${tx} - Cliente: ${cli}`,
+    usuario: auth.currentUser.email,
+    uid: auth.currentUser.uid,
+    data: new Date()
+  }).then(() => {
+    cambioQtdEur.value = "";
+    cambioCliente.value = "";
+    alert("Operação de câmbio registrada no histórico com sucesso!");
+  });
+}
 
 function carregarArmazemPTTresPassos() {
   if(listenerArmazemPT) listenerArmazemPT();
@@ -1925,7 +3255,7 @@ function despacharLotePT() {
   }).then(() => {
     loteNomeIdentificador.value = "";
     loteFreteEuro.value = "";
-    alert("Lote montado e despachado com sucesso! Frete rateado proporcionalmente.");
+    alert("Lote despachado para São Tomé com frete rateado com sucesso!");
   }).catch(e => alert("Erro ao despachar lote: " + e.message));
 }
 
@@ -1933,1126 +3263,55 @@ function darEntradaLoteNoStockSTP(loteId) {
   let lote = todosLotesPT.find(l => l.id === loteId);
   if(!lote) return;
 
-  let cotacaoPrompt = prompt("Digite a Cotação/Taxa de Câmbio do Euro para Dobras (STN) para converter os custos:", "26.0");
-  if(!cotacaoPrompt) return;
-  let taxaCambio = Number(cotacaoPrompt) || 26.0;
+  if(!confirm(`Confirma o recebimento e entrada automática de todos os produtos do lote "${lote.identificador}" no Stock Geral de São Tomé?`)) return;
 
-  if(!confirm(`Confirmar a entrada dos produtos do Lote "${lote.identificador}" no Stock Geral de São Tomé à taxa de ${taxaCambio} Db/€?`)) {
-    return;
-  }
+  let taxaCambioPadrao = 25.0; 
 
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-  db.runTransaction(function(transaction) {
-    let loteRef = db.collection("lotes_pt").doc(loteId);
-
-    return transaction.get(loteRef).then(function(loteDoc) {
-      if (!loteDoc.exists) throw "Lote não encontrado.";
-      if (loteDoc.data().estado === "RECEBIDO") throw "Este lote já teve entrada processada anteriormente.";
-
-      lote.itens.forEach(item => {
-        let custoUnitarioSTN = Math.round(item.custoFinalUnitarioEuro * taxaCambio);
-        let precoVendaSugerido = Math.round(custoUnitarioSTN * 1.3);
-
-        let prodExistente = todosProdutos.find(p => p.nome.toLowerCase().trim() === item.nome.toLowerCase().trim());
-
-        if(prodExistente) {
-          let refExistente = db.collection("produtos").doc(prodExistente.id);
-          let novoEstoque = (Number(prodExistente.estoque) || 0) + item.quantidade;
-          transaction.update(refExistente, {
-            estoque: novoEstoque,
-            compra: custoUnitarioSTN
-          });
-        } else {
-          let novoRef = db.collection("produtos").doc();
-          transaction.set(novoRef, {
-            nome: item.nome,
-            barcode: "",
-            categoria: item.categoria || "Importado PT",
-            estoque: item.quantidade,
-            minimo: 2,
-            compra: custoUnitarioSTN,
-            venda: precoVendaSugerido,
-            foto: ""
-          });
-        }
-
-        let movRef = db.collection("movimentacoes").doc();
-        let movPayload = {
-          produto: item.nome,
-          tipo: "entrada",
-          quantidade: item.quantidade,
-          valor: custoUnitarioSTN * item.quantidade,
-          formaPagamento: `Transferência Lote PT (${lote.identificador})`,
-          usuario: auth.currentUser.email,
-          uid: auth.currentUser.uid,
-          role: usuarioRole,
-          data: new Date()
-        };
-        if(cId) movPayload.caixaId = cId;
-
-        transaction.set(movRef, movPayload);
-      });
-
-      transaction.update(loteRef, {
-        estado: "RECEBIDO",
-        dataRecebimento: new Date()
-      });
-    });
-  }).then(() => {
-    alert("Produtos transferidos e somados ao Stock Geral de São Tomé com sucesso!");
-  }).catch(e => alert("Erro ao dar entrada no stock: " + e));
-}
-
-function verificarAlertaEstoqueBaixo() {
-  let emFalta = todosProdutos.filter(p => (Number(p.estoque) || 0) <= 0);
-  let estoqueBaixo = todosProdutos.filter(p => {
-    let q = Number(p.estoque) || 0;
-    let m = Number(p.minimo) || 0;
-    return q > 0 && q <= m;
-  });
-
-  let totalAlertas = emFalta.length + estoqueBaixo.length;
+  let batch = db.batch();
   
-  if(totalAlertas > 0) {
-    btnToggleAlertas.innerText = `⚠️ Alertas de Estoque (${totalAlertas})`;
-    btnToggleAlertas.className = "btn-warning";
-  } else {
-    btnToggleAlertas.innerText = `✅ Alertas de Estoque (0)`;
-    btnToggleAlertas.className = "btn-secondary";
-  }
-
-  let htmlBox = "";
-
-  if(totalAlertas === 0) {
-    htmlBox = `<p style="color:#10b981; font-weight:600; margin:0; display:flex; align-items:center; gap:6px;">✅ Excelente! Todos os produtos estão com níveis normais de estoque.</p>`;
-  } else {
-    if(emFalta.length > 0) {
-      htmlBox += `
-        <div class="alerta-grupo">
-          <span class="alerta-titulo esgotado">❌ Esgotados (${emFalta.length})</span>
-          <div class="alerta-badges">
-            ${emFalta.map(p => `
-              <span class="badge-alerta esgotado">
-                ${p.nome} <span class="qtd-tag">0 un</span>
-              </span>
-            `).join("")}
-          </div>
-        </div>
-      `;
-    }
-
-    if(estoqueBaixo.length > 0) {
-      htmlBox += `
-        <div class="alerta-grupo" style="${emFalta.length > 0 ? 'border-top: 1px dashed #e2e8f0; padding-top: 8px;' : ''}">
-          <span class="alerta-titulo critico">⚠️ Mínimo Crítico (${estoqueBaixo.length})</span>
-          <div class="alerta-badges">
-            ${estoqueBaixo.map(p => `
-              <span class="badge-alerta critico">
-                ${p.nome} <span class="qtd-tag">${p.estoque} un (mín: ${p.minimo})</span>
-              </span>
-            `).join("")}
-          </div>
-        </div>
-      `;
-    }
-  }
-
-  containerProdutosEmFalta.innerHTML = htmlBox;
-}
-
-function toggleApenasBaixoEstoque() {
-  filtrarApenasBaixoEstoque = !filtrarApenasBaixoEstoque;
-  btnFiltroEstoqueBaixo.innerText = filtrarApenasBaixoEstoque ? "📋 Ver Todos os Produtos na Tabela" : "🚨 Ver Apenas Produtos Críticos na Tabela";
-  paginaAtual = 1;
-  renderizarTabelaEstoque();
-}
-
-function carregarDespesas() {
-  listenerDespesas = db.collection("despesas").orderBy("data","desc").onSnapshot(s => {
-    todasDespesas = [];
-    s.forEach(d => { let desp = d.data(); desp.id = d.id; todasDespesas.push(desp); });
-    processarDashboard();
-  });
-}
-
-function carregarEncomendas() {
-  listenerEncomendas = db.collection("encomendas").orderBy("data","desc").onSnapshot(s => {
-    todasEncomendas = [];
-    let htmlBuffer = "";
-
-    s.forEach(d => {
-      let enc = d.data();
-      enc.id = d.id;
-      todasEncomendas.push(enc);
-
-      let faltaPagar = (Number(enc.valorTotal) || 0) - (Number(enc.sinalPago) || 0);
-      let btnWhatsApp = enc.telefone ? 
-        `<a href="https://wa.me/${enc.telefone.replace(/[^0-9]/g, '')}" target="_blank" style="text-decoration:none;"><button class="btn-success btn-acao" style="background:#25d366;">📲 WA</button></a>` : '-';
-
-      let btnAcao = (enc.estado === "EM_TRANSITO") ? 
-        `<button class="btn-success btn-acao" onclick="concluirEncomendaModal('${enc.id}', '${enc.cliente.replace(/'/g, "\\'")}', '${enc.produto.replace(/'/g, "\\'")}', ${faltaPagar}, ${enc.valorTotal}, ${enc.custoCompra||0})">✅ Concluir & Entregar</button>` :
-        `<span class="badge-concluido">Entregue</span>`;
-
-      let btnApagar = (usuarioRole === "admin") ? 
-        `<button class="btn-danger btn-acao" onclick="apagarEncomenda('${enc.id}')">🗑️</button>` : '';
-
-      htmlBuffer += `
-        <tr>
-          <td><b>${enc.cliente}</b></td>
-          <td><b>${enc.produto}</b></td>
-          <td>${enc.valorTotal} Db</td>
-          <td style="color:#10b981; font-weight:bold;">${enc.sinalPago} Db</td>
-          <td style="color:#ef4444; font-weight:bold;">${faltaPagar} Db</td>
-          <td style="color:#64748b;">${enc.custoCompra || 0} Db</td>
-          <td><span class="${enc.estado === 'EM_TRANSITO' ? 'badge-em-transito' : 'badge-concluido'}">${enc.estado === 'EM_TRANSITO' ? 'EM TRÂNSITO' : 'CONCLUÍDO'}</span></td>
-          <td>${btnWhatsApp}</td>
-          <td>
-            <div class="acoes-cell">
-              ${btnAcao}
-              ${btnApagar}
-            </div>
-          </td>
-        </tr>
-      `;
-    });
-
-    listaEncomendas.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma encomenda registada.</td></tr>';
-    processarDashboard();
-  });
-}
-
-function calcularSinalAutomatico() {
-  let total = Number(encValorTotal.value) || 0;
-  if(total > 0 && (!encSinalPago.value || encSinalPago.value === "")) {
-    encSinalPago.value = Math.round(total / 2);
-  }
-}
-
-function registrarNovaEncomenda() {
-  let cli = encCliente.value.trim();
-  let tel = encTelefone.value.trim();
-  let prod = encProduto.value.trim();
-  let vTotal = Number(encValorTotal.value) || 0;
-  let sPago = Number(encSinalPago.value) || 0;
-  let cCompra = Number(encCustoCompra.value) || 0;
-
-  if(!cli || !prod || vTotal <= 0 || sPago <= 0) {
-    return alert("Preencha o nome do cliente, produto, valor total e o sinal pago!");
-  }
-
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-  let payload = {
-    cliente: cli,
-    telefone: tel,
-    produto: prod,
-    valorTotal: vTotal,
-    sinalPago: sPago,
-    custoCompra: cCompra,
-    estado: "EM_TRANSITO",
-    usuario: auth.currentUser.email,
-    uid: auth.currentUser.uid,
-    role: usuarioRole,
-    data: new Date()
-  };
-
-  db.collection("encomendas").add(payload).then(() => {
-    let movPayload = {
-      produto: `Sinal Encomenda: ${prod}`,
-      tipo: "saida",
-      quantidade: 1,
-      valor: sPago,
-      formaPagamento: "Sinal 50% (Encomenda)",
-      cliente: cli,
-      usuario: auth.currentUser.email,
-      uid: auth.currentUser.uid,
-      role: usuarioRole,
-      data: new Date()
-    };
-    if(cId) movPayload.caixaId = cId;
-
-    return db.collection("movimentacoes").add(movPayload);
-  }).then(() => {
-    encCliente.value = ""; encTelefone.value = ""; encProduto.value = "";
-    encValorTotal.value = ""; encSinalPago.value = ""; encCustoCompra.value = "";
-    alert("Encomenda registada com sucesso! O sinal já deu entrada na caixa.");
-  });
-}
-
-function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, custoCompra) {
-  if(confirm(`Confirmar a entrega do produto "${produto}" ao cliente ${cliente}?\n\nValor restante a receber: ${faltaPagar} Db.`)) {
-    let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-    db.collection("encomendas").doc(id).update({
-      estado: "CONCLUIDO",
-      dataConclusao: new Date()
-    }).then(() => {
-      let movPayload = {
-        produto: `Quitação Importação: ${produto}`,
-        tipo: "saida",
-        quantidade: 1,
-        valor: faltaPagar,
-        formaPagamento: "Quitação 50% (Entrega Encomenda)",
-        cliente: cliente,
-        usuario: auth.currentUser.email,
-        uid: auth.currentUser.uid,
-        role: usuarioRole,
-        data: new Date()
-      };
-      if(cId) movPayload.caixaId = cId;
-
-      return db.collection("movimentacoes").add(movPayload);
-    }).then(() => {
-      alert("Encomenda concluída e entregue! Faturamento registrado com sucesso.");
-    });
-  }
-}
-
-function apagarEncomenda(id) {
-  if(confirm("Tens a certeza que desejas apagar esta encomenda do sistema?")) {
-    db.collection("encomendas").doc(id).delete().then(() => {
-      alert("Encomenda removida com sucesso!");
-    }).catch(e => {
-      alert("Erro ao apagar encomenda: " + e.message);
-    });
-  }
-}
-
-function processarFotoOtimizada(event) {
-  let file = event.target.files[0];
-  if(!file) return;
-
-  let reader = new FileReader();
-  reader.onload = function(e) {
-    let img = new Image();
-    img.onload = function() {
-      let canvas = document.createElement("canvas");
-      let ctx = canvas.getContext("2d");
-
-      let maxDimension = 300;
-      let width = img.width;
-      let height = img.height;
-
-      if (width > height) {
-        if (width > maxDimension) {
-          height = Math.round((height * maxDimension) / width);
-          width = maxDimension;
-        }
-      } else {
-        if (height > maxDimension) {
-          width = Math.round((width * maxDimension) / height);
-          height = maxDimension;
-        }
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(img, 0, 0, width, height);
-
-      let base64Otimizada = canvas.toDataURL("image/webp", 0.7);
-
-      fotoBase64.value = base64Otimizada;
-      previewFoto.src = base64Otimizada;
-      previewFoto.classList.remove("hidden");
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function processarDashboard() {
-  if(usuarioRole !== "admin") return;
-
-  let totalValorEstoque = 0;
-  let totalQtdEstoque = 0;
-  todosProdutos.forEach(p => {
-    let q = Number(p.estoque) || 0;
-    let precoV = Number(p.venda) || 0;
-    totalValorEstoque += (q * precoV);
-    totalQtdEstoque += q;
-  });
-  valorTotalEstoqueKpi.innerText = totalValorEstoque.toLocaleString('pt-PT') + " Db";
-  qtdTotalEstoqueKpi.innerText = `${totalQtdEstoque} unidades (${todosProdutos.length} produtos)`;
-
-  let agora = new Date();
-  let hojeStr = agora.toISOString().split('T')[0];
-  let anoAtual = agora.getFullYear();
-  let mesAtual = agora.getMonth();
-
-  let dataInicio = dataFiltroInicioDash || new Date(anoAtual, mesAtual, 1);
-  let dataFim = dataFiltroFimDash || new Date(anoAtual, mesAtual + 1, 0, 23, 59, 59);
-
-  let totalVendasHoje = 0, qtdVendasHojeVal = 0;
-  let totalVendasPeriodo = 0, totalLucroVendasPeriodo = 0;
-  let totalLucroCambioPeriodo = 0;
-  let pagDin = 0, pagTrans = 0, pagCart = 0;
-
-  let mapaProdutos = {};
-  let mapaEquipe = {};
-
-  let prodLookup = {};
-  todosProdutos.forEach(p => { prodLookup[p.nome] = p; });
-
-  todasMovimentacoes.forEach(m => {
-    if(!m.data) return;
-    let d = m.data.toDate();
-    let val = Number(m.valor) || 0;
-    let qtd = Number(m.quantidade) || 0;
-    let dStr = d.toISOString().split('T')[0];
-
-    let isEncomendaMov = (m.formaPagamento && m.formaPagamento.includes("Encomenda"));
-
-    if(m.tipo === "saida") {
-      if(dStr === hojeStr) {
-        totalVendasHoje += val;
-        qtdVendasHojeVal++;
-      }
-
-      if(d >= dataInicio && d <= dataFim) {
-        totalVendasPeriodo += val;
-
-        if(!isEncomendaMov) {
-          let precoCompra = prodLookup[m.produto] ? Number(prodLookup[m.produto].compra || 0) : 0;
-          let lucroItem = val - (qtd * precoCompra);
-          totalLucroVendasPeriodo += lucroItem;
-        }
-
-        let fPag = m.formaPagamento || "Dinheiro";
-        if(fPag.includes("Dinheiro")) pagDin += val;
-        else if(fPag.includes("Transferencia")) pagTrans += val;
-        else if(fPag.includes("Cartao")) pagCart += val;
-        else pagDin += val;
-
-        if(!mapaProdutos[m.produto]) mapaProdutos[m.produto] = { qtd: 0, faturamento: 0 };
-        mapaProdutos[m.produto].qtd += qtd;
-        mapaProdutos[m.produto].faturamento += val;
-
-        let usr = m.usuario || "Desconhecido";
-        if(!mapaEquipe[usr]) mapaEquipe[usr] = { vendas: 0, total: 0 };
-        mapaEquipe[usr].vendas++;
-        mapaEquipe[usr].total += val;
-      }
-    } else if(m.tipo === "cambio" && d >= dataInicio && d <= dataFim) {
-      totalLucroCambioPeriodo += Number(m.lucroCambio) || 0;
-    }
-  });
-
-  let totalLucroEncomendas = 0;
-  let emTransitoQtd = 0;
-  todasEncomendas.forEach(enc => {
-    if(enc.estado === "EM_TRANSITO") emTransitoQtd++;
-    if(enc.estado === "CONCLUIDO" && enc.dataConclusao) {
-      let dEnc = enc.dataConclusao.toDate();
-      if(dEnc >= dataInicio && dEnc <= dataFim) {
-        let vTot = Number(enc.valorTotal) || 0;
-        let cComp = Number(enc.custoCompra) || 0;
-        totalLucroEncomendas += (vTot - cComp);
-      }
-    }
-  });
-
-  let totalDespesasPeriodo = 0;
-  todasDespesas.forEach(dp => {
-    if(!dp.data) return;
-    let d = dp.data.toDate();
-    if(d >= dataInicio && d <= dataFim) {
-      totalDespesasPeriodo += Number(dp.valor) || 0;
-    }
-  });
-
-  let lucroLiquidoFinal = (totalLucroVendasPeriodo + totalLucroCambioPeriodo + totalLucroEncomendas) - totalDespesasPeriodo;
-
-  vendasHoje.innerText = totalVendasHoje.toLocaleString('pt-PT') + " Db";
-  qtdVendasHoje.innerText = `${qtdVendasHojeVal} transações`;
-
-  vendasMes.innerText = totalVendasPeriodo.toLocaleString('pt-PT') + " Db";
-  lucroMes.innerText = `Lucro Produtos: ${totalLucroVendasPeriodo.toLocaleString('pt-PT')} Db`;
-
-  lucroEncomendasKpi.innerText = totalLucroEncomendas.toLocaleString('pt-PT') + " Db";
-  subEncomendasKpi.innerText = `${emTransitoQtd} ativas em trânsito`;
-
-  lucroCambioKpi.innerText = totalLucroCambioPeriodo.toLocaleString('pt-PT') + " Db";
-
-  despesasMes.innerText = totalDespesasPeriodo.toLocaleString('pt-PT') + " Db";
-
-  lucroLiquidoReal.innerText = lucroLiquidoFinal.toLocaleString('pt-PT') + " Db";
-
-  pagDinheiro.innerText = pagDin.toLocaleString('pt-PT') + " Db";
-  pagTransf.innerText = pagTrans.toLocaleString('pt-PT') + " Db";
-  pagCartao.innerText = pagCart.toLocaleString('pt-PT') + " Db";
-
-  let arrTop = Object.keys(mapaProdutos).map(p => ({
-    nome: p,
-    qtd: mapaProdutos[p].qtd,
-    faturamento: mapaProdutos[p].faturamento
-  })).sort((a,b) => b.qtd - a.qtd).slice(0, 5);
-
-  let htmlTop = "";
-  arrTop.forEach(item => {
-    htmlTop += `<tr><td style="text-align:left;"><b>${item.nome}</b></td><td>${item.qtd} un</td><td><b>${item.faturamento.toLocaleString('pt-PT')} Db</b></td></tr>`;
-  });
-  listaTopProdutos.innerHTML = htmlTop || '<tr><td colspan="3" style="color:#94a3b8;">Nenhum dado.</td></tr>';
-
-  let arrEquipe = Object.keys(mapaEquipe).map(u => ({
-    usuario: u,
-    vendas: mapaEquipe[u].vendas,
-    total: mapaEquipe[u].total
-  })).sort((a,b) => b.total - a.total);
-
-  let htmlEquipe = "";
-  arrEquipe.forEach(item => {
-    htmlEquipe += `<tr><td style="text-align:left;"><b>${item.usuario}</b></td><td>${item.vendas}</td><td><b>${item.total.toLocaleString('pt-PT')} Db</b></td></tr>`;
-  });
-  listaDesempenhoEquipe.innerHTML = htmlEquipe || '<tr><td colspan="3" style="color:#94a3b8;">Nenhum dado.</td></tr>';
-}
-
-function filtrarDashboardData() {
-  let ini = dashDataInicio.value;
-  let fim = dashDataFim.value;
-
-  if(!ini || !fim) return alert("Selecione a data de início e a data de fim!");
-
-  dataFiltroInicioDash = new Date(ini + "T00:00:00");
-  dataFiltroFimDash = new Date(fim + "T23:59:59");
-
-  tituloVendasPeriodo.innerText = `Vendas (${ini} a ${fim})`;
-  tituloDespesasPeriodo.innerText = `Despesas (${ini} a ${fim})`;
-
-  processarDashboard();
-}
-
-function limparFiltroDashboard() {
-  dashDataInicio.value = "";
-  dashDataFim.value = "";
-  dataFiltroInicioDash = null;
-  dataFiltroFimDash = null;
-
-  tituloVendasPeriodo.innerText = "Vendas do Mês";
-  tituloDespesasPeriodo.innerText = "Despesas (Mês)";
-
-  processarDashboard();
-}
-
-function mudarFiltroOuBusca() {
-  paginaAtual = 1;
-  renderizarTabelaEstoque();
-}
-
-function renderizarTabelaEstoque() {
-  let termo = inputBusca.value.toLowerCase().trim();
-  let catSel = selectCategoriaFiltro.value;
-
-  let filtrados = todosProdutos.filter(p => {
-    let bateNome = p.nome.toLowerCase().includes(termo);
-    let bateBarcode = p.barcode ? p.barcode.toLowerCase().includes(termo) : false;
-    let bateBusca = bateNome || bateBarcode;
-    
-    let bateCat = (catSel === "" || p.categoria === catSel);
-
-    if(filtrarApenasBaixoEstoque) {
-      let q = Number(p.estoque) || 0;
-      let m = Number(p.minimo) || 0;
-      let isCritico = q <= m;
-      return bateBusca && bateCat && isCritico;
-    }
-
-    return bateBusca && bateCat;
-  });
-
-  let totalItens = filtrados.length;
-  let totalPaginas = Math.ceil(totalItens / itensPorPagina) || 1;
-
-  if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
-  if(paginaAtual < 1) paginaAtual = 1;
-
-  let inicio = (paginaAtual - 1) * itensPorPagina;
-  let paginaItens = filtrados.slice(inicio, inicio + itensPorPagina);
-
-  let htmlBuffer = "";
-  let isAdmin = (usuarioRole === "admin");
-  let isEstoque = (usuarioRole === "estoque");
-  let podeAdicionarEstoque = (isAdmin || isEstoque);
-  let podeVender = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
-
-  paginaItens.forEach(p => {
-    let est = Number(p.estoque) || 0;
-    let min = Number(p.minimo) || 0;
-    let precC = Number(p.compra) || 0;
-    let precV = Number(p.venda) || 0;
-    let lucro = precV - precC;
-    let total = est * precV;
-
-    let classe = est <= min ? 'baixo' : '';
-    let barcodeBadge = p.barcode ? `<span class="barcode-badge">🏷️ ${p.barcode}</span>` : '<span style="color:#cbd5e1;">-</span>';
-
-    htmlBuffer += `<tr class="${classe}">
-      <td>${p.foto ? `<img src="${p.foto}" class="img-thumb" alt="Foto">` : '📷'}</td>
-      <td><b>${p.nome}</b></td>
-      <td>${barcodeBadge}</td>
-      <td><small>${p.categoria || 'Geral'}</small></td>
-      <td><b>${est} un</b></td>
-      <td>${min}</td>
-      ${isAdmin ? `<td>${precC.toLocaleString('pt-PT')} Db</td>` : ''}
-      <td><b>${precV.toLocaleString('pt-PT')} Db</b></td>
-      ${isAdmin ? `<td style="color:${lucro >= 0 ? '#10b981' : '#ef4444'}; font-weight:bold;">${lucro.toLocaleString('pt-PT')} Db</td>` : ''}
-      <td><b>${total.toLocaleString('pt-PT')} Db</b></td>
-      ${podeAdicionarEstoque ? `<td><button onclick="adicionar('${p.id}')" class="btn-secondary btn-acao">+</button></td>` : ''}
-      ${podeVender ? `<td><button onclick="abrirModalVenda('${p.id}')" class="btn-success btn-acao">🛒 Vender</button></td>` : ''}
-      ${isAdmin ? `<td>
-        <div class="acoes-cell">
-          <button onclick="editarProduto('${p.id}')" class="btn-warning btn-acao">✏️</button>
-          <button onclick="deletar('${p.id}')" class="btn-danger btn-acao">🗑️</button>
-        </div>
-      </td>` : ''}
-    </tr>`;
-  });
-
-  lista.innerHTML = htmlBuffer || '<tr><td colspan="13" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>';
-  infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas} (${totalItens} produtos)`;
-
-  btnPagAnt.disabled = (paginaAtual === 1);
-  btnPagProx.disabled = (paginaAtual === totalPaginas);
-}
-
-function paginaAnterior() {
-  if(paginaAtual > 1) { paginaAtual--; renderizarTabelaEstoque(); }
-}
-
-function proximaPagina() {
-  paginaAtual++; renderizarTabelaEstoque();
-}
-
-function salvarProduto(){
-  let n = nome.value.trim();
-  let bc = barcodeInput.value.trim();
-  let cat = categoriaInput.value.trim() || "Geral";
-  let e = Number(estoque.value) || 0;
-  let m = Number(minimo.value) || 0;
-  let c = Number(compra.value) || 0;
-  let v = Number(venda.value) || 0;
-  let f = fotoBase64.value || "";
-
-  if(!n || v <= 0) return alert("Preencha o nome do produto e o preço de venda!");
-
-  // FASE 3: VERIFICAÇÃO DE CÓDIGO DE BARRAS DUPLICADO
-  if(bc) {
-    let dup = todosProdutos.find(prod => prod.barcode && prod.barcode.toLowerCase() === bc.toLowerCase() && prod.id !== editandoProdutoId);
-    if(dup) {
-      return alert(`O código de barras "${bc}" já está associado ao produto "${dup.nome}"! Evite duplicados.`);
-    }
-  }
-
-  let payload = {
-    nome: n,
-    barcode: bc,
-    categoria: cat,
-    estoque: e,
-    minimo: m,
-    compra: c,
-    venda: v,
-    foto: f
-  };
-
-  if(editandoProdutoId) {
-    db.collection("produtos").doc(editandoProdutoId).update(payload).then(() => {
-      cancelarEdicaoProduto();
-      alert("Produto atualizado com sucesso!");
-    });
-  } else {
-    db.collection("produtos").add(payload).then(() => {
-      limparCamposProduto();
-      alert("Produto cadastrado com sucesso!");
-    });
-  }
-}
-
-function editarProduto(id) {
-  let p = todosProdutos.find(item => item.id === id);
-  if(!p) return;
-
-  editandoProdutoId = id;
-  tituloFormProduto.innerText = "✏️ Editar Produto";
-
-  nome.value = p.nome;
-  barcodeInput.value = p.barcode || "";
-  categoriaInput.value = p.categoria || "Geral";
-  estoque.value = p.estoque;
-  minimo.value = p.minimo;
-  compra.value = p.compra;
-  venda.value = p.venda;
-
-  if(p.foto) {
-    fotoBase64.value = p.foto;
-    previewFoto.src = p.foto;
-    previewFoto.classList.remove("hidden");
-  } else {
-    fotoBase64.value = "";
-    previewFoto.src = "";
-    previewFoto.classList.add("hidden");
-  }
-
-  btnSalvarProduto.innerText = "Atualizar Produto";
-  btnCancelarProduto.classList.remove("hidden");
-  window.scrollTo({ top: cardNovoProduto.offsetTop - 20, behavior: 'smooth' });
-}
-
-function cancelarEdicaoProduto() {
-  editandoProdutoId = null;
-  tituloFormProduto.innerText = "📦 Novo Produto";
-  limparCamposProduto();
-  btnSalvarProduto.innerText = "Salvar Produto";
-  btnCancelarProduto.classList.add("hidden");
-}
-
-function limparCamposProduto() {
-  nome.value = ""; barcodeInput.value = ""; categoriaInput.value = ""; estoque.value = ""; minimo.value = "";
-  compra.value = ""; venda.value = ""; fotoInput.value = ""; fotoBase64.value = "";
-  previewFoto.src = ""; previewFoto.classList.add("hidden");
-}
-
-function adicionar(id){
-  let p = todosProdutos.find(item => item.id === id);
-  let qPrompt = prompt(`Adicionar quanto ao estoque de "${p.nome}"?`, "1");
-  if(!qPrompt) return;
-  let q = Number(qPrompt);
-  if(!q || q <= 0) return alert("Quantidade inválida!");
-
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-  db.collection("produtos").doc(id).update({
-    estoque: firebase.firestore.FieldValue.increment(q)
-  }).then(() => {
-    let movPayload = {
-      produto: p.nome,
-      tipo: "entrada",
-      quantidade: q,
-      valor: q * Number(p.compra || 0),
-      formaPagamento: "Entrada Manual Estoque",
-      usuario: auth.currentUser.email,
-      uid: auth.currentUser.uid,
-      role: usuarioRole,
-      data: new Date()
-    };
-    if(cId) movPayload.caixaId = cId;
-
-    db.collection("movimentacoes").add(movPayload);
-  });
-}
-
-function abrirModalVenda(id) {
-  // FASE 2: EXIGE CAIXA ABERTO PARA REALIZAR VENDA
-  if(!caixaAtualObj) {
-    alert("⚠️ Você não possui um caixa aberto no momento!\nVá até a página 'Gestão de Caixa & Turno' e abra o seu caixa antes de realizar vendas.");
-    navegarPara('paginaCaixa');
-    return;
-  }
-
-  let p = todosProdutos.find(item => item.id === id);
-  if(!p) return;
-
-  if(Number(p.estoque) <= 0) {
-    return alert("Produto esgotado no estoque!");
-  }
-
-  produtoVendaAtual = p;
-  modalProdNome.innerText = p.nome;
-  modalProdQtd.value = 1;
-  modalProdQtd.max = p.estoque;
-  modalValorRecebido.value = "";
-  modalNomeCliente.value = "";
-
-  alternarCampoTroco();
-  calcularTotalVendaModal();
-
-  modalVenda.classList.remove("hidden");
-}
-
-function fecharModalVenda() {
-  modalVenda.classList.add("hidden");
-  produtoVendaAtual = null;
-}
-
-function alternarCampoTroco() {
-  let fPag = modalFormaPagamento.value;
-  if(fPag === "Dinheiro") {
-    boxCalculoTroco.classList.remove("hidden");
-  } else {
-    boxCalculoTroco.classList.add("hidden");
-  }
-}
-
-function calcularTotalVendaModal() {
-  if(!produtoVendaAtual) return;
-  let q = Number(modalProdQtd.value) || 1;
-  let total = q * Number(produtoVendaAtual.venda);
-  modalTotalPagar.innerText = total.toLocaleString('pt-PT') + " Db";
-  calcularTroco();
-}
-
-function calcularTroco() {
-  if(!produtoVendaAtual) return;
-  let q = Number(modalProdQtd.value) || 1;
-  let total = q * Number(produtoVendaAtual.venda);
-  let rec = Number(modalValorRecebido.value) || 0;
-  let troco = rec - total;
-
-  if(troco >= 0) {
-    lblTroco.className = "dif-certo";
-    lblTroco.innerText = troco.toLocaleString('pt-PT') + " Db";
-  } else {
-    lblTroco.className = "dif-quebra";
-    lblTroco.innerText = "Valor insuficiente";
-  }
-}
-
-// TRANSACTION SEGURA DA FASE 1 MANTIDA + VINCULADA AO CAIXA DA FASE 2
-function confirmarVendaModal() {
-  if(!produtoVendaAtual) return;
-
-  let btn = document.getElementById("btnConfirmarVenda");
-  btn.disabled = true;
-
-  let q = Number(modalProdQtd.value);
-  if(!q || q <= 0) {
-    btn.disabled = false;
-    return alert("Quantidade inválida!");
-  }
-
-  let fPag = modalFormaPagamento.value;
-  let valRec = Number(modalValorRecebido.value) || 0;
-  let totalPagar = q * Number(produtoVendaAtual.venda);
-
-  if(fPag === "Dinheiro" && valRec < totalPagar) {
-    btn.disabled = false;
-    return alert("O valor entregue pelo cliente é inferior ao total da venda!");
-  }
-
-  let nomeCli = modalNomeCliente.value.trim() || "Consumidor Final";
-  let trocoCalculado = fPag === "Dinheiro" ? (valRec - totalPagar) : 0;
-  let pId = produtoVendaAtual.id;
-  let pNome = produtoVendaAtual.nome;
-  let pPreco = Number(produtoVendaAtual.venda);
-  let user = auth.currentUser;
-
-  // FASE 3: SE ESTIVER OFFLINE, AVISA O OPERADOR E IMPEDE GRAVAÇÃO PARCIAL INSEGURA
-  if(!navigator.onLine) {
-    btn.disabled = false;
-    adicionarOperacaoFilaLocal("venda_pendente", { produtoId: pId, qtd: q, valorTotal: totalPagar, caixaId: caixaAtualObj.id });
-    return alert("🔴 O sistema está OFFLINE no momento.\nA venda foi adicionada à fila local, mas para decrementar o estoque com segurança e emitir o recibo oficial é necessária conexão com o Firebase.");
-  }
-
-  db.runTransaction(function(transaction) {
-    let prodRef = db.collection("produtos").doc(pId);
-
-    return transaction.get(prodRef).then(function(prodDoc) {
-      if (!prodDoc.exists) throw "Produto não existe mais!";
-      
-      let estAtual = Number(prodDoc.data().estoque) || 0;
-      if (estAtual < q) throw `Estoque insuficiente! Disponível apenas: ${estAtual} un.`;
-
-      let novoEstoque = estAtual - q;
-      transaction.update(prodRef, { estoque: novoEstoque });
-
-      let movRef = db.collection("movimentacoes").doc();
-      transaction.set(movRef, {
-        produto: pNome,
-        tipo: "saida",
-        quantidade: q,
-        valor: totalPagar,
-        formaPagamento: fPag,
-        cliente: nomeCli,
-        caixaId: caixaAtualObj.id,
-        usuario: user.email,
-        uid: user.uid,
-        role: usuarioRole,
-        data: new Date()
-      });
-    });
-  }).then(() => {
-    btn.disabled = false;
-    fecharModalVenda();
-
-    reciboData.innerText = new Date().toLocaleString('pt-PT');
-    reciboCliente.innerText = nomeCli;
-    reciboVendedor.innerText = user.email;
-    reciboItem.innerText = pNome;
-    reciboQtd.innerText = q;
-    reciboPrecoUnit.innerText = pPreco.toLocaleString('pt-PT');
-    reciboTotalItem.innerText = totalPagar.toLocaleString('pt-PT');
-    reciboTotal.innerText = totalPagar.toLocaleString('pt-PT');
-    reciboPagamento.innerText = fPag;
-
-    if(fPag === "Dinheiro") {
-      reciboTrocoRow.style.display = "block";
-      reciboTroco.innerText = trocoCalculado.toLocaleString('pt-PT');
+  (lote.itens || []).forEach(item => {
+    let prodExistente = todosProdutos.find(p => p.nome.toLowerCase().trim() === item.nome.toLowerCase().trim());
+    let custoUnitarioDb = item.custoFinalUnitarioEuro * taxaCambioPadrao;
+
+    if(prodExistente) {
+      let refP = db.collection("produtos").doc(prodExistente.id);
+      let nEst = prodExistente.estoque + item.quantidade;
+      batch.update(refP, { estoque: nEst, compra: custoUnitarioDb, ultimaAtualizacao: new Date() });
     } else {
-      reciboTrocoRow.style.display = "none";
+      let refNew = db.collection("produtos").doc();
+      batch.set(refNew, {
+        nome: item.nome,
+        barcode: "",
+        categoria: item.categoria || "Importado PT",
+        estoque: item.quantidade,
+        minimo: 2,
+        compra: custoUnitarioDb,
+        venda: Math.round(custoUnitarioDb * 1.4), 
+        foto: "",
+        ultimaAtualizacao: new Date()
+      });
     }
 
-    setTimeout(() => {
-      window.print();
-    }, 300);
-
-  }).catch(e => {
-    btn.disabled = false;
-    alert("Erro ao realizar venda: " + e);
-  });
-}
-
-function registrarCompraProduto() {
-  let pId = compraSelectProduto.value;
-  let q = Number(compraQtd.value) || 0;
-  let cTotal = Number(compraCustoTotal.value) || 0;
-  let forn = compraFornecedor.value.trim() || "Fornecedor Local";
-  let fPag = compraFormaPag.value;
-
-  if(!pId || q <= 0 || cTotal <= 0) {
-    return alert("Selecione o produto, informe a quantidade e o custo total pago!");
-  }
-
-  let p = todosProdutos.find(item => item.id === pId);
-  if(!p) return;
-
-  let custoUnitarioNovo = Math.round(cTotal / q);
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-  db.collection("produtos").doc(pId).update({
-    estoque: firebase.firestore.FieldValue.increment(q),
-    compra: custoUnitarioNovo
-  }).then(() => {
-    let movPayload = {
-      produto: p.nome,
-      tipo: "compra",
-      quantidade: q,
-      valor: cTotal,
-      formaPagamento: fPag,
-      fornecedor: forn,
+    let refMov = db.collection("movimentacoes").doc();
+    batch.set(refMov, {
+      produto: item.nome,
+      quantidade: item.quantidade,
+      valor: item.quantidade * custoUnitarioDb,
+      tipo: "entrada",
+      subTipo: "importacao_pt",
+      detalhes: `Importação Lote PT (${lote.identificador}) - Custo: ${custoUnitarioDb.toFixed(0)} Db/un`,
       usuario: auth.currentUser.email,
       uid: auth.currentUser.uid,
-      role: usuarioRole,
       data: new Date()
-    };
-    if(cId) movPayload.caixaId = cId;
-
-    return db.collection("movimentacoes").add(movPayload);
-  }).then(() => {
-    compraSelectProduto.value = ""; compraQtd.value = "";
-    compraCustoTotal.value = ""; compraFornecedor.value = "";
-    alert("Entrada de compra registrada com sucesso!");
-  });
-}
-
-function atualizarRotulosCambio() {
-  let dir = cambioDirecao.value;
-  if(dir === "PT_STP") {
-    cambioResumoTxt.innerText = "0 € = 0 Db";
-  } else {
-    cambioResumoTxt.innerText = "0 Db = 0 €";
-  }
-  calcularCalculoCambioSimulado();
-}
-
-function calcularCalculoCambioSimulado() {
-  let dir = cambioDirecao.value;
-  let eur = Number(cambioQtdEur.value) || 0;
-  let taxa = Number(cambioTaxa.value) || 26.0;
-
-  if(dir === "PT_STP") {
-    let totalSTN = Math.round(eur * taxa);
-    let taxaOficial = 24.5;
-    let lucroEstimado = Math.round(eur * (taxa - taxaOficial));
-
-    cambioResumoTxt.innerText = `${eur} € ➔ Entregar ${totalSTN.toLocaleString('pt-PT')} Db em São Tomé`;
-    cambioLucroEstimadoTxt.innerText = `Lucro Estimado de Câmbio: +${lucroEstimado.toLocaleString('pt-PT')} Db`;
-  } else {
-    let totalSTNReceber = Math.round(eur * taxa);
-    let taxaOficial = 24.5;
-    let lucroEstimado = Math.round(eur * (taxa - taxaOficial));
-
-    cambioResumoTxt.innerText = `Receber ${totalSTNReceber.toLocaleString('pt-PT')} Db ➔ Entregar ${eur} € em Lisboa`;
-    cambioLucroEstimadoTxt.innerText = `Lucro Estimado de Câmbio: +${lucroEstimado.toLocaleString('pt-PT')} Db`;
-  }
-}
-
-function registrarOperacaoCambio() {
-  let dir = cambioDirecao.value;
-  let eur = Number(cambioQtdEur.value) || 0;
-  let taxa = Number(cambioTaxa.value) || 26.0;
-  let cli = cambioCliente.value.trim() || "Remessa Câmbio";
-
-  if(eur <= 0 || taxa <= 0) return alert("Informe a quantidade em Euros e a Taxa de Câmbio válida!");
-
-  let totalSTN = Math.round(eur * taxa);
-  let taxaOficial = 24.5;
-  let lucroEstimado = Math.round(eur * (taxa - taxaOficial));
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-  let movPayload = {
-    produto: `Câmbio ${dir === 'PT_STP' ? 'PT ➔ STP' : 'STP ➔ PT'}: ${eur} € (Taxa: ${taxa})`,
-    tipo: "cambio",
-    quantidade: eur,
-    valor: totalSTN,
-    lucroCambio: lucroEstimado,
-    formaPagamento: "Remessa Moeda",
-    cliente: cli,
-    usuario: auth.currentUser.email,
-    uid: auth.currentUser.uid,
-    role: usuarioRole,
-    data: new Date()
-  };
-  if(cId) movPayload.caixaId = cId;
-
-  db.collection("movimentacoes").add(movPayload).then(() => {
-    cambioQtdEur.value = ""; cambioCliente.value = "";
-    calcularCalculoCambioSimulado();
-    alert("Operação de Câmbio / Remessa registrada com sucesso!");
-  });
-}
-
-function salvarDespesa() {
-  let desc = despDescricao.value.trim();
-  let val = Number(despValor.value) || 0;
-  let cat = despCategoria.value;
-
-  if(!desc || val <= 0) return alert("Preencha a descrição e o valor da despesa!");
-
-  let payload = {
-    descricao: desc,
-    valor: val,
-    categoria: cat,
-    usuario: auth.currentUser.email,
-    uid: auth.currentUser.uid,
-    role: usuarioRole,
-    data: new Date()
-  };
-
-  db.collection("despesas").add(payload).then(() => {
-    despDescricao.value = ""; despValor.value = "";
-    alert("Despesa operada com sucesso!");
-  });
-}
-
-function renderizarHistorico(listaMovs) {
-  let htmlBuffer = "";
-  let prodMap = {};
-  todosProdutos.forEach(p => { prodMap[p.nome] = p.foto; });
-
-  listaMovs.forEach(m => {
-    let d = m.data ? m.data.toDate().toLocaleString('pt-PT') : '-';
-    let val = Number(m.valor) || 0;
-    let tipoBadge = '';
-
-    if(m.tipo === 'saida') tipoBadge = '<span style="color:#10b981; font-weight:bold;">Venda</span>';
-    else if(m.tipo === 'entrada') tipoBadge = '<span style="color:#2563eb; font-weight:bold;">Entrada Stock</span>';
-    else if(m.tipo === 'compra') tipoBadge = '<span style="color:#d97706; font-weight:bold;">Compra Fornec.</span>';
-    else if(m.tipo === 'cambio') tipoBadge = '<span style="color:#8b5cf6; font-weight:bold;">Câmbio</span>';
-
-    let fotoProd = prodMap[m.produto] ? `<img src="${prodMap[m.produto]}" class="img-thumb" alt="Foto">` : '📜';
-
-    let btnApagar = (usuarioRole === 'admin') ? 
-      `<button onclick="apagarMovimentacao('${m.id}')" class="btn-danger btn-acao">🗑️</button>` : '-';
-
-    htmlBuffer += `
-      <tr>
-        <td>${fotoProd}</td>
-        <td><b>${m.produto}</b></td>
-        <td>${tipoBadge}</td>
-        <td>${m.quantidade} un</td>
-        <td><small>${m.formaPagamento || '-'}</small></td>
-        <td><b>${val.toLocaleString('pt-PT')} Db</b></td>
-        <td><small>${m.usuario || 'Sistema'}</small></td>
-        <td><small>${d}</small></td>
-        <td>${btnApagar}</td>
-      </tr>
-    `;
-  });
-
-  historico.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma movimentação registada.</td></tr>';
-}
-
-function apagarMovimentacao(id) {
-  if(confirm("Tem a certeza que deseja apagar este registo de histórico?")) {
-    db.collection("movimentacoes").doc(id).delete();
-  }
-}
-
-function carregarFuncionarios() {
-  if(listenerFuncionarios) listenerFuncionarios();
-  listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
-    let htmlBuffer = "";
-    s.forEach(d => {
-      let f = d.data();
-      f.id = d.id;
-      let statusSt = f.status || "ativo";
-      let isAtivo = statusSt === "ativo";
-
-      htmlBuffer += `
-        <tr>
-          <td><b>${f.email || f.id}</b></td>
-          <td><small>${(f.role || 'venda1').toUpperCase()}</small></td>
-          <td><span class="${isAtivo ? 'status-caixa-aberto' : 'status-caixa-fechado'}">${statusSt.toUpperCase()}</span></td>
-          <td>
-            <div class="acoes-cell">
-              <button onclick="alternarStatusFunc('${f.id}', '${statusSt}')" class="${isAtivo ? 'btn-status-inativo' : 'btn-status-ativo'} btn-acao">
-                ${isAtivo ? 'Desativar' : 'Ativar'}
-              </button>
-            </div>
-          </td>
-        </tr>
-      `;
     });
-    listaFuncionarios.innerHTML = htmlBuffer || '<tr><td colspan="4">Nenhum funcionário cadastrado.</td></tr>';
   });
-}
 
-function salvarFuncionario() {
-  let e = funcEmail.value.trim();
-  let s = funcSenha.value.trim();
-  let r = funcRole.value;
+  let refLote = db.collection("lotes_pt").doc(loteId);
+  batch.update(refLote, { estado: "RECEBIDO_STP", dataRecebimento: new Date() });
 
-  if(!e || !s) return alert("Preencha o e-mail e a senha inicial do funcionário!");
-
-  db.collection("usuarios").add({
-    email: e,
-    role: r,
-    status: "ativo",
-    dataCriacao: new Date()
-  }).then(() => {
-    funcEmail.value = ""; funcSenha.value = "";
-    alert("Perfil de funcionário registado no Firestore com sucesso!");
-  });
-}
-
-function alternarStatusFunc(id, statusAtual) {
-  let novoStatus = statusAtual === "ativo" ? "desativado" : "ativo";
-  db.collection("usuarios").doc(id).update({ status: novoStatus });
-}
-
-function exportarEstoque() {
-  let csv = "Produto;Categoria;Estoque;Minimo;Compra;Venda;Total\n";
-  todosProdutos.forEach(p => {
-    let tot = (Number(p.estoque)||0) * (Number(p.venda)||0);
-    csv += `"${p.nome}";"${p.categoria}";${p.estoque};${p.minimo};${p.compra};${p.venda};${tot}\n`;
-  });
-  downloadCSV(csv, "estoque_mundo_digital_stp.csv");
-}
-
-function exportarHistorico() {
-  let csv = "Produto;Tipo;Quantidade;FormaPagamento;ValorTotal;Usuario;Data\n";
-  todasMovimentacoes.forEach(m => {
-    let d = m.data ? m.data.toDate().toLocaleString('pt-PT') : '';
-    csv += `"${m.produto}";"${m.tipo}";${m.quantidade};"${m.formaPagamento||''}";${m.valor};"${m.usuario||''}";"${d}"\n`;
-  });
-  downloadCSV(csv, "historico_mundo_digital_stp.csv");
-}
-
-function downloadCSV(content, filename) {
-  let blob = new Blob(["\ufeff" + content], { type: 'text/csv;charset=utf-8;' });
-  let link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
+  batch.commit().then(() => {
+    alert("Entrada do lote gravada com sucesso no Estoque de São Tomé!");
+  }).catch(e => alert("Erro ao dar entrada no stock: " + e.message));
 }
 </script>
 </body>
