@@ -20,6 +20,7 @@ body {
   overflow-x: hidden;
 }
 
+/* FASE 3: BARRA DE STATUS CONEXÃO ONLINE/OFFLINE */
 #offlineBanner {
   background: #ef4444;
   color: #ffffff;
@@ -62,6 +63,7 @@ header {
 }
 header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
 
+/* MENU DE NAVEGAÇÃO ENTRE PÁGINAS / ABAS (FASE 3: TOUCH FRIENDLY) */
 .main-nav {
   display: flex;
   gap: 8px;
@@ -75,8 +77,8 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
 }
 .nav-btn {
   flex: 1;
-  min-width: 130px;
-  min-height: 48px;
+  min-width: 140px;
+  min-height: 48px; /* Touch target otimizado */
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 14px;
@@ -116,6 +118,7 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
   padding-bottom: 8px;
 }
 
+/* ESTILOS ESPECÍFICOS DO ARMAZÉM PT */
 .pt-step-card {
   border-left: 5px solid #2563eb;
   background: #ffffff;
@@ -135,6 +138,7 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
   font-size: 12px;
 }
 
+/* BARRA DE BOTÕES DE AÇÃO NO TOPO */
 .top-action-bar {
   display: flex;
   justify-content: flex-end;
@@ -143,6 +147,7 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
   flex-wrap: wrap;
 }
 
+/* KPI GRID RESPONSIVO */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -166,6 +171,7 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
 .kpi-value { font-size: 18px; color: #1e293b; font-weight: 700; margin-top: 4px; display: block; word-break: break-word; }
 .kpi-sub { font-size: 11px; color: #10b981; font-weight: 600; margin-top: 2px; display: block; }
 
+/* PAINEL DE ALERTA MODERNO */
 .alerta-container { display: flex; flex-direction: column; gap: 12px; }
 .alerta-grupo { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
 .alerta-titulo { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; min-width: 140px; padding-top: 4px; }
@@ -191,23 +197,23 @@ header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px
   align-items: center;
 }
 
-input, select, textarea {
+/* FASE 3: OTIMIZAÇÃO MOBILE PARA FORMULÁRIOS E BOTÕES */
+input, select {
   width: 100%;
-  padding: 12px 14px;
+  padding: 12px 14px; /* Maior área de toque */
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 15px; /* Evita auto-zoom do iOS */
   outline: none;
   background-color: #ffffff;
   min-height: 48px;
-  font-family: inherit;
 }
-input:focus, select:focus, textarea:focus {
+input:focus, select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 button {
-  min-height: 48px;
+  min-height: 48px; /* Touch friendly */
   padding: 10px 16px;
   border-radius: 8px;
   font-size: 14px;
@@ -231,6 +237,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-warning { background: #d97706; color: #fff; }
 .btn-success { background: #10b981; color: #fff; }
 
+/* FASE 3: TABELAS ADAPTADAS E RESPONSIVAS */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
@@ -296,9 +303,8 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 .badge-em-transito { background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
 .badge-concluido { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
-.badge-ativo { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
-.badge-bloqueado { background: #fef2f2; color: #991b1b; padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; }
 
+/* ESTILOS DA FASE 2: CAIXA E TURNO */
 .status-caixa-aberto { background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
 .status-caixa-fechado { background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: 12px; }
 
@@ -306,6 +312,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 .dif-quebra { color: #ef4444; font-weight: bold; }
 .dif-sobra { color: #d97706; font-weight: bold; }
 
+/* FASE 3: MODAIS ALTAMENTE RESPONSIVOS NO MOBILE */
 .modal-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
@@ -320,6 +327,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 }
 .modal-content.large { max-width: 800px; }
 
+/* FASE 3: PAINEL POS OTIMIZADO PARA BALCÃO / MOBILE */
 .pos-search-box {
   background: #eff6ff;
   border: 2px solid #2563eb;
@@ -355,6 +363,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 </head>
 <body>
 
+<!-- FASE 3: BANNER DE CONEXÃO E FILA LOCAL -->
 <div id="offlineBanner" class="hidden no-print">
   <span>⚡ Modo Offline: As leituras de código e consultas locais funcionam. As vendas exigem conexão para gravação segura no Firebase.</span>
 </div>
@@ -382,17 +391,17 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 <div id="app" class="hidden no-print">
 
-  <!-- NAVEGAÇÃO PRINCIPAL COM CLIENTES E FIADO -->
+  <!-- NAVEGAÇÃO PRINCIPAL -->
   <nav class="main-nav">
     <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas</button>
     <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Gestão de Caixa</button>
     <button class="nav-btn" id="btnPageArmazem" onclick="navegarPara('paginaArmazemPT')">🇵🇹 Armazém Portugal</button>
-    <button class="nav-btn" id="btnPageClientes" onclick="navegarPara('paginaClientes')">👤 Clientes & Fiado</button>
   </nav>
 
   <!-- PÁGINA PRINCIPAL -->
   <div id="paginaPrincipal">
 
+    <!-- FASE 3: PAINEL POS DE LEITURA RÁPIDA DE CÓDIGO DE BARRAS NO BALCÃO -->
     <div class="card pos-search-box">
       <h3 style="margin: 0 0 10px 0; border: none; color: #1e3a8a;">🔍 POS Balcão — Leitor de Código de Barras</h3>
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -410,11 +419,13 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
+    <!-- BARRA SUPERIOR DE BOTÕES -->
     <div class="top-action-bar">
       <button onclick="toggleAlertasEstoque()" class="btn-warning" id="btnToggleAlertas">⚠️ Alertas de Estoque (0)</button>
       <button id="btnToggleFunc" onclick="toggleFuncionarios()" class="btn-secondary hidden">👥 Gerir Equipa</button>
     </div>
 
+    <!-- PAINEL DE ALERTAS -->
     <div class="card hidden" id="cardAlertaEstoque" style="border-top: 4px solid #ef4444;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
         <h3 style="color:#dc2626; margin:0; border:none; font-size:16px;">⚠️ Painel de Controle: Alertas de Estoque</h3>
@@ -512,7 +523,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <div><b>Dinheiro:</b> <span id="pagDinheiro">0 Db</span></div>
         <div><b>Transferência:</b> <span id="pagTransf">0 Db</span></div>
         <div><b>Cartão:</b> <span id="pagCartao">0 Db</span></div>
-        <div><b>Fiado:</b> <span id="pagFiado">0 Db</span></div>
       </div>
 
       <div class="dash-columns">
@@ -627,7 +637,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
-    <!-- NOVO / EDITAR PRODUTO -->
+    <!-- NOVO / EDITAR PRODUTO (FASE 3: SUPORTE A CÓDIGO DE BARRAS) -->
     <div class="card hidden" id="cardNovoProduto">
       <h3 id="tituloFormProduto">📦 Novo Produto</h3>
       <div class="form-grid">
@@ -714,6 +724,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <p style="margin: 0; color: #64748b; font-size: 14px;">A verificar estado do caixa...</p>
       </div>
 
+      <!-- FORMULÁRIO DE ABERTURA -->
       <div id="formAberturaCaixa" class="hidden">
         <h4 style="margin-top:0; color:#1e293b;">🟢 Abertura de Caixa / Turno</h4>
         <div class="form-grid" style="max-width: 500px;">
@@ -723,6 +734,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
         </div>
       </div>
 
+      <!-- PAINEL DE CAIXA ABERTO -->
       <div id="painelCaixaAberto" class="hidden">
         <div class="kpi-grid" style="margin-bottom: 15px;">
           <div class="kpi-card blue">
@@ -742,6 +754,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
+    <!-- AUDITORIA DE CAIXAS (EXCLUSIVO ADMIN) -->
     <div class="card hidden" id="cardAuditoriaCaixas">
       <h3>📜 Auditoria de Caixas & Turnos (Administração)</h3>
       <p style="font-size: 13px; color: #64748b; margin-top: -8px; margin-bottom: 15px;">
@@ -762,7 +775,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div> <!-- FIM PAGINA CAIXA -->
 
 
-  <!-- PÁGINA: ARMAZÉM PORTUGAL -->
+  <!-- PÁGINA 2: ARMAZÉM PORTUGAL -->
   <div id="paginaArmazemPT" class="hidden">
     
     <div class="card pt-step-card">
@@ -845,102 +858,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
   </div> <!-- FIM PAGINA ARMAZEM PT -->
 
-
-  <!-- FASE 4.1: PÁGINA CLIENTES & FIADO -->
-  <div id="paginaClientes" class="hidden">
-    
-    <!-- DASHBOARD CLIENTES -->
-    <div class="kpi-grid">
-      <div class="kpi-card green">
-        <span class="kpi-title">👥 Clientes Ativos</span>
-        <span id="kpiClientesAtivos" class="kpi-value">0</span>
-      </div>
-
-      <div class="kpi-card red">
-        <span class="kpi-title">💰 Total em Dívidas</span>
-        <span id="kpiTotalDividas" class="kpi-value">0 Db</span>
-      </div>
-
-      <div class="kpi-card orange">
-        <span class="kpi-title">⚠️ Crédito Elevado</span>
-        <span id="kpiCreditoElevado" class="kpi-value">0</span>
-        <span class="kpi-sub" style="color:#d97706;">Uso de crédito > 80%</span>
-      </div>
-
-      <div class="kpi-card purple">
-        <span class="kpi-title">🔒 Clientes Bloqueados</span>
-        <span id="kpiClientesBloqueados" class="kpi-value">0</span>
-      </div>
-    </div>
-
-    <!-- FORMULÁRIO DE CADASTRO/EDIÇÃO (SOMENTE ADMIN) -->
-    <div class="card hidden" id="cardCadastroCliente">
-      <h3 id="tituloFormCliente">👤 Novo Cliente</h3>
-      <div class="form-grid">
-        <input id="cliNome" placeholder="Nome Completo *">
-        <input id="cliTelefone" placeholder="Telefone / WhatsApp *">
-        <input id="cliMorada" placeholder="Morada / Endereço">
-        <input id="cliNif" placeholder="NIF (opcional)">
-        <input id="cliLimiteCredito" type="number" min="0" placeholder="Limite de Crédito (Db)">
-        <select id="cliStatus">
-          <option value="ativo">Ativo</option>
-          <option value="bloqueado">Bloqueado</option>
-        </select>
-        <textarea id="cliObservacoes" placeholder="Observações do Cliente" style="grid-column: 1 / -1; min-height: 60px;"></textarea>
-
-        <button id="btnSalvarCliente" onclick="salvarCliente()" class="btn-success" style="grid-column: 1 / -1;">Salvar Cliente</button>
-        <button id="btnCancelarCliente" onclick="cancelarEdicaoCliente()" class="btn-secondary hidden" style="grid-column: 1 / -1;">Cancelar</button>
-      </div>
-    </div>
-
-    <!-- LISTA E PESQUISA DE CLIENTES -->
-    <div class="card">
-      <h3>👤 Gestão de Clientes</h3>
-      <div class="search-container">
-        <input type="text" id="inputBuscaCliente" class="search-input" placeholder="🔍 Pesquisar por Nome, Telefone ou NIF..." oninput="filtrarTabelaClientes()">
-      </div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th><th>Telefone</th><th>NIF</th><th>Limite</th><th>Dívida Atual</th><th>Disp. Crédito</th><th>Estado</th><th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="listaClientes"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- PAINEL DE HISTÓRICO FINANCEIRO E PAGAMENTOS DO CLIENTE SELECIONADO -->
-    <div class="card hidden" id="cardHistoricoCliente">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-        <div>
-          <h3 style="margin:0; border:none; color:#1e293b;" id="lblClienteHistoricoNome">Histórico do Cliente</h3>
-          <small style="color:#64748b;" id="lblClienteHistoricoSub">Selecione um cliente para ver o extrato</small>
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button id="btnRegistrarPagamentoCliente" onclick="abrirModalPagamentoDivida()" class="btn-success hidden">💰 Registrar Pagamento</button>
-          <button onclick="fecharHistoricoCliente()" class="btn-secondary" style="min-height: 36px;">✕ Fechar</button>
-        </div>
-      </div>
-
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th><th>Tipo</th><th>Descrição / Ref</th><th>Valor</th><th>Forma Pag.</th><th>Saldo Anterior</th><th>Saldo Após</th><th>Responsável</th>
-            </tr>
-          </thead>
-          <tbody id="listaMovimentosCliente"></tbody>
-        </table>
-      </div>
-    </div>
-
-  </div> <!-- FIM PAGINA CLIENTES -->
-
 </div>
 
-<!-- MODAL POS VENDA (COM SUPORTE A FIADO) -->
+<!-- MODAL POS -->
 <div id="modalVenda" class="modal-overlay hidden">
   <div class="modal-content">
     <h3 style="margin-top:0; color:#1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">🛒 Registrar Venda (POS)</h3>
@@ -950,25 +870,11 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <input type="number" id="modalProdQtd" value="1" min="1" oninput="calcularTotalVendaModal()" style="margin-bottom: 10px;">
     
     <label style="font-size: 12px; font-weight:600;">Forma de Pagamento:</label>
-    <select id="modalFormaPagamento" onchange="alternarFormaPagamentoPOS()" style="margin-bottom: 10px;">
+    <select id="modalFormaPagamento" onchange="alternarCampoTroco()" style="margin-bottom: 10px;">
       <option value="Dinheiro">Dinheiro (Numerário)</option>
       <option value="Transferencia">Transferência / DobraPay</option>
       <option value="Cartao">Cartão Multicaixa</option>
-      <option value="Fiado">Fiado (Crédito do Cliente)</option>
     </select>
-
-    <!-- PAINEL DE SELEÇÃO DE CLIENTE SE FOR FIADO -->
-    <div id="boxClienteFiado" class="hidden" style="background: #fffbe6; padding: 12px; border-radius: 8px; border: 1px solid #fde68a; margin-bottom: 10px;">
-      <label style="font-size: 12px; font-weight:700; color: #92400e;">Selecionar Cliente para Fiado:</label>
-      <select id="modalSelectClienteFiado" onchange="atualizarInfoCreditoClienteModal()" style="margin-top: 4px; margin-bottom: 8px;">
-        <option value="">-- Selecione o Cliente --</option>
-      </select>
-      <div id="boxInfoCreditoCliente" style="font-size: 12px; color: #78350f;">
-        <span>Dívida Atual: <b id="lblFiadoDivida">0 Db</b></span> | 
-        <span>Limite: <b id="lblFiadoLimite">0 Db</b></span><br>
-        <span>Crédito Disponível: <b id="lblFiadoDisponivel" style="color:#10b981; font-weight:bold;">0 Db</b></span>
-      </div>
-    </div>
 
     <div id="boxCalculoTroco">
       <label style="font-size: 12px; font-weight:600;">Valor Entregue pelo Cliente (Db):</label>
@@ -978,7 +884,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
-    <label style="font-size: 12px; font-weight:600;">Nome do Cliente / Obs (Opcional):</label>
+    <label style="font-size: 12px; font-weight:600;">Nome do Cliente (Opcional):</label>
     <input type="text" id="modalNomeCliente" placeholder="Ex: João Silva" style="margin-bottom: 15px;">
 
     <div style="background:#eff6ff; padding: 12px; border-radius:8px; text-align:center; margin-bottom:15px;">
@@ -989,36 +895,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div style="display: flex; gap:10px; flex-wrap: wrap;">
       <button id="btnConfirmarVenda" onclick="confirmarVendaModal()" class="btn-success" style="flex:1; padding: 12px; min-width: 140px;">✅ Confirmar & Emitir Recibo</button>
       <button onclick="fecharModalVenda()" class="btn-secondary" style="min-width: 100px;">Cancelar</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL REGISTRO DE PAGAMENTO DE DÍVIDA DO CLIENTE -->
-<div id="modalPagamentoDivida" class="modal-overlay hidden">
-  <div class="modal-content">
-    <h3 style="margin-top:0; color:#1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">💰 Registrar Pagamento de Dívida</h3>
-    <p style="margin: 5px 0 10px 0; font-size:13px;">Cliente: <b id="lblPagDividaClienteNome" style="color:#2563eb;"></b></p>
-    
-    <div style="background:#fef2f2; padding:10px; border-radius:8px; border:1px solid #fecaca; margin-bottom:12px; font-size:13px; color:#991b1b;">
-      Dívida Atual: <b id="lblPagDividaAtualVal">0 Db</b>
-    </div>
-
-    <label style="font-size: 12px; font-weight:600;">Valor Pago (Db):</label>
-    <input type="number" id="pagDividaValor" min="1" placeholder="Ex: 100" style="margin-bottom: 10px;">
-
-    <label style="font-size: 12px; font-weight:600;">Forma de Pagamento:</label>
-    <select id="pagDividaForma" style="margin-bottom: 10px;">
-      <option value="Dinheiro">Dinheiro (Entra no Caixa)</option>
-      <option value="Transferencia">Transferência Bancária</option>
-      <option value="Cartao">Cartão Multicaixa</option>
-    </select>
-
-    <label style="font-size: 12px; font-weight:600;">Observações / Comprovativo:</label>
-    <input type="text" id="pagDividaObs" placeholder="Ex: Abate parcial da dívida" style="margin-bottom: 15px;">
-
-    <div style="display: flex; gap:10px; flex-wrap: wrap;">
-      <button id="btnConfirmarPagDivida" onclick="confirmarPagamentoDivida()" class="btn-success" style="flex:1; padding: 12px;">✅ Confirmar Pagamento</button>
-      <button onclick="fecharModalPagamentoDivida()" class="btn-secondary" style="min-width: 90px;">Cancelar</button>
     </div>
   </div>
 </div>
@@ -1128,6 +1004,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// FASE 3: ATIVAR PERSISTÊNCIA OFFLINE SEGURA NO FIRESTORE
 db.enablePersistence({ synchronizeTabs: true }).catch(err => {
   if (err.code == 'failed-precondition') {
     console.warn("Persistência em múltiplas abas não suportada simultaneamente.");
@@ -1139,8 +1016,6 @@ db.enablePersistence({ synchronizeTabs: true }).catch(err => {
 let usuarioRole = null;
 let editandoFuncId = null;
 let editandoProdutoId = null;
-let editandoClienteId = null;
-let clienteSelecionadoHistoricoId = null;
 
 let listenerProdutos = null;
 let listenerMovimentacoes = null;
@@ -1149,10 +1024,9 @@ let listenerDespesas = null;
 let listenerEncomendas = null;
 let listenerArmazemPT = null;
 let listenerLotesPT = null;
+
 let listenerCaixaAtual = null;
 let listenerCaixasAuditoria = null;
-let listenerClientes = null;
-let listenerMovimentosCliente = null;
 
 let todosProdutos = [];
 let todasMovimentacoes = [];
@@ -1160,8 +1034,6 @@ let todasDespesas = [];
 let todasEncomendas = [];
 let todosItensSoltosPT = [];
 let todosLotesPT = [];
-let todosClientes = [];
-let todosMovimentosCliente = [];
 
 let caixaAtualObj = null;
 let todosCaixasAuditoria = [];
@@ -1174,6 +1046,7 @@ let filtrarApenasBaixoEstoque = false;
 let paginaAtual = 1;
 const itensPorPagina = 10;
 
+// FASE 3: MONITORAMENTO DE CONEXÃO ONLINE/OFFLINE E ESTRUTURA DE FILA LOCAL
 let isSystemOnline = navigator.onLine;
 
 function atualizarStatusConexao() {
@@ -1195,6 +1068,28 @@ function atualizarStatusConexao() {
 window.addEventListener('online', atualizarStatusConexao);
 window.addEventListener('offline', atualizarStatusConexao);
 
+// FASE 3: ESTRUTURA LOCAL DE PREPARAÇÃO PARA FILA DE SINCRONIZAÇÃO
+function obterFilaLocalSinc() {
+  try {
+    return JSON.parse(localStorage.getItem("stp_sync_queue") || "[]");
+  } catch(e) { return []; }
+}
+
+function salvarFilaLocalSinc(fila) {
+  localStorage.setItem("stp_sync_queue", JSON.stringify(fila));
+}
+
+function adicionarOperacaoFilaLocal(tipo, payload) {
+  let fila = obterFilaLocalSinc();
+  fila.push({
+    idLocal: "LOC_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+    tipo: tipo,
+    payload: payload,
+    timestamp: new Date().toISOString()
+  });
+  salvarFilaLocalSinc(fila);
+}
+
 function login(){
   let erroCampo = document.getElementById("erro");
   if(erroCampo) erroCampo.innerText = "";
@@ -1206,12 +1101,10 @@ function navegarPara(paginaId) {
   document.getElementById("paginaPrincipal").classList.add("hidden");
   document.getElementById("paginaCaixa").classList.add("hidden");
   document.getElementById("paginaArmazemPT").classList.add("hidden");
-  document.getElementById("paginaClientes").classList.add("hidden");
 
   document.getElementById("btnPageMain").classList.remove("active");
   document.getElementById("btnPageCaixa").classList.remove("active");
   document.getElementById("btnPageArmazem").classList.remove("active");
-  document.getElementById("btnPageClientes").classList.remove("active");
 
   if(paginaId === 'paginaPrincipal') {
     document.getElementById("paginaPrincipal").classList.remove("hidden");
@@ -1222,9 +1115,6 @@ function navegarPara(paginaId) {
   } else if(paginaId === 'paginaArmazemPT') {
     document.getElementById("paginaArmazemPT").classList.remove("hidden");
     document.getElementById("btnPageArmazem").classList.add("active");
-  } else if(paginaId === 'paginaClientes') {
-    document.getElementById("paginaClientes").classList.remove("hidden");
-    document.getElementById("btnPageClientes").classList.add("active");
   }
 }
 
@@ -1243,7 +1133,6 @@ function resetarInterface() {
   btnExportarHistorico.classList.add("hidden");
   cardEstoque.classList.add("hidden");
   cardAuditoriaCaixas.classList.add("hidden");
-  cardCadastroCliente.classList.add("hidden");
 }
 
 function logout(){
@@ -1256,8 +1145,6 @@ function logout(){
   if(listenerLotesPT) listenerLotesPT();
   if(listenerCaixaAtual) listenerCaixaAtual();
   if(listenerCaixasAuditoria) listenerCaixasAuditoria();
-  if(listenerClientes) listenerClientes();
-  if(listenerMovimentosCliente) listenerMovimentosCliente();
 
   usuarioRole = null;
   caixaAtualObj = null;
@@ -1304,8 +1191,6 @@ auth.onAuthStateChanged(u => {
         btnExportarHistorico.classList.remove("hidden");
         cardAuditoriaCaixas.classList.remove("hidden");
         encCustoCompra.classList.remove("hidden");
-        cardCadastroCliente.classList.remove("hidden");
-        btnRegistrarPagamentoCliente.classList.remove("hidden");
       } else if(usuarioRole === "estoque") {
         cardCompras.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
@@ -1313,15 +1198,11 @@ auth.onAuthStateChanged(u => {
         btnExportarEstoque.classList.remove("hidden");
         cardAuditoriaCaixas.classList.add("hidden");
         encCustoCompra.classList.add("hidden");
-        cardCadastroCliente.classList.add("hidden");
-        btnRegistrarPagamentoCliente.classList.add("hidden");
       } else {
         cardCambio.classList.remove("hidden");
         cardEncomendas.classList.remove("hidden");
         cardAuditoriaCaixas.classList.add("hidden");
         encCustoCompra.classList.add("hidden");
-        cardCadastroCliente.classList.add("hidden");
-        btnRegistrarPagamentoCliente.classList.add("hidden");
       }
 
       cardEstoque.classList.remove("hidden");
@@ -1370,7 +1251,6 @@ function carregar(){
   carregarEncomendas();
   carregarArmazemPTTresPassos();
   carregarCaixaDoUsuario();
-  carregarClientes();
 
   listenerProdutos = db.collection("produtos").onSnapshot(s => {
     todosProdutos = [];
@@ -1413,944 +1293,929 @@ function carregar(){
 }
 
 /* =========================================================================
-   FASE 4.1: MÓDULO CLIENTES E FIADO
+   FASE 3: SUPORTE COMPLETO A CÓDIGO DE BARRAS NO POS & CADASTRO
    ========================================================================= */
 
-function carregarClientes() {
-  if(listenerClientes) listenerClientes();
-
-  listenerClientes = db.collection("clientes").orderBy("nome", "asc").onSnapshot(s => {
-    todosClientes = [];
-    s.forEach(d => {
-      let c = d.data();
-      c.id = d.id;
-      todosClientes.push(c);
-    });
-
-    renderizarTabelaClientes();
-    atualizarKpiClientes();
-    atualizarSelectClientesFiadoPOS();
-  });
-}
-
-function atualizarKpiClientes() {
-  let ativos = 0;
-  let bloqueados = 0;
-  let totalDividas = 0;
-  let creditoElevado = 0;
-
-  todosClientes.forEach(c => {
-    let dev = Number(c.saldoDevedor) || 0;
-    let lim = Number(c.limiteCredito) || 0;
-
-    if(c.status === "bloqueado") {
-      bloqueados++;
-    } else {
-      ativos++;
-    }
-
-    totalDividas += dev;
-
-    if(lim > 0 && (dev / lim) >= 0.8) {
-      creditoElevado++;
-    }
-  });
-
-  document.getElementById("kpiClientesAtivos").innerText = ativos;
-  document.getElementById("kpiTotalDividas").innerText = totalDividas.toLocaleString('pt-PT') + " Db";
-  document.getElementById("kpiCreditoElevado").innerText = creditoElevado;
-  document.getElementById("kpiClientesBloqueados").innerText = bloqueados;
-}
-
-function renderizarTabelaClientes() {
-  let busca = document.getElementById("inputBuscaCliente").value.trim().toLowerCase();
-  let tbody = document.getElementById("listaClientes");
-
-  let filtrados = todosClientes.filter(c => {
-    let n = (c.nome || "").toLowerCase();
-    let t = (c.telefone || "").toLowerCase();
-    let nf = (c.nif || "").toLowerCase();
-    return n.includes(busca) || t.includes(busca) || nf.includes(busca);
-  });
-
-  let html = "";
-  let isAdmin = (usuarioRole === "admin");
-
-  filtrados.forEach(c => {
-    let lim = Number(c.limiteCredito) || 0;
-    let dev = Number(c.saldoDevedor) || 0;
-    let disp = lim - dev;
-    let isBloq = (c.status === "bloqueado");
-
-    let stBadge = isBloq ? 
-      '<span class="badge-bloqueado">🔒 BLOQUEADO</span>' : 
-      '<span class="badge-ativo">🟢 ATIVO</span>';
-
-    let btnAcoes = "";
-    if(isAdmin) {
-      let btnBloqTxt = isBloq ? "🔓 Desbloquear" : "🔒 Bloquear";
-      btnAcoes = `
-        <button class="btn-secondary btn-acao" onclick="editarCliente('${c.id}')">✏️ Editar</button>
-        <button class="${isBloq ? 'btn-success' : 'btn-warning'} btn-acao" onclick="toggleBloqueioCliente('${c.id}')">${btnBloqTxt}</button>
-        <button class="btn-danger btn-acao" onclick="apagarCliente('${c.id}')">🗑️ Apagar</button>
-      `;
-    }
-
-    html += `
-      <tr style="cursor:pointer;" onclick="visualizarHistoricoCliente('${c.id}')">
-        <td style="text-align:left;"><b>${c.nome}</b></td>
-        <td>${c.telefone || '-'}</td>
-        <td>${c.nif || '-'}</td>
-        <td>${lim.toLocaleString('pt-PT')} Db</td>
-        <td style="color:#ef4444; font-weight:bold;">${dev.toLocaleString('pt-PT')} Db</td>
-        <td style="color:${disp < 0 ? '#ef4444' : '#10b981'}; font-weight:bold;">${disp.toLocaleString('pt-PT')} Db</td>
-        <td>${stBadge}</td>
-        <td onclick="event.stopPropagation();">
-          <div class="acoes-cell">
-            ${btnAcoes || '<button class="btn-secondary btn-acao" onclick="visualizarHistoricoCliente(\''+c.id+'\')">👁️ Extrato</button>'}
-          </div>
-        </td>
-      </tr>
-    `;
-  });
-
-  tbody.innerHTML = html || '<tr><td colspan="8" style="color:#94a3b8;">Nenhum cliente cadastrado.</td></tr>';
-}
-
-function filtrarTabelaClientes() {
-  renderizarTabelaClientes();
-}
-
-function salvarCliente() {
-  if(usuarioRole !== "admin") return alert("Somente administradores podem salvar clientes.");
-
-  let nome = cliNome.value.trim();
-  let tel = cliTelefone.value.trim();
-  let morada = cliMorada.value.trim();
-  let nif = cliNif.value.trim();
-  let lim = Number(cliLimiteCredito.value) || 0;
-  let status = cliStatus.value;
-  let obs = cliObservacoes.value.trim();
-
-  if(!nome || !tel) {
-    return alert("Nome completo e Telefone são campos obrigatórios!");
-  }
-
-  let u = auth.currentUser;
-
-  let payload = {
-    nome: nome,
-    telefone: tel,
-    morada: morada,
-    nif: nif,
-    limiteCredito: lim,
-    status: status,
-    observacoes: obs,
-    ultimaAtualizacao: new Date()
-  };
-
-  if(editandoClienteId) {
-    let cliOriginal = todosClientes.find(c => c.id === editandoClienteId);
-    let limAnt = cliOriginal ? (Number(cliOriginal.limiteCredito) || 0) : 0;
-
-    db.collection("clientes").doc(editandoClienteId).update(payload).then(() => {
-      if(limAnt !== lim) {
-        db.collection("movimentos_clientes").add({
-          clienteId: editandoClienteId,
-          clienteNome: nome,
-          tipo: "ajuste",
-          descricao: `Alteração de Limite de Crédito de ${limAnt} Db para ${lim} Db`,
-          valor: 0,
-          usuario: u.email,
-          uid: u.uid,
-          data: new Date(),
-          saldoAnterior: cliOriginal ? (Number(cliOriginal.saldoDevedor) || 0) : 0,
-          saldoPosterior: cliOriginal ? (Number(cliOriginal.saldoDevedor) || 0) : 0
-        });
-      }
-      alert("Cliente atualizado com sucesso!");
-      cancelarEdicaoCliente();
-    }).catch(e => alert("Erro ao atualizar cliente: " + e.message));
-  } else {
-    payload.saldoDevedor = 0;
-    payload.criadoPor = u.email;
-    payload.criadoPorUid = u.uid;
-    payload.dataCriacao = new Date();
-
-    db.collection("clientes").add(payload).then(ref => {
-      db.collection("movimentos_clientes").add({
-        clienteId: ref.id,
-        clienteNome: nome,
-        tipo: "ajuste",
-        descricao: "Cadastro inicial do cliente",
-        valor: 0,
-        usuario: u.email,
-        uid: u.uid,
-        data: new Date(),
-        saldoAnterior: 0,
-        saldoPosterior: 0
-      });
-      alert("Cliente cadastrado com sucesso!");
-      cancelarEdicaoCliente();
-    }).catch(e => alert("Erro ao cadastrar cliente: " + e.message));
+function tratarKeyPressBarcodePOS(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    buscarProdutoPorBarcodeManual();
   }
 }
 
-function editarCliente(id) {
-  let c = todosClientes.find(item => item.id === id);
-  if(!c) return;
+function buscarProdutoPorBarcodeManual() {
+  let input = document.getElementById("posBarcodeScanner");
+  let barcode = input.value.trim().toLowerCase();
+  let boxRes = document.getElementById("posBarcodeResult");
 
-  editandoClienteId = id;
-  tituloFormCliente.innerText = "✏️ Editar Cliente";
-  cliNome.value = c.nome || "";
-  cliTelefone.value = c.telefone || "";
-  cliMorada.value = c.morada || "";
-  cliNif.value = c.nif || "";
-  cliLimiteCredito.value = c.limiteCredito || 0;
-  cliStatus.value = c.status || "ativo";
-  cliObservacoes.value = c.observacoes || "";
-
-  btnSalvarCliente.innerText = "Atualizar Cliente";
-  btnCancelarCliente.classList.remove("hidden");
-  cardCadastroCliente.scrollIntoView({ behavior: 'smooth' });
-}
-
-function cancelarEdicaoCliente() {
-  editandoClienteId = null;
-  tituloFormCliente.innerText = "👤 Novo Cliente";
-  cliNome.value = "";
-  cliTelefone.value = "";
-  cliMorada.value = "";
-  cliNif.value = "";
-  cliLimiteCredito.value = "";
-  cliStatus.value = "ativo";
-  cliObservacoes.value = "";
-
-  btnSalvarCliente.innerText = "Salvar Cliente";
-  btnCancelarCliente.classList.add("hidden");
-}
-
-function toggleBloqueioCliente(id) {
-  if(usuarioRole !== "admin") return alert("Apenas administradores podem bloquear/desbloquear clientes.");
-
-  let c = todosClientes.find(item => item.id === id);
-  if(!c) return;
-
-  let novoStatus = c.status === "bloqueado" ? "ativo" : "bloqueado";
-  let u = auth.currentUser;
-
-  db.collection("clientes").doc(id).update({
-    status: novoStatus,
-    ultimaAtualizacao: new Date()
-  }).then(() => {
-    db.collection("movimentos_clientes").add({
-      clienteId: id,
-      clienteNome: c.nome,
-      tipo: "ajuste",
-      descricao: `Status do cliente alterado para: ${novoStatus.toUpperCase()}`,
-      valor: 0,
-      usuario: u.email,
-      uid: u.uid,
-      data: new Date(),
-      saldoAnterior: Number(c.saldoDevedor) || 0,
-      saldoPosterior: Number(c.saldoDevedor) || 0
-    });
-    alert(`Cliente ${novoStatus === 'bloqueado' ? 'bloqueado' : 'desbloqueado'} com sucesso!`);
-  }).catch(e => alert("Erro ao alterar estado do cliente: " + e.message));
-}
-
-function apagarCliente(id) {
-  if(usuarioRole !== "admin") return alert("Apenas administradores podem apagar clientes.");
-
-  let c = todosClientes.find(item => item.id === id);
-  if(!c) return;
-
-  let dev = Number(c.saldoDevedor) || 0;
-  if(dev > 0) {
-    return alert(`❌ Não é possível apagar o cliente ${c.nome}. Existem registros financeiros e dívida ativa de ${dev} Db associados.`);
-  }
-
-  db.collection("movimentos_clientes").where("clienteId", "==", id).limit(1).get().then(snap => {
-    if(!snap.empty) {
-      return alert(`❌ Não é possível apagar o cliente ${c.nome}. Existem registros de movimentações financeiras no histórico do cliente.`);
-    }
-
-    if(confirm(`Tem certeza que deseja apagar permanentemente o cliente "${c.nome}"?`)) {
-      db.collection("clientes").doc(id).delete().then(() => {
-        alert("Cliente apagado com sucesso.");
-      });
-    }
-  });
-}
-
-function visualizarHistoricoCliente(id) {
-  let c = todosClientes.find(item => item.id === id);
-  if(!c) return;
-
-  clienteSelecionadoHistoricoId = id;
-  lblClienteHistoricoNome.innerText = `Extrato: ${c.nome}`;
-  lblClienteHistoricoSub.innerText = `Telefone: ${c.telefone || '-'} | Dívida Atual: ${(Number(c.saldoDevedor)||0).toLocaleString('pt-PT')} Db | Limite: ${(Number(c.limiteCredito)||0).toLocaleString('pt-PT')} Db`;
-
-  cardHistoricoCliente.classList.remove("hidden");
-  cardHistoricoCliente.scrollIntoView({ behavior: 'smooth' });
-
-  if(listenerMovimentosCliente) listenerMovimentosCliente();
-
-  listenerMovimentosCliente = db.collection("movimentos_clientes")
-    .where("clienteId", "==", id)
-    .orderBy("data", "desc")
-    .onSnapshot(s => {
-      todosMovimentosCliente = [];
-      let html = "";
-
-      s.forEach(d => {
-        let m = d.data();
-        m.id = d.id;
-        todosMovimentosCliente.push(m);
-
-        let dtFmt = m.data ? m.data.toDate().toLocaleString('pt-PT') : '-';
-        let val = Number(m.valor) || 0;
-        let sAnt = Number(m.saldoAnterior) || 0;
-        let sPost = Number(m.saldoPosterior) || 0;
-
-        let badgeTipo = "";
-        if(m.tipo === "fiado") badgeTipo = '<span style="background:#fef2f2; color:#ef4444; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px;">FIADO</span>';
-        else if(m.tipo === "pagamento_divida") badgeTipo = '<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px;">PAGAMENTO</span>';
-        else if(m.tipo === "venda") badgeTipo = '<span style="background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px;">VENDA</span>';
-        else badgeTipo = '<span style="background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px;">AJUSTE</span>';
-
-        html += `
-          <tr>
-            <td><small>${dtFmt}</small></td>
-            <td>${badgeTipo}</td>
-            <td style="text-align:left;"><b>${m.descricao || '-'}</b></td>
-            <td style="font-weight:bold;">${val.toLocaleString('pt-PT')} Db</td>
-            <td><small>${m.formaPagamento || '-'}</small></td>
-            <td>${sAnt.toLocaleString('pt-PT')} Db</td>
-            <td style="font-weight:bold; color:#0f172a;">${sPost.toLocaleString('pt-PT')} Db</td>
-            <td><small>${m.usuario || '-'}</small></td>
-          </tr>
-        `;
-      });
-
-      listaMovimentosCliente.innerHTML = html || '<tr><td colspan="8" style="color:#94a3b8;">Nenhuma movimentação registrada para este cliente.</td></tr>';
-    });
-}
-
-function fecharHistoricoCliente() {
-  cardHistoricoCliente.classList.add("hidden");
-  clienteSelecionadoHistoricoId = null;
-  if(listenerMovimentosCliente) listenerMovimentosCliente();
-}
-
-function abrirModalPagamentoDivida() {
-  if(!clienteSelecionadoHistoricoId) return;
-  let c = todosClientes.find(item => item.id === clienteSelecionadoHistoricoId);
-  if(!c) return;
-
-  let dev = Number(c.saldoDevedor) || 0;
-  if(dev <= 0) return alert("Este cliente não possui dívida devedora pendente no momento.");
-
-  lblPagDividaClienteNome.innerText = c.nome;
-  lblPagDividaAtualVal.innerText = dev.toLocaleString('pt-PT') + " Db";
-  pagDividaValor.value = "";
-  pagDividaObs.value = "";
-
-  modalPagamentoDivida.classList.remove("hidden");
-}
-
-function fecharModalPagamentoDivida() {
-  modalPagamentoDivida.classList.add("hidden");
-}
-
-function confirmarPagamentoDivida() {
-  if(usuarioRole !== "admin") return alert("Somente administradores podem registrar pagamentos de dívida.");
-
-  let c = todosClientes.find(item => item.id === clienteSelecionadoHistoricoId);
-  if(!c) return;
-
-  let valPago = Number(pagDividaValor.value) || 0;
-  let fPag = pagDividaForma.value;
-  let obs = pagDividaObs.value.trim();
-  let devAtual = Number(c.saldoDevedor) || 0;
-
-  if(valPago <= 0) return alert("Por favor, digite um valor de pagamento válido!");
-
-  if(valPago > devAtual) {
-    return alert(`❌ O valor do pagamento (${valPago} Db) não pode ser superior à dívida atual (${devAtual} Db).`);
-  }
-
-  let u = auth.currentUser;
-  let novoSaldo = devAtual - valPago;
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-  db.runTransaction(function(transaction) {
-    let cliRef = db.collection("clientes").doc(c.id);
-
-    return transaction.get(cliRef).then(function(cliDoc) {
-      if(!cliDoc.exists) throw "Cliente não encontrado.";
-      let cData = cliDoc.data();
-      let devDb = Number(cData.saldoDevedor) || 0;
-
-      if(valPago > devDb) throw "O valor do pagamento é superior à dívida atual.";
-
-      let saldoPos = devDb - valPago;
-
-      transaction.update(cliRef, {
-        saldoDevedor: saldoPos,
-        ultimaAtualizacao: new Date()
-      });
-
-      let movRef = db.collection("movimentos_clientes").doc();
-      transaction.set(movRef, {
-        clienteId: c.id,
-        clienteNome: cData.nome,
-        tipo: "pagamento_divida",
-        descricao: `Pagamento de dívida (${fPag})${obs ? ' - ' + obs : ''}`,
-        valor: valPago,
-        formaPagamento: fPag,
-        usuario: u.email,
-        uid: u.uid,
-        data: new Date(),
-        saldoAnterior: devDb,
-        saldoPosterior: saldoPos
-      });
-
-      let auditoriaRef = db.collection("movimentacoes").doc();
-      let auditPayload = {
-        produto: `PAGAMENTO DÍVIDA: ${cData.nome}`,
-        tipo: "entrada",
-        quantidade: 1,
-        valor: valPago,
-        formaPagamento: fPag,
-        usuario: u.email,
-        uid: u.uid,
-        role: usuarioRole,
-        clienteId: c.id,
-        clienteNome: cData.nome,
-        data: new Date()
-      };
-      if(cId) auditPayload.caixaId = cId;
-
-      transaction.set(auditoriaRef, auditPayload);
-    });
-  }).then(() => {
-    fecharModalPagamentoDivida();
-    alert("Pagamento registrado com sucesso e abatido da dívida!");
-  }).catch(e => alert("Erro ao registrar pagamento: " + e));
-}
-
-function atualizarSelectClientesFiadoPOS() {
-  let select = document.getElementById("modalSelectClienteFiado");
-  if(!select) return;
-
-  select.innerHTML = '<option value="">-- Selecione o Cliente --</option>';
-  todosClientes.forEach(c => {
-    let statusTxt = c.status === "bloqueado" ? " [BLOQUEADO]" : "";
-    select.innerHTML += `<option value="${c.id}">${c.nome}${statusTxt}</option>`;
-  });
-}
-
-function alternarFormaPagamentoPOS() {
-  let fPag = modalFormaPagamento.value;
-  let boxFiado = document.getElementById("boxClienteFiado");
-  let boxTroco = document.getElementById("boxCalculoTroco");
-
-  if(fPag === "Fiado") {
-    boxFiado.classList.remove("hidden");
-    boxTroco.classList.add("hidden");
-    atualizarSelectClientesFiadoPOS();
-  } else {
-    boxFiado.classList.add("hidden");
-    boxTroco.classList.remove("hidden");
-  }
-}
-
-function atualizarInfoCreditoClienteModal() {
-  let cId = modalSelectClienteFiado.value;
-  let lblDev = document.getElementById("lblFiadoDivida");
-  let lblLim = document.getElementById("lblFiadoLimite");
-  let lblDisp = document.getElementById("lblFiadoDisponivel");
-
-  if(!cId) {
-    lblDev.innerText = "0 Db";
-    lblLim.innerText = "0 Db";
-    lblDisp.innerText = "0 Db";
+  if(!barcode) {
+    boxRes.classList.add("hidden");
     return;
   }
 
-  let c = todosClientes.find(item => item.id === cId);
-  if(!c) return;
+  // Busca o produto por código de barras ou nome exato
+  let prod = todosProdutos.find(p => 
+    (p.barcode && p.barcode.toLowerCase() === barcode) || 
+    p.nome.toLowerCase() === barcode
+  );
 
-  let lim = Number(c.limiteCredito) || 0;
-  let dev = Number(c.saldoDevedor) || 0;
-  let disp = lim - dev;
+  if(prod) {
+    document.getElementById("posResNome").innerText = prod.nome + (prod.barcode ? ` [${prod.barcode}]` : '');
+    document.getElementById("posResPreco").innerText = (Number(prod.venda) || 0).toLocaleString('pt-PT') + " Db";
+    document.getElementById("posResEstoque").innerText = `Estoque disponível: ${prod.estoque} un`;
 
-  lblDev.innerText = dev.toLocaleString('pt-PT') + " Db";
-  lblLim.innerText = lim.toLocaleString('pt-PT') + " Db";
-  lblDisp.innerText = disp.toLocaleString('pt-PT') + " Db";
+    let btnVenda = document.getElementById("posResBtnVender");
+    btnVenda.onclick = function() {
+      abrirModalVenda(prod.id);
+    };
 
-  if(c.status === "bloqueado") {
-    lblDisp.innerText = "0 Db (BLOQUEADO)";
-    lblDisp.style.color = "#ef4444";
+    boxRes.classList.remove("hidden");
+    input.value = ""; // Limpa para a próxima leitura do leitor físico
   } else {
-    lblDisp.style.color = disp < 0 ? "#ef4444" : "#10b981";
+    alert("Produto não localizado para o Código de Barras / Termo: " + barcode);
+    boxRes.classList.add("hidden");
   }
 }
 
 /* =========================================================================
-   LÓGICA POS & VENDA COM TRANSAÇÃO ATÔMICA
+   LÓGICA DA FASE 2: GESTÃO DE CAIXA + AUDITORIA DE TURNO
    ========================================================================= */
 
-function abrirModalVenda(produtoId) {
-  let p = todosProdutos.find(item => item.id === produtoId);
-  if(!p) return;
+function carregarCaixaDoUsuario() {
+  if(listenerCaixaAtual) listenerCaixaAtual();
+  let user = auth.currentUser;
+  if(!user) return;
 
-  if(!caixaAtualObj && (usuarioRole === "venda1" || usuarioRole === "venda2")) {
-    return alert("Atenção: Você precisa abrir um Caixa/Turno na aba 'Gestão de Caixa' antes de realizar vendas!");
-  }
-
-  produtoVendaAtual = p;
-  modalProdNome.innerText = p.nome;
-  modalProdQtd.value = 1;
-  modalFormaPagamento.value = "Dinheiro";
-  modalValorRecebido.value = "";
-  modalNomeCliente.value = "";
-
-  alternarFormaPagamentoPOS();
-  calcularTotalVendaModal();
-
-  modalVenda.classList.remove("hidden");
+  listenerCaixaAtual = db.collection("caixas")
+    .where("uid", "==", user.uid)
+    .where("estado", "==", "aberto")
+    .limit(1)
+    .onSnapshot(s => {
+      if(!s.empty) {
+        let doc = s.docs[0];
+        caixaAtualObj = doc.data();
+        caixaAtualObj.id = doc.id;
+        renderizarPainelCaixaAberto();
+      } else {
+        caixaAtualObj = null;
+        renderizarPainelCaixaFechado();
+      }
+    });
 }
 
-function fecharModalVenda() {
-  modalVenda.classList.add("hidden");
-  produtoVendaAtual = null;
-}
+function renderizarPainelCaixaFechado() {
+  formAberturaCaixa.classList.remove("hidden");
+  painelCaixaAberto.classList.add("hidden");
 
-function calcularTotalVendaModal() {
-  if(!produtoVendaAtual) return;
-  let qtd = Number(modalProdQtd.value) || 1;
-  let total = qtd * (Number(produtoVendaAtual.venda) || 0);
-  modalTotalPagar.innerText = total.toLocaleString('pt-PT') + " Db";
-  calcularTroco();
-}
-
-function calcularTroco() {
-  if(!produtoVendaAtual) return;
-  let qtd = Number(modalProdQtd.value) || 1;
-  let total = qtd * (Number(produtoVendaAtual.venda) || 0);
-  let rec = Number(modalValorRecebido.value) || 0;
-  let troco = rec - total;
-
-  if(troco < 0 || modalValorRecebido.value === "") {
-    lblTroco.innerText = "0 Db";
-  } else {
-    lblTroco.innerText = troco.toLocaleString('pt-PT') + " Db";
-  }
-}
-
-function confirmarVendaModal() {
-  if(!navigator.onLine) return alert("Erro de conexão: Vendas exigem internet para atualização imediata e segura do estoque/caixa/crédito.");
-  if(!produtoVendaAtual) return;
-
-  let btn = document.getElementById("btnConfirmarVenda");
-  btn.disabled = true;
-
-  let qtd = Number(modalProdQtd.value) || 0;
-  let fPag = modalFormaPagamento.value;
-  let nomeCliModal = modalNomeCliente.value.trim();
-  let valorTotalVenda = qtd * (Number(produtoVendaAtual.venda) || 0);
-
-  if(qtd <= 0) {
-    btn.disabled = false;
-    return alert("Quantidade inválida para venda!");
+  let canOpen = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
+  if(!canOpen) {
+    statusTurnoBox.innerHTML = `<p style="margin:0; color:#ef4444; font-weight:bold;">⚠️ A sua função (${usuarioRole.toUpperCase()}) não realiza operações de caixa.</p>`;
+    formAberturaCaixa.classList.add("hidden");
+    return;
   }
 
-  let clienteFiadoObj = null;
+  statusTurnoBox.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <span class="status-caixa-fechado">CAIXA FECHADO</span>
+        <span style="margin-left:10px; font-weight:600; font-size:14px;">Você não possui nenhum turno aberto no momento.</span>
+      </div>
+    </div>
+  `;
+}
 
-  if(fPag === "Fiado") {
-    let cliId = modalSelectClienteFiado.value;
-    if(!cliId) {
-      btn.disabled = false;
-      return alert("Por favor, selecione o cliente para a venda a fiado!");
+function renderizarPainelCaixaAberto() {
+  formAberturaCaixa.classList.add("hidden");
+  painelCaixaAberto.classList.remove("hidden");
+
+  let dtAbertura = caixaAtualObj.dataAbertura ? caixaAtualObj.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+
+  statusTurnoBox.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <span class="status-caixa-aberto">🟢 CAIXA ABERTO</span>
+        <span style="margin-left:10px; font-weight:bold; font-size:14px;">Turno de ${caixaAtualObj.usuario}</span>
+        <small style="display:block; color:#64748b; margin-top:2px;">Aberto em: ${dtAbertura}</small>
+      </div>
+      <div style="font-size:12px; background:#e0f2fe; color:#0369a1; padding:4px 10px; border-radius:6px; font-weight:600;">
+        ID Turno: ${caixaAtualObj.id.substring(0,8)}...
+      </div>
+    </div>
+  `;
+
+  atualizarKpiCaixaAbertoLocal();
+}
+
+function atualizarKpiCaixaAbertoLocal() {
+  if(!caixaAtualObj) return;
+
+  let valInicial = Number(caixaAtualObj.valorInicial) || 0;
+  let totalVendasDinheiro = 0;
+
+  todasMovimentacoes.forEach(m => {
+    if(m.caixaId === caixaAtualObj.id && m.tipo === "saida") {
+      let fPag = m.formaPagamento || "";
+      if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+        totalVendasDinheiro += Number(m.valor) || 0;
+      }
     }
+  });
 
-    clienteFiadoObj = todosClientes.find(c => c.id === cliId);
-    if(!clienteFiadoObj) {
-      btn.disabled = false;
-      return alert("Cliente selecionado não encontrado!");
-    }
+  let dinheiroEsperado = valInicial + totalVendasDinheiro;
 
-    if(clienteFiadoObj.status === "bloqueado") {
-      btn.disabled = false;
-      return alert("🔒 Cliente bloqueado para compras a crédito.");
-    }
+  kpiCaixaInicial.innerText = valInicial.toLocaleString('pt-PT') + " Db";
+  kpiCaixaVendasDinheiro.innerText = totalVendasDinheiro.toLocaleString('pt-PT') + " Db";
+  kpiCaixaDinheiroEsperado.innerText = dinheiroEsperado.toLocaleString('pt-PT') + " Db";
+}
 
-    let lim = Number(clienteFiadoObj.limiteCredito) || 0;
-    let dev = Number(clienteFiadoObj.saldoDevedor) || 0;
-    let disp = lim - dev;
-
-    if(valorTotalVenda > disp) {
-      btn.disabled = false;
-      return alert(`❌ Crédito insuficiente para esta venda.\n\nLimite: ${lim} Db\nDívida Atual: ${dev} Db\nCrédito Disponível: ${disp} Db\nValor da Venda: ${valorTotalVenda} Db`);
-    }
-
-    let novaDivida = dev + valorTotalVenda;
-
-    let confirma = confirm(
-      `Confirmar venda a fiado?\n\n` +
-      `Cliente: ${clienteFiadoObj.nome}\n` +
-      `Dívida Atual: ${dev} Db\n` +
-      `Limite: ${lim} Db\n` +
-      `Crédito Disponível: ${disp} Db\n\n` +
-      `Nova Venda: ${valorTotalVenda} Db\n` +
-      `Nova Dívida: ${novaDivida} Db`
-    );
-
-    if(!confirma) {
-      btn.disabled = false;
-      return;
-    }
-  }
+function abrirCaixa() {
+  if(!navigator.onLine) return alert("Erro de conexão: É necessária internet ativa para abrir o caixa de forma segura.");
 
   let u = auth.currentUser;
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
+  if(!u) return;
+
+  let valInicial = Number(aberturaValorInicial.value) || 0;
+  if(valInicial < 0) return alert("Por favor, informe um valor inicial válido!");
+
+  db.collection("caixas")
+    .where("uid", "==", u.uid)
+    .where("estado", "==", "aberto")
+    .get()
+    .then(snap => {
+      if(!snap.empty) {
+        alert("Já possui um caixa aberto! Feche o caixa atual antes de abrir um novo.");
+        return;
+      }
+
+      let payload = {
+        uid: u.uid,
+        usuario: u.email,
+        role: usuarioRole,
+        dataAbertura: new Date(),
+        valorInicial: valInicial,
+        estado: "aberto"
+      };
+
+      return db.collection("caixas").add(payload).then(() => {
+        aberturaValorInicial.value = "0";
+        alert("Caixa / Turno aberto com sucesso!");
+      });
+    })
+    .catch(e => alert("Erro ao abrir caixa: " + e.message));
+}
+
+function abrirModalFecharCaixa() {
+  if(!caixaAtualObj) return alert("Nenhum caixa aberto para fechar.");
+
+  let valInicial = Number(caixaAtualObj.valorInicial) || 0;
+  let totalVendasDinheiro = 0;
+
+  todasMovimentacoes.forEach(m => {
+    if(m.caixaId === caixaAtualObj.id && m.tipo === "saida") {
+      let fPag = m.formaPagamento || "";
+      if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+        totalVendasDinheiro += Number(m.valor) || 0;
+      }
+    }
+  });
+
+  let dinheiroEsperado = valInicial + totalVendasDinheiro;
+
+  lblModalValorInicial.innerText = valInicial.toLocaleString('pt-PT') + " Db";
+  lblModalVendasDinheiro.innerText = totalVendasDinheiro.toLocaleString('pt-PT') + " Db";
+  lblModalDinheiroEsperado.innerText = dinheiroEsperado.toLocaleString('pt-PT') + " Db";
+  
+  modalDinheiroContado.value = "";
+  modalObservacaoFechamento.value = "";
+  
+  calcularDiferencaFechamento();
+  modalFecharCaixa.classList.remove("hidden");
+}
+
+function fecharModalFecharCaixa() {
+  modalFecharCaixa.classList.add("hidden");
+}
+
+function calcularDiferencaFechamento() {
+  if(!caixaAtualObj) return;
+
+  let valInicial = Number(caixaAtualObj.valorInicial) || 0;
+  let totalVendasDinheiro = 0;
+
+  todasMovimentacoes.forEach(m => {
+    if(m.caixaId === caixaAtualObj.id && m.tipo === "saida") {
+      let fPag = m.formaPagamento || "";
+      if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+        totalVendasDinheiro += Number(m.valor) || 0;
+      }
+    }
+  });
+
+  let dinheiroEsperado = valInicial + totalVendasDinheiro;
+  let dinheiroContado = Number(modalDinheiroContado.value) || 0;
+  let diferenca = dinheiroContado - dinheiroEsperado;
+
+  let lbl = lblModalDiferenca;
+
+  if(diferenca === 0) {
+    lbl.className = "dif-certo";
+    lbl.innerText = "🟢 0 Db (Caixa certo)";
+  } else if(diferenca < 0) {
+    lbl.className = "dif-quebra";
+    lbl.innerText = `🔴 ${diferenca.toLocaleString('pt-PT')} Db (Falta / Quebra de Caixa)`;
+  } else {
+    lbl.className = "dif-sobra";
+    lbl.innerText = `🟡 +${diferenca.toLocaleString('pt-PT')} Db (Sobra de Caixa)`;
+  }
+}
+
+function confirmarFechamentoCaixa() {
+  if(!navigator.onLine) return alert("Erro: O fechamento de caixa exige conexão com a internet para validação da auditoria.");
+  if(!caixaAtualObj) return;
+
+  let btn = document.getElementById("btnConfirmarFecharCaixa");
+  btn.disabled = true;
+
+  let dinheiroContadoVal = Number(modalDinheiroContado.value);
+  if(modalDinheiroContado.value === "" || isNaN(dinheiroContadoVal) || dinheiroContadoVal < 0) {
+    btn.disabled = false;
+    return alert("Por favor, digite o valor de dinheiro contado fisicamente!");
+  }
+
+  let obsVal = modalObservacaoFechamento.value.trim();
+  let user = auth.currentUser;
 
   db.runTransaction(function(transaction) {
-    let prodRef = db.collection("produtos").doc(produtoVendaAtual.id);
+    let caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
 
-    return transaction.get(prodRef).then(function(prodDoc) {
-      if(!prodDoc.exists) throw "Produto não encontrado.";
+    return transaction.get(caixaRef).then(function(caixaDoc) {
+      if(!caixaDoc.exists) throw "Caixa não encontrado.";
+      if(caixaDoc.data().estado === "fechado") throw "Este caixa já foi fechado anteriormente.";
 
-      let pData = prodDoc.data();
-      let estAtual = Number(pData.estoque) || 0;
+      let cData = caixaDoc.data();
+      let valInicial = Number(cData.valorInicial) || 0;
 
-      if(estAtual < qtd) throw `Estoque insuficiente em tempo real! Restam apenas ${estAtual} unidades.`;
-
-      let novoEstoque = estAtual - qtd;
-
-      if(fPag === "Fiado" && clienteFiadoObj) {
-        let cliRef = db.collection("clientes").doc(clienteFiadoObj.id);
-
-        return transaction.get(cliRef).then(function(cliDoc) {
-          if(!cliDoc.exists) throw "Cliente não encontrado.";
-          let cData = cliDoc.data();
-
-          if(cData.status === "bloqueado") throw "🔒 Cliente bloqueado para compras a crédito.";
-
-          let lim = Number(cData.limiteCredito) || 0;
-          let dev = Number(cData.saldoDevedor) || 0;
-          let disp = lim - dev;
-
-          if(valorTotalVenda > disp) throw "❌ Crédito insuficiente para esta venda.";
-
-          let novaDivida = dev + valorTotalVenda;
-
-          transaction.update(prodRef, { estoque: novoEstoque });
-          transaction.update(cliRef, { saldoDevedor: novaDivida, ultimaAtualizacao: new Date() });
-
-          let movCliRef = db.collection("movimentos_clientes").doc();
-          transaction.set(movCliRef, {
-            clienteId: clienteFiadoObj.id,
-            clienteNome: cData.nome,
-            tipo: "fiado",
-            descricao: `Venda a Fiado: ${pData.nome} (${qtd}un)`,
-            valor: valorTotalVenda,
-            formaPagamento: "Fiado",
-            usuario: u.email,
-            uid: u.uid,
-            data: new Date(),
-            saldoAnterior: dev,
-            saldoPosterior: novaDivida
-          });
-
-          let vendaRef = db.collection("movimentacoes").doc();
-          let vendaPayload = {
-            produto: pData.nome,
-            tipo: "saida",
-            quantidade: qtd,
-            valor: valorTotalVenda,
-            formaPagamento: "Fiado",
-            usuario: u.email,
-            uid: u.uid,
-            role: usuarioRole,
-            clienteId: clienteFiadoObj.id,
-            clienteNome: cData.nome,
-            data: new Date()
-          };
-          if(cId) vendaPayload.caixaId = cId;
-
-          transaction.set(vendaRef, vendaPayload);
+      return db.collection("movimentacoes").where("caixaId", "==", caixaAtualObj.id).get().then(snapMovs => {
+        let totalVendasDinheiro = 0;
+        snapMovs.forEach(docM => {
+          let m = docM.data();
+          if(m.tipo === "saida") {
+            let fPag = m.formaPagamento || "";
+            if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+              totalVendasDinheiro += Number(m.valor) || 0;
+            }
+          }
         });
-      } else {
-        transaction.update(prodRef, { estoque: novoEstoque });
 
-        let vendaRef = db.collection("movimentacoes").doc();
-        let vendaPayload = {
-          produto: pData.nome,
-          tipo: "saida",
-          quantidade: qtd,
-          valor: valorTotalVenda,
-          formaPagamento: fPag,
-          usuario: u.email,
-          uid: u.uid,
-          role: usuarioRole,
-          clienteNome: nomeCliModal || "Cliente Geral",
-          data: new Date()
-        };
-        if(cId) vendaPayload.caixaId = cId;
+        let dinheiroEsperado = valInicial + totalVendasDinheiro;
+        let diferenca = dinheiroContadoVal - dinheiroEsperado;
 
-        transaction.set(vendaRef, vendaPayload);
-      }
+        transaction.update(caixaRef, {
+          estado: "fechado",
+          dinheiroEsperado: dinheiroEsperado,
+          dinheiroContado: dinheiroContadoVal,
+          diferenca: diferenca,
+          observacaoFechamento: obsVal,
+          fechadoPorUid: user.uid,
+          fechadoPorUsuario: user.email,
+          dataFechamento: new Date()
+        });
+      });
     });
   }).then(() => {
     btn.disabled = false;
-    fecharModalVenda();
-    
-    prepararEImprimirRecibo({
-      data: new Date().toLocaleString('pt-PT'),
-      cliente: fPag === "Fiado" ? clienteFiadoObj.nome : (nomeCliModal || "Cliente Geral"),
-      vendedor: u.email,
-      item: produtoVendaAtual.nome,
-      qtd: qtd,
-      precoUnit: Number(produtoVendaAtual.venda) || 0,
-      total: valorTotalVenda,
-      pagamento: fPag,
-      troco: fPag === "Dinheiro" ? (Number(lblTroco.innerText.replace(' Db','')) || 0) : 0
-    });
-
-    alert("Venda realizada com sucesso!");
+    fecharModalFecharCaixa();
+    alert("Caixa fechado com sucesso e auditoria gravada!");
   }).catch(e => {
     btn.disabled = false;
-    alert("Erro ao processar venda: " + e);
+    alert("Erro ao fechar caixa: " + e);
   });
 }
 
-function prepararEImprimirRecibo(dados) {
-  reciboData.innerText = dados.data;
-  reciboCliente.innerText = dados.cliente;
-  reciboVendedor.innerText = dados.vendedor;
-  reciboItem.innerText = dados.item;
-  reciboQtd.innerText = dados.qtd;
-  reciboPrecoUnit.innerText = dados.precoUnit.toLocaleString('pt-PT') + " Db";
-  reciboTotalItem.innerText = dados.total.toLocaleString('pt-PT');
-  reciboTotal.innerText = dados.total.toLocaleString('pt-PT');
-  reciboPagamento.innerText = dados.pagamento;
+function carregarAuditoriaCaixasAdmin() {
+  if(listenerCaixasAuditoria) listenerCaixasAuditoria();
 
-  if(dados.pagamento === "Dinheiro") {
-    reciboTrocoRow.style.display = "block";
-    reciboTroco.innerText = dados.troco.toLocaleString('pt-PT');
-  } else {
-    reciboTrocoRow.style.display = "none";
-  }
+  listenerCaixasAuditoria = db.collection("caixas").orderBy("dataAbertura", "desc").onSnapshot(s => {
+    todosCaixasAuditoria = [];
+    let htmlBuffer = "";
 
-  window.print();
-}
+    s.forEach(d => {
+      let c = d.data();
+      c.id = d.id;
+      todosCaixasAuditoria.push(c);
 
-/* =========================================================================
-   DASHBOARD, ESTOQUE E HISTÓRICO
-   ========================================================================= */
+      let dtAberto = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+      let dtFechado = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'EM ABERTO';
+      
+      let stBadge = c.estado === 'aberto' ? 
+        '<span class="status-caixa-aberto">ABERTO</span>' : 
+        '<span class="status-caixa-fechado">FECHADO</span>';
 
-function renderizarTabelaEstoque() {
-  let busca = inputBusca.value.trim().toLowerCase();
-  let cat = selectCategoriaFiltro.value;
+      let difTxt = "-";
+      if(c.estado === "fechado") {
+        let dif = Number(c.diferenca) || 0;
+        if(dif === 0) difTxt = '<span class="dif-certo">0 Db</span>';
+        else if(dif < 0) difTxt = `<span class="dif-quebra">${dif} Db</span>`;
+        else difTxt = `<span class="dif-sobra">+${dif} Db</span>`;
+      }
 
-  let filtrados = todosProdutos.filter(p => {
-    let bateBusca = p.nome.toLowerCase().includes(busca) || (p.barcode && p.barcode.toLowerCase().includes(busca));
-    let bateCat = cat === "" || p.categoria === cat;
-    let bateBaixo = !filtrarApenasBaixoEstoque || ((Number(p.estoque) || 0) <= (Number(p.minimo) || 0));
-    return bateBusca && bateCat && bateBaixo;
-  });
-
-  let totalPaginas = Math.ceil(filtrados.length / itensPorPagina) || 1;
-  if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
-
-  let inicio = (paginaAtual - 1) * itensPorPagina;
-  let paginados = filtrados.slice(inicio, inicio + itensPorPagina);
-
-  let html = "";
-  let isAdmin = (usuarioRole === "admin");
-  let isEstoque = (usuarioRole === "estoque");
-  let podeAdicionar = (isAdmin || isEstoque);
-  let podeVender = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
-
-  paginados.forEach(p => {
-    let q = Number(p.estoque) || 0;
-    let m = Number(p.minimo) || 0;
-    let comp = Number(p.compra) || 0;
-    let vend = Number(p.venda) || 0;
-    let lucro = vend - comp;
-    let tot = q * vend;
-
-    let classeBaixo = q <= m ? "baixo" : "";
-
-    html += `
-      <tr class="${classeBaixo}">
-        <td><img src="${p.foto || 'https://via.placeholder.com/42'}" class="img-thumb" alt="Foto"></td>
-        <td style="text-align:left;"><b>${p.nome}</b></td>
-        <td><span class="barcode-badge">${p.barcode || '-'}</span></td>
-        <td><small>${p.categoria}</small></td>
-        <td><b>${q} un</b></td>
-        <td><small>${m}</small></td>
-        ${isAdmin ? `<td>${comp.toLocaleString('pt-PT')} Db</td>` : ''}
-        <td><b>${vend.toLocaleString('pt-PT')} Db</b></td>
-        ${isAdmin ? `<td style="color:#10b981;">${lucro.toLocaleString('pt-PT')} Db</td>` : ''}
-        <td><b>${tot.toLocaleString('pt-PT')} Db</b></td>
-        ${podeAdicionar ? `<td><button class="btn-success btn-acao" onclick="adicionarEstoqueRapido('${p.id}')">+</button></td>` : ''}
-        ${podeVender ? `<td><button class="btn-success btn-acao" onclick="abrirModalVenda('${p.id}')">🛒 Vender</button></td>` : ''}
-        ${isAdmin ? `
+      htmlBuffer += `
+        <tr>
+          <td><b>Turno #${c.id.substring(0,5).toUpperCase()}</b></td>
+          <td><b>${c.usuario}</b></td>
+          <td><small>${(c.role || 'venda1').toUpperCase()}</small></td>
+          <td><small>${dtAberto}</small></td>
+          <td><small>${dtFechado}</small></td>
+          <td>${(Number(c.valorInicial)||0).toLocaleString('pt-PT')} Db</td>
+          <td>${c.dinheiroEsperado !== undefined ? Number(c.dinheiroEsperado).toLocaleString('pt-PT') + ' Db' : '-'}</td>
+          <td>${c.dinheiroContado !== undefined ? Number(c.dinheiroContado).toLocaleString('pt-PT') + ' Db' : '-'}</td>
+          <td>${difTxt}</td>
+          <td>${stBadge}</td>
           <td>
-            <div class="acoes-cell">
-              <button class="btn-secondary btn-acao" onclick="editarProduto('${p.id}')">✏️</button>
-              <button class="btn-danger btn-acao" onclick="apagarProduto('${p.id}')">🗑️</button>
-            </div>
+            <button class="btn-secondary btn-acao" onclick="abrirAuditoriaDetalhadaModal('${c.id}')">🔍 Ver Auditoria</button>
           </td>
-        ` : ''}
+        </tr>
+      `;
+    });
+
+    listaCaixasAuditoria.innerHTML = htmlBuffer || '<tr><td colspan="11" style="color:#94a3b8;">Nenhum registo de caixa encontrado.</td></tr>';
+  });
+}
+
+function abrirAuditoriaDetalhadaModal(caixaId) {
+  let c = todosCaixasAuditoria.find(item => item.id === caixaId);
+  if(!c) return;
+
+  auditTituloModal.innerText = `Auditoria do Turno #${caixaId.substring(0,8).toUpperCase()}`;
+
+  let dtAberto = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+  let dtFechado = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'EM ABERTO';
+
+  let vendasDoTurno = todasMovimentacoes.filter(m => m.caixaId === caixaId);
+
+  let totalVendasDinheiro = 0;
+  let htmlVendas = "";
+
+  vendasDoTurno.forEach(m => {
+    let dHora = m.data ? m.data.toDate().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'}) : '-';
+    let val = Number(m.valor) || 0;
+    let fPag = m.formaPagamento || "Dinheiro";
+
+    if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
+      totalVendasDinheiro += val;
+    }
+
+    htmlVendas += `
+      <tr>
+        <td>${dHora}</td>
+        <td><b>${m.produto}</b></td>
+        <td>${m.quantidade} un</td>
+        <td><b>${val.toLocaleString('pt-PT')} Db</b></td>
+        <td><small>${fPag}</small></td>
+        <td><small>${m.usuario}</small></td>
       </tr>
     `;
   });
 
-  lista.innerHTML = html || '<tr><td colspan="12" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>';
-  infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas} (${filtrados.length} produtos)`;
+  let valInicial = Number(c.valorInicial) || 0;
+  let dinEsperadoCalculado = c.dinheiroEsperado !== undefined ? c.dinheiroEsperado : (valInicial + totalVendasDinheiro);
+
+  let htmlAudit = `
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:15px; font-size:13px;">
+      <div><b>Funcionário:</b> ${c.usuario}</div>
+      <div><b>Função:</b> ${(c.role||'venda1').toUpperCase()}</div>
+      <div><b>UID:</b> <small>${c.uid}</small></div>
+      <div><b>Abertura:</b> ${dtAberto}</div>
+      <div><b>Fechamento:</b> ${dtFechado}</div>
+      <div><b>Fechado Por:</b> ${c.fechadoPorUsuario || '-'}</div>
+    </div>
+
+    <div class="kpi-grid" style="margin-bottom: 15px;">
+      <div class="kpi-card blue">
+        <span class="kpi-title">Valor Inicial</span>
+        <span class="kpi-value">${valInicial.toLocaleString('pt-PT')} Db</span>
+      </div>
+      <div class="kpi-card green">
+        <span class="kpi-title">Vendas em Dinheiro</span>
+        <span class="kpi-value">${totalVendasDinheiro.toLocaleString('pt-PT')} Db</span>
+      </div>
+      <div class="kpi-card purple">
+        <span class="kpi-title">Dinheiro Esperado</span>
+        <span class="kpi-value">${dinEsperadoCalculado.toLocaleString('pt-PT')} Db</span>
+      </div>
+      <div class="kpi-card ${c.diferenca < 0 ? 'red' : (c.diferenca > 0 ? 'orange' : 'green')}">
+        <span class="kpi-title">Dinheiro Contado / Dif.</span>
+        <span class="kpi-value">${c.dinheiroContado !== undefined ? c.dinheiroContado.toLocaleString('pt-PT') + ' Db' : 'Em aberto'}</span>
+        <span class="kpi-sub" style="color:inherit;">
+          ${c.diferenca !== undefined ? 'Diferença: ' + c.diferenca + ' Db' : ''}
+        </span>
+      </div>
+    </div>
+
+    ${c.observacaoFechamento ? `
+      <div style="background:#fffbe6; padding:10px; border-radius:8px; border:1px solid #fde68a; margin-bottom:15px; font-size:13px; color:#92400e;">
+        <b>💬 Observação do Fechamento:</b> ${c.observacaoFechamento}
+      </div>
+    ` : ''}
+
+    <h4 style="margin: 15px 0 8px 0; color:#1e293b;">🛒 Vendas Realizadas Neste Turno (${vendasDoTurno.length})</h4>
+    <div class="table-responsive">
+      <table style="min-width:100%;">
+        <thead>
+          <tr>
+            <th>Horário</th><th>Produto</th><th>Qtd</th><th>Valor</th><th>Forma Pag.</th><th>Funcionário</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${htmlVendas || '<tr><td colspan="6" style="color:#94a3b8;">Nenhuma venda cadastrada neste turno.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  auditConteudoModal.innerHTML = htmlAudit;
+  modalAuditoriaDetalhes.classList.remove("hidden");
 }
 
-function mudarFiltroOuBusca() {
-  paginaAtual = 1;
-  renderizarTabelaEstoque();
+function fecharModalAuditoria() {
+  modalAuditoriaDetalhes.classList.add("hidden");
 }
 
-function paginaAnterior() {
-  if(paginaAtual > 1) { paginaAtual--; renderizarTabelaEstoque(); }
+/* =========================================================================
+   LÓGICA DO ARMAZÉM PORTUGAL
+   ========================================================================= */
+
+function carregarArmazemPTTresPassos() {
+  if(listenerArmazemPT) listenerArmazemPT();
+  if(listenerLotesPT) listenerLotesPT();
+
+  listenerArmazemPT = db.collection("armazem_pt").orderBy("dataRegisto", "desc").onSnapshot(s => {
+    todosItensSoltosPT = [];
+    let htmlSoltos = "";
+    let htmlSelecao = "";
+
+    s.forEach(d => {
+      let item = d.data();
+      item.id = d.id;
+
+      if(item.estado === "EM_LISBOA") {
+        todosItensSoltosPT.push(item);
+
+        let dataFmt = item.dataRegisto ? item.dataRegisto.toDate().toLocaleDateString('pt-PT') : '-';
+        let subtotal = (item.quantidade || 0) * (item.custoEuroUnitario || 0);
+
+        htmlSoltos += `
+          <tr>
+            <td><b>${item.nome}</b></td>
+            <td><small>${item.categoria || 'Geral'}</small></td>
+            <td><b>${item.quantidade} un</b></td>
+            <td>${(item.custoEuroUnitario || 0).toFixed(2)} €</td>
+            <td style="color:#2563eb; font-weight:bold;">${subtotal.toFixed(2)} €</td>
+            <td><small>${dataFmt}</small></td>
+            <td>
+              <button class="btn-danger btn-acao" onclick="apagarItemSoltoPT('${item.id}')">🗑️</button>
+            </td>
+          </tr>
+        `;
+
+        htmlSelecao += `
+          <tr>
+            <td><input type="checkbox" class="chk-item-pt" value="${item.id}" data-custototal="${subtotal}"></td>
+            <td><b>${item.nome}</b> (${item.categoria || 'Geral'})</td>
+            <td>${item.quantidade} un</td>
+            <td><b>${subtotal.toFixed(2)} €</b></td>
+          </tr>
+        `;
+      }
+    });
+
+    listaItensSoltosPT.innerHTML = htmlSoltos || '<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo solto no Armazém de Lisboa.</td></tr>';
+    listaSelecaoLotePT.innerHTML = htmlSelecao || '<tr><td colspan="4" style="color:#94a3b8;">Nenhum artigo disponível para montagem de lote.</td></tr>';
+  });
+
+  listenerLotesPT = db.collection("lotes_pt").orderBy("dataEnvio", "desc").onSnapshot(s => {
+    todosLotesPT = [];
+    let htmlLotes = "";
+
+    s.forEach(d => {
+      let lote = d.data();
+      lote.id = d.id;
+      todosLotesPT.push(lote);
+
+      let dataFmt = lote.dataEnvio ? lote.dataEnvio.toDate().toLocaleDateString('pt-PT') : '-';
+      let statusBadge = lote.estado === 'EM_TRANSITO' ? 
+        '<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>' : 
+        '<span class="badge-concluido">ENTRADA DADA NO STOCK</span>';
+
+      let btnAcao = lote.estado === 'EM_TRANSITO' ? 
+        `<button class="btn-success btn-acao" onclick="darEntradaLoteNoStockSTP('${lote.id}')">🛬 Dar Entrada no Stock</button>` : '-';
+
+      let nomesItens = (lote.itens || []).map(i => `${i.nome} (${i.quantidade}un)`).join(", ");
+
+      htmlLotes += `
+        <tr>
+          <td><b>${lote.identificador}</b></td>
+          <td><small>${nomesItens}</small></td>
+          <td style="color:#d97706; font-weight:bold;">${(lote.custoFreteEuro || 0).toFixed(2)} €</td>
+          <td style="color:#2563eb; font-weight:bold;">${(lote.custoTotalItensEuro + lote.custoFreteEuro).toFixed(2)} €</td>
+          <td>${statusBadge}</td>
+          <td><small>${dataFmt}</small></td>
+          <td>${btnAcao}</td>
+        </tr>
+      `;
+    });
+
+    listaLotesEmTransitoPT.innerHTML = htmlLotes || '<tr><td colspan="7" style="color:#94a3b8;">Nenhum lote enviado ou em trânsito.</td></tr>';
+  });
 }
-function proximaPagina() {
-  paginaAtual++; renderizarTabelaEstoque();
+
+function cadastrarItemSoltoPT() {
+  let nome = ptNomeItem.value.trim();
+  let cat = ptCategoriaItem.value.trim() || "Geral";
+  let qtd = Number(ptQtdItem.value) || 0;
+  let custoUnit = Number(ptCustoEuroItem.value) || 0;
+
+  if(!nome || qtd <= 0 || custoUnit <= 0) {
+    return alert("Preencha o nome do artigo, quantidade e custo unitário em Euros (€)!");
+  }
+
+  let payload = {
+    nome: nome,
+    categoria: cat,
+    quantidade: qtd,
+    custoEuroUnitario: custoUnit,
+    estado: "EM_LISBOA",
+    usuario: auth.currentUser.email,
+    uid: auth.currentUser.uid,
+    role: usuarioRole,
+    dataRegisto: new Date()
+  };
+
+  db.collection("armazem_pt").add(payload).then(() => {
+    ptNomeItem.value = "";
+    ptCategoriaItem.value = "";
+    ptQtdItem.value = "";
+    ptCustoEuroItem.value = "";
+    alert("Artigo cadastrado no Stock de Lisboa com sucesso!");
+  }).catch(e => alert("Erro ao cadastrar: " + e.message));
+}
+
+function apagarItemSoltoPT(id) {
+  if(confirm("Deseja apagar este artigo do stock de Lisboa?")) {
+    db.collection("armazem_pt").doc(id).delete();
+  }
+}
+
+function selecionarTodosArtigosPT(chkMaster) {
+  let checkboxes = document.querySelectorAll(".chk-item-pt");
+  checkboxes.forEach(c => c.checked = chkMaster.checked);
+}
+
+function despacharLotePT() {
+  let ident = loteNomeIdentificador.value.trim();
+  let freteEuro = Number(loteFreteEuro.value) || 0;
+  let chks = document.querySelectorAll(".chk-item-pt:checked");
+
+  if(!ident) return alert("Por favor, digite um identificador para o Lote/Tambor!");
+  if(freteEuro < 0) return alert("Informe um valor válido de frete (€)!");
+  if(chks.length === 0) return alert("Selecione pelo menos um artigo para incluir no lote!");
+
+  let idsSelecionados = Array.from(chks).map(c => c.value);
+  let itensAlocados = todosItensSoltosPT.filter(i => idsSelecionados.includes(i.id));
+
+  let custoTotalItensEuro = itensAlocados.reduce((acc, i) => acc + (i.quantidade * i.custoEuroUnitario), 0);
+
+  let itensComRateio = itensAlocados.map(item => {
+    let subtotalItem = item.quantidade * item.custoEuroUnitario;
+    let proporcao = custoTotalItensEuro > 0 ? (subtotalItem / custoTotalItensEuro) : (1 / itensAlocados.length);
+    let freteAlocadoAoItem = freteEuro * proporcao;
+    let fretePorUnidade = freteAlocadoAoItem / item.quantidade;
+    let custoFinalUnitarioEuro = item.custoEuroUnitario + fretePorUnidade;
+
+    return {
+      idOriginalPT: item.id,
+      nome: item.nome,
+      categoria: item.categoria,
+      quantidade: item.quantidade,
+      custoEuroUnitarioBase: item.custoEuroUnitario,
+      freteAlocadoItemTotal: freteAlocadoAoItem,
+      custoFinalUnitarioEuro: custoFinalUnitarioEuro
+    };
+  });
+
+  let lotePayload = {
+    identificador: ident,
+    custoFreteEuro: freteEuro,
+    custoTotalItensEuro: custoTotalItensEuro,
+    itens: itensComRateio,
+    estado: "EM_TRANSITO",
+    usuario: auth.currentUser.email,
+    uid: auth.currentUser.uid,
+    role: usuarioRole,
+    dataEnvio: new Date()
+  };
+
+  db.collection("lotes_pt").add(lotePayload).then(() => {
+    let batch = db.batch();
+    idsSelecionados.forEach(id => {
+      let ref = db.collection("armazem_pt").doc(id);
+      batch.update(ref, { estado: "EM_LOTE", loteIdentificador: ident });
+    });
+    return batch.commit();
+  }).then(() => {
+    loteNomeIdentificador.value = "";
+    loteFreteEuro.value = "";
+    alert("Lote montado e despachado com sucesso! Frete rateado proporcionalmente.");
+  }).catch(e => alert("Erro ao despachar lote: " + e.message));
+}
+
+function darEntradaLoteNoStockSTP(loteId) {
+  let lote = todosLotesPT.find(l => l.id === loteId);
+  if(!lote) return;
+
+  let cotacaoPrompt = prompt("Digite a Cotação/Taxa de Câmbio do Euro para Dobras (STN) para converter os custos:", "26.0");
+  if(!cotacaoPrompt) return;
+  let taxaCambio = Number(cotacaoPrompt) || 26.0;
+
+  if(!confirm(`Confirmar a entrada dos produtos do Lote "${lote.identificador}" no Stock Geral de São Tomé à taxa de ${taxaCambio} Db/€?`)) {
+    return;
+  }
+
+  let cId = caixaAtualObj ? caixaAtualObj.id : null;
+
+  db.runTransaction(function(transaction) {
+    let loteRef = db.collection("lotes_pt").doc(loteId);
+
+    return transaction.get(loteRef).then(function(loteDoc) {
+      if (!loteDoc.exists) throw "Lote não encontrado.";
+      if (loteDoc.data().estado === "RECEBIDO") throw "Este lote já teve entrada processada anteriormente.";
+
+      lote.itens.forEach(item => {
+        let custoUnitarioSTN = Math.round(item.custoFinalUnitarioEuro * taxaCambio);
+        let precoVendaSugerido = Math.round(custoUnitarioSTN * 1.3);
+
+        let prodExistente = todosProdutos.find(p => p.nome.toLowerCase().trim() === item.nome.toLowerCase().trim());
+
+        if(prodExistente) {
+          let refExistente = db.collection("produtos").doc(prodExistente.id);
+          let novoEstoque = (Number(prodExistente.estoque) || 0) + item.quantidade;
+          transaction.update(refExistente, {
+            estoque: novoEstoque,
+            compra: custoUnitarioSTN
+          });
+        } else {
+          let novoRef = db.collection("produtos").doc();
+          transaction.set(novoRef, {
+            nome: item.nome,
+            barcode: "",
+            categoria: item.categoria || "Importado PT",
+            estoque: item.quantidade,
+            minimo: 2,
+            compra: custoUnitarioSTN,
+            venda: precoVendaSugerido,
+            foto: ""
+          });
+        }
+
+        let movRef = db.collection("movimentacoes").doc();
+        let movPayload = {
+          produto: item.nome,
+          tipo: "entrada",
+          quantidade: item.quantidade,
+          valor: custoUnitarioSTN * item.quantidade,
+          formaPagamento: `Transferência Lote PT (${lote.identificador})`,
+          usuario: auth.currentUser.email,
+          uid: auth.currentUser.uid,
+          role: usuarioRole,
+          data: new Date()
+        };
+        if(cId) movPayload.caixaId = cId;
+
+        transaction.set(movRef, movPayload);
+      });
+
+      transaction.update(loteRef, {
+        estado: "RECEBIDO",
+        dataRecebimento: new Date()
+      });
+    });
+  }).then(() => {
+    alert("Produtos transferidos e somados ao Stock Geral de São Tomé com sucesso!");
+  }).catch(e => alert("Erro ao dar entrada no stock: " + e));
+}
+
+function verificarAlertaEstoqueBaixo() {
+  let emFalta = todosProdutos.filter(p => (Number(p.estoque) || 0) <= 0);
+  let estoqueBaixo = todosProdutos.filter(p => {
+    let q = Number(p.estoque) || 0;
+    let m = Number(p.minimo) || 0;
+    return q > 0 && q <= m;
+  });
+
+  let totalAlertas = emFalta.length + estoqueBaixo.length;
+  
+  if(totalAlertas > 0) {
+    btnToggleAlertas.innerText = `⚠️ Alertas de Estoque (${totalAlertas})`;
+    btnToggleAlertas.className = "btn-warning";
+  } else {
+    btnToggleAlertas.innerText = `✅ Alertas de Estoque (0)`;
+    btnToggleAlertas.className = "btn-secondary";
+  }
+
+  let htmlBox = "";
+
+  if(totalAlertas === 0) {
+    htmlBox = `<p style="color:#10b981; font-weight:600; margin:0; display:flex; align-items:center; gap:6px;">✅ Excelente! Todos os produtos estão com níveis normais de estoque.</p>`;
+  } else {
+    if(emFalta.length > 0) {
+      htmlBox += `
+        <div class="alerta-grupo">
+          <span class="alerta-titulo esgotado">❌ Esgotados (${emFalta.length})</span>
+          <div class="alerta-badges">
+            ${emFalta.map(p => `
+              <span class="badge-alerta esgotado">
+                ${p.nome} <span class="qtd-tag">0 un</span>
+              </span>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+
+    if(estoqueBaixo.length > 0) {
+      htmlBox += `
+        <div class="alerta-grupo" style="${emFalta.length > 0 ? 'border-top: 1px dashed #e2e8f0; padding-top: 8px;' : ''}">
+          <span class="alerta-titulo critico">⚠️ Mínimo Crítico (${estoqueBaixo.length})</span>
+          <div class="alerta-badges">
+            ${estoqueBaixo.map(p => `
+              <span class="badge-alerta critico">
+                ${p.nome} <span class="qtd-tag">${p.estoque} un (mín: ${p.minimo})</span>
+              </span>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  containerProdutosEmFalta.innerHTML = htmlBox;
 }
 
 function toggleApenasBaixoEstoque() {
   filtrarApenasBaixoEstoque = !filtrarApenasBaixoEstoque;
-  let btn = document.getElementById("btnFiltroEstoqueBaixo");
-  if(filtrarApenasBaixoEstoque) {
-    btn.innerText = "📋 Ver Todos os Produtos";
-    btn.style.background = "#64748b";
-  } else {
-    btn.innerText = "🚨 Ver Apenas Produtos Críticos";
-    btn.style.background = "#ef4444";
-  }
-  mudarFiltroOuBusca();
+  btnFiltroEstoqueBaixo.innerText = filtrarApenasBaixoEstoque ? "📋 Ver Todos os Produtos na Tabela" : "🚨 Ver Apenas Produtos Críticos na Tabela";
+  paginaAtual = 1;
+  renderizarTabelaEstoque();
 }
 
-function adicionarEstoqueRapido(id) {
-  let qtdAdicionar = prompt("Quantas unidades deseja ADICIONAR ao estoque atual?", "1");
-  if(!qtdAdicionar) return;
-  let qtdNum = Number(qtdAdicionar);
-  if(isNaN(qtdNum) || qtdNum <= 0) return alert("Quantidade inválida!");
+function carregarDespesas() {
+  listenerDespesas = db.collection("despesas").orderBy("data","desc").onSnapshot(s => {
+    todasDespesas = [];
+    s.forEach(d => { let desp = d.data(); desp.id = d.id; todasDespesas.push(desp); });
+    processarDashboard();
+  });
+}
 
-  let p = todosProdutos.find(item => item.id === id);
-  if(!p) return;
+function carregarEncomendas() {
+  listenerEncomendas = db.collection("encomendas").orderBy("data","desc").onSnapshot(s => {
+    todasEncomendas = [];
+    let htmlBuffer = "";
 
-  let novoEstoque = (Number(p.estoque) || 0) + qtdNum;
+    s.forEach(d => {
+      let enc = d.data();
+      enc.id = d.id;
+      todasEncomendas.push(enc);
 
-  db.collection("produtos").doc(id).update({ estoque: novoEstoque }).then(() => {
-    db.collection("movimentacoes").add({
-      produto: p.nome,
-      tipo: "entrada",
-      quantidade: qtdNum,
-      valor: qtdNum * (Number(p.compra) || 0),
-      formaPagamento: "Ajuste de Estoque Rápido",
+      let faltaPagar = (Number(enc.valorTotal) || 0) - (Number(enc.sinalPago) || 0);
+      let btnWhatsApp = enc.telefone ? 
+        `<a href="https://wa.me/${enc.telefone.replace(/[^0-9]/g, '')}" target="_blank" style="text-decoration:none;"><button class="btn-success btn-acao" style="background:#25d366;">📲 WA</button></a>` : '-';
+
+      let btnAcao = (enc.estado === "EM_TRANSITO") ? 
+        `<button class="btn-success btn-acao" onclick="concluirEncomendaModal('${enc.id}', '${enc.cliente.replace(/'/g, "\\'")}', '${enc.produto.replace(/'/g, "\\'")}', ${faltaPagar}, ${enc.valorTotal}, ${enc.custoCompra||0})">✅ Concluir & Entregar</button>` :
+        `<span class="badge-concluido">Entregue</span>`;
+
+      let btnApagar = (usuarioRole === "admin") ? 
+        `<button class="btn-danger btn-acao" onclick="apagarEncomenda('${enc.id}')">🗑️</button>` : '';
+
+      htmlBuffer += `
+        <tr>
+          <td><b>${enc.cliente}</b></td>
+          <td><b>${enc.produto}</b></td>
+          <td>${enc.valorTotal} Db</td>
+          <td style="color:#10b981; font-weight:bold;">${enc.sinalPago} Db</td>
+          <td style="color:#ef4444; font-weight:bold;">${faltaPagar} Db</td>
+          <td style="color:#64748b;">${enc.custoCompra || 0} Db</td>
+          <td><span class="${enc.estado === 'EM_TRANSITO' ? 'badge-em-transito' : 'badge-concluido'}">${enc.estado === 'EM_TRANSITO' ? 'EM TRÂNSITO' : 'CONCLUÍDO'}</span></td>
+          <td>${btnWhatsApp}</td>
+          <td>
+            <div class="acoes-cell">
+              ${btnAcao}
+              ${btnApagar}
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    listaEncomendas.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma encomenda registada.</td></tr>';
+    processarDashboard();
+  });
+}
+
+function calcularSinalAutomatico() {
+  let total = Number(encValorTotal.value) || 0;
+  if(total > 0 && (!encSinalPago.value || encSinalPago.value === "")) {
+    encSinalPago.value = Math.round(total / 2);
+  }
+}
+
+function registrarNovaEncomenda() {
+  let cli = encCliente.value.trim();
+  let tel = encTelefone.value.trim();
+  let prod = encProduto.value.trim();
+  let vTotal = Number(encValorTotal.value) || 0;
+  let sPago = Number(encSinalPago.value) || 0;
+  let cCompra = Number(encCustoCompra.value) || 0;
+
+  if(!cli || !prod || vTotal <= 0 || sPago <= 0) {
+    return alert("Preencha o nome do cliente, produto, valor total e o sinal pago!");
+  }
+
+  let cId = caixaAtualObj ? caixaAtualObj.id : null;
+
+  let payload = {
+    cliente: cli,
+    telefone: tel,
+    produto: prod,
+    valorTotal: vTotal,
+    sinalPago: sPago,
+    custoCompra: cCompra,
+    estado: "EM_TRANSITO",
+    usuario: auth.currentUser.email,
+    uid: auth.currentUser.uid,
+    role: usuarioRole,
+    data: new Date()
+  };
+
+  db.collection("encomendas").add(payload).then(() => {
+    let movPayload = {
+      produto: `Sinal Encomenda: ${prod}`,
+      tipo: "saida",
+      quantidade: 1,
+      valor: sPago,
+      formaPagamento: "Sinal 50% (Encomenda)",
+      cliente: cli,
       usuario: auth.currentUser.email,
       uid: auth.currentUser.uid,
       role: usuarioRole,
       data: new Date()
-    });
-    alert("Estoque atualizado com sucesso!");
+    };
+    if(cId) movPayload.caixaId = cId;
+
+    return db.collection("movimentacoes").add(movPayload);
+  }).then(() => {
+    encCliente.value = ""; encTelefone.value = ""; encProduto.value = "";
+    encValorTotal.value = ""; encSinalPago.value = ""; encCustoCompra.value = "";
+    alert("Encomenda registada com sucesso! O sinal já deu entrada na caixa.");
   });
 }
 
-function salvarProduto() {
-  let n = nome.value.trim();
-  let bar = barcodeInput.value.trim();
-  let cat = categoriaInput.value.trim() || "Geral";
-  let est = Number(estoque.value) || 0;
-  let min = Number(minimo.value) || 0;
-  let comp = Number(compra.value) || 0;
-  let vend = Number(venda.value) || 0;
-  let img = fotoBase64.value || "";
+function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, custoCompra) {
+  if(confirm(`Confirmar a entrega do produto "${produto}" ao cliente ${cliente}?\n\nValor restante a receber: ${faltaPagar} Db.`)) {
+    let cId = caixaAtualObj ? caixaAtualObj.id : null;
 
-  if(!n) return alert("Digite o nome do produto!");
+    db.collection("encomendas").doc(id).update({
+      estado: "CONCLUIDO",
+      dataConclusao: new Date()
+    }).then(() => {
+      let movPayload = {
+        produto: `Quitação Importação: ${produto}`,
+        tipo: "saida",
+        quantidade: 1,
+        valor: faltaPagar,
+        formaPagamento: "Quitação 50% (Entrega Encomenda)",
+        cliente: cliente,
+        usuario: auth.currentUser.email,
+        uid: auth.currentUser.uid,
+        role: usuarioRole,
+        data: new Date()
+      };
+      if(cId) movPayload.caixaId = cId;
 
-  let payload = {
-    nome: n,
-    barcode: bar,
-    categoria: cat,
-    estoque: est,
-    minimo: min,
-    compra: comp,
-    venda: vend,
-    foto: img
-  };
-
-  if(editandoProdutoId) {
-    db.collection("produtos").doc(editandoProdutoId).update(payload).then(() => {
-      alert("Produto atualizado com sucesso!");
-      cancelarEdicaoProduto();
-    });
-  } else {
-    db.collection("produtos").add(payload).then(() => {
-      alert("Produto cadastrado com sucesso!");
-      cancelarEdicaoProduto();
+      return db.collection("movimentacoes").add(movPayload);
+    }).then(() => {
+      alert("Encomenda concluída e entregue! Faturamento registrado com sucesso.");
     });
   }
 }
 
-function editarProduto(id) {
-  let p = todosProdutos.find(item => item.id === id);
-  if(!p) return;
-
-  editandoProdutoId = id;
-  tituloFormProduto.innerText = "✏️ Editar Produto";
-  nome.value = p.nome;
-  barcodeInput.value = p.barcode || "";
-  categoriaInput.value = p.categoria || "";
-  estoque.value = p.estoque;
-  minimo.value = p.minimo;
-  compra.value = p.compra;
-  venda.value = p.venda;
-  fotoBase64.value = p.foto || "";
-
-  if(p.foto) {
-    previewFoto.src = p.foto;
-    previewFoto.classList.remove("hidden");
-  } else {
-    previewFoto.classList.add("hidden");
-  }
-
-  btnSalvarProduto.innerText = "Atualizar Produto";
-  btnCancelarProduto.classList.remove("hidden");
-  cardNovoProduto.scrollIntoView({ behavior: 'smooth' });
-}
-
-function cancelarEdicaoProduto() {
-  editandoProdutoId = null;
-  tituloFormProduto.innerText = "📦 Novo Produto";
-  nome.value = "";
-  barcodeInput.value = "";
-  categoriaInput.value = "";
-  estoque.value = "";
-  minimo.value = "";
-  compra.value = "";
-  venda.value = "";
-  fotoBase64.value = "";
-  fotoInput.value = "";
-  previewFoto.classList.add("hidden");
-
-  btnSalvarProduto.innerText = "Salvar Produto";
-  btnCancelarProduto.classList.add("hidden");
-}
-
-function apagarProduto(id) {
-  if(confirm("Tem certeza que deseja apagar este produto do sistema?")) {
-    db.collection("produtos").doc(id).delete();
+function apagarEncomenda(id) {
+  if(confirm("Tens a certeza que desejas apagar esta encomenda do sistema?")) {
+    db.collection("encomendas").doc(id).delete().then(() => {
+      alert("Encomenda removida com sucesso!");
+    }).catch(e => {
+      alert("Erro ao apagar encomenda: " + e.message);
+    });
   }
 }
 
@@ -2364,16 +2229,31 @@ function processarFotoOtimizada(event) {
     img.onload = function() {
       let canvas = document.createElement("canvas");
       let ctx = canvas.getContext("2d");
-      let maxW = 300;
-      let scale = maxW / img.width;
-      canvas.width = maxW;
-      canvas.height = img.height * scale;
 
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      let resizedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+      let maxDimension = 300;
+      let width = img.width;
+      let height = img.height;
 
-      fotoBase64.value = resizedBase64;
-      previewFoto.src = resizedBase64;
+      if (width > height) {
+        if (width > maxDimension) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        }
+      } else {
+        if (height > maxDimension) {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      let base64Otimizada = canvas.toDataURL("image/webp", 0.7);
+
+      fotoBase64.value = base64Otimizada;
+      previewFoto.src = base64Otimizada;
       previewFoto.classList.remove("hidden");
     };
     img.src = e.target.result;
@@ -2381,263 +2261,652 @@ function processarFotoOtimizada(event) {
   reader.readAsDataURL(file);
 }
 
-function renderizarHistorico(movs) {
-  let html = "";
-  let isAdmin = (usuarioRole === "admin");
-
-  movs.forEach(m => {
-    let dFmt = m.data ? m.data.toDate().toLocaleString('pt-PT') : '-';
-    let pObj = todosProdutos.find(p => p.nome === m.produto);
-    let imgUrl = pObj && pObj.foto ? pObj.foto : 'https://via.placeholder.com/42';
-
-    let isEntrada = m.tipo === "entrada";
-    let tipoBadge = isEntrada ? 
-      '<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px;">ENTRADA</span>' : 
-      '<span style="background:#fef2f2; color:#ef4444; padding:2px 8px; border-radius:10px; font-weight:bold; font-size:11px;">SAÍDA / VENDA</span>';
-
-    html += `
-      <tr>
-        <td><img src="${imgUrl}" class="img-thumb"></td>
-        <td style="text-align:left;"><b>${m.produto}</b></td>
-        <td>${tipoBadge}</td>
-        <td><b>${m.quantidade} un</b></td>
-        <td><small>${m.formaPagamento || '-'}</small></td>
-        <td><b>${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</b></td>
-        <td><small>${m.usuario}</small></td>
-        <td><small>${dFmt}</small></td>
-        <td>
-          ${isAdmin ? `<button class="btn-danger btn-acao" onclick="apagarHistorico('${m.id}')">🗑️</button>` : '-'}
-        </td>
-      </tr>
-    `;
-  });
-
-  historico.innerHTML = html || '<tr><td colspan="9" style="color:#94a3b8;">Nenhum histórico registrado.</td></tr>';
-}
-
-function apagarHistorico(id) {
-  if(confirm("Deseja apagar este registro do histórico?")) {
-    db.collection("movimentacoes").doc(id).delete();
-  }
-}
-
 function processarDashboard() {
-  let valTotalEstoque = 0;
-  let qtdTotalEstoque = 0;
+  if(usuarioRole !== "admin") return;
 
+  let totalValorEstoque = 0;
+  let totalQtdEstoque = 0;
   todosProdutos.forEach(p => {
     let q = Number(p.estoque) || 0;
-    let v = Number(p.venda) || 0;
-    valTotalEstoque += (q * v);
-    qtdTotalEstoque += q;
+    let precoV = Number(p.venda) || 0;
+    totalValorEstoque += (q * precoV);
+    totalQtdEstoque += q;
   });
+  valorTotalEstoqueKpi.innerText = totalValorEstoque.toLocaleString('pt-PT') + " Db";
+  qtdTotalEstoqueKpi.innerText = `${totalQtdEstoque} unidades (${todosProdutos.length} produtos)`;
 
-  valorTotalEstoqueKpi.innerText = valTotalEstoque.toLocaleString('pt-PT') + " Db";
-  qtdTotalEstoqueKpi.innerText = `${qtdTotalEstoque} itens em estoque`;
+  let agora = new Date();
+  let hojeStr = agora.toISOString().split('T')[0];
+  let anoAtual = agora.getFullYear();
+  let mesAtual = agora.getMonth();
 
-  let hojeStr = new Date().toDateString();
-  let vendasHojeVal = 0;
-  let qtdVendasHojeVal = 0;
+  let dataInicio = dataFiltroInicioDash || new Date(anoAtual, mesAtual, 1);
+  let dataFim = dataFiltroFimDash || new Date(anoAtual, mesAtual + 1, 0, 23, 59, 59);
 
-  let vendasMesVal = 0;
-  let lucroProdutosMesVal = 0;
+  let totalVendasHoje = 0, qtdVendasHojeVal = 0;
+  let totalVendasPeriodo = 0, totalLucroVendasPeriodo = 0;
+  let totalLucroCambioPeriodo = 0;
+  let pagDin = 0, pagTrans = 0, pagCart = 0;
 
-  let pagDin = 0;
-  let pagTrans = 0;
-  let pagCart = 0;
-  let pagFiad = 0;
+  let mapaProdutos = {};
+  let mapaEquipe = {};
 
-  let topProdutosMap = {};
-  let equipeMap = {};
+  let prodLookup = {};
+  todosProdutos.forEach(p => { prodLookup[p.nome] = p; });
 
   todasMovimentacoes.forEach(m => {
-    if(m.tipo === "saida") {
-      let mDt = m.data ? m.data.toDate() : new Date();
-      let mVal = Number(m.valor) || 0;
-      let mQtd = Number(m.quantidade) || 0;
+    if(!m.data) return;
+    let d = m.data.toDate();
+    let val = Number(m.valor) || 0;
+    let qtd = Number(m.quantidade) || 0;
+    let dStr = d.toISOString().split('T')[0];
 
-      if(mDt.toDateString() === hojeStr) {
-        vendasHojeVal += mVal;
+    let isEncomendaMov = (m.formaPagamento && m.formaPagamento.includes("Encomenda"));
+
+    if(m.tipo === "saida") {
+      if(dStr === hojeStr) {
+        totalVendasHoje += val;
         qtdVendasHojeVal++;
       }
 
-      let passaFiltro = true;
-      if(dataFiltroInicioDash && dataFiltroFimDash) {
-        passaFiltro = (mDt >= dataFiltroInicioDash && mDt <= dataFiltroFimDash);
-      } else {
-        let agora = new Date();
-        passaFiltro = (mDt.getMonth() === agora.getMonth() && mDt.getFullYear() === agora.getFullYear());
-      }
+      if(d >= dataInicio && d <= dataFim) {
+        totalVendasPeriodo += val;
 
-      if(passaFiltro) {
-        vendasMesVal += mVal;
-
-        let pObj = todosProdutos.find(p => p.nome === m.produto);
-        let custoUnit = pObj ? (Number(pObj.compra) || 0) : 0;
-        let lucroItem = mVal - (mQtd * custoUnit);
-        lucroProdutosMesVal += lucroItem;
+        if(!isEncomendaMov) {
+          let precoCompra = prodLookup[m.produto] ? Number(prodLookup[m.produto].compra || 0) : 0;
+          let lucroItem = val - (qtd * precoCompra);
+          totalLucroVendasPeriodo += lucroItem;
+        }
 
         let fPag = m.formaPagamento || "Dinheiro";
-        if(fPag.includes("Dinheiro")) pagDin += mVal;
-        else if(fPag.includes("Transferencia")) pagTrans += mVal;
-        else if(fPag.includes("Cartao")) pagCart += mVal;
-        else if(fPag.includes("Fiado")) pagFiad += mVal;
+        if(fPag.includes("Dinheiro")) pagDin += val;
+        else if(fPag.includes("Transferencia")) pagTrans += val;
+        else if(fPag.includes("Cartao")) pagCart += val;
+        else pagDin += val;
 
-        if(!topProdutosMap[m.produto]) topProdutosMap[m.produto] = { qtd: 0, valor: 0 };
-        topProdutosMap[m.produto].qtd += mQtd;
-        topProdutosMap[m.produto].valor += mVal;
+        if(!mapaProdutos[m.produto]) mapaProdutos[m.produto] = { qtd: 0, faturamento: 0 };
+        mapaProdutos[m.produto].qtd += qtd;
+        mapaProdutos[m.produto].faturamento += val;
 
         let usr = m.usuario || "Desconhecido";
-        if(!equipeMap[usr]) equipeMap[usr] = { qtd: 0, valor: 0 };
-        equipeMap[usr].qtd++;
-        equipeMap[usr].valor += mVal;
+        if(!mapaEquipe[usr]) mapaEquipe[usr] = { vendas: 0, total: 0 };
+        mapaEquipe[usr].vendas++;
+        mapaEquipe[usr].total += val;
+      }
+    } else if(m.tipo === "cambio" && d >= dataInicio && d <= dataFim) {
+      totalLucroCambioPeriodo += Number(m.lucroCambio) || 0;
+    }
+  });
+
+  let totalLucroEncomendas = 0;
+  let emTransitoQtd = 0;
+  todasEncomendas.forEach(enc => {
+    if(enc.estado === "EM_TRANSITO") emTransitoQtd++;
+    if(enc.estado === "CONCLUIDO" && enc.dataConclusao) {
+      let dEnc = enc.dataConclusao.toDate();
+      if(dEnc >= dataInicio && dEnc <= dataFim) {
+        let vTot = Number(enc.valorTotal) || 0;
+        let cComp = Number(enc.custoCompra) || 0;
+        totalLucroEncomendas += (vTot - cComp);
       }
     }
   });
 
-  vendasHoje.innerText = vendasHojeVal.toLocaleString('pt-PT') + " Db";
-  qtdVendasHoje.innerText = `${qtdVendasHojeVal} transações hoje`;
+  let totalDespesasPeriodo = 0;
+  todasDespesas.forEach(dp => {
+    if(!dp.data) return;
+    let d = dp.data.toDate();
+    if(d >= dataInicio && d <= dataFim) {
+      totalDespesasPeriodo += Number(dp.valor) || 0;
+    }
+  });
 
-  vendasMes.innerText = vendasMesVal.toLocaleString('pt-PT') + " Db";
-  lucroMes.innerText = `Lucro Produtos: ${lucroProdutosMesVal.toLocaleString('pt-PT')} Db`;
+  let lucroLiquidoFinal = (totalLucroVendasPeriodo + totalLucroCambioPeriodo + totalLucroEncomendas) - totalDespesasPeriodo;
+
+  vendasHoje.innerText = totalVendasHoje.toLocaleString('pt-PT') + " Db";
+  qtdVendasHoje.innerText = `${qtdVendasHojeVal} transações`;
+
+  vendasMes.innerText = totalVendasPeriodo.toLocaleString('pt-PT') + " Db";
+  lucroMes.innerText = `Lucro Produtos: ${totalLucroVendasPeriodo.toLocaleString('pt-PT')} Db`;
+
+  lucroEncomendasKpi.innerText = totalLucroEncomendas.toLocaleString('pt-PT') + " Db";
+  subEncomendasKpi.innerText = `${emTransitoQtd} ativas em trânsito`;
+
+  lucroCambioKpi.innerText = totalLucroCambioPeriodo.toLocaleString('pt-PT') + " Db";
+
+  despesasMes.innerText = totalDespesasPeriodo.toLocaleString('pt-PT') + " Db";
+
+  lucroLiquidoReal.innerText = lucroLiquidoFinal.toLocaleString('pt-PT') + " Db";
 
   pagDinheiro.innerText = pagDin.toLocaleString('pt-PT') + " Db";
   pagTransf.innerText = pagTrans.toLocaleString('pt-PT') + " Db";
   pagCartao.innerText = pagCart.toLocaleString('pt-PT') + " Db";
-  pagFiado.innerText = pagFiad.toLocaleString('pt-PT') + " Db";
 
-  let totalDespesasMes = 0;
-  todasDespesas.forEach(d => {
-    let dDt = d.data ? d.data.toDate() : new Date();
-    let passaFiltro = true;
-    if(dataFiltroInicioDash && dataFiltroFimDash) {
-      passaFiltro = (dDt >= dataFiltroInicioDash && dDt <= dataFiltroFimDash);
-    } else {
-      let agora = new Date();
-      passaFiltro = (dDt.getMonth() === agora.getMonth() && dDt.getFullYear() === agora.getFullYear());
-    }
-    if(passaFiltro) totalDespesasMes += (Number(d.valor) || 0);
-  });
-
-  despesasMes.innerText = totalDespesasMes.toLocaleString('pt-PT') + " Db";
-
-  let lucroLiquidoFinal = lucroProdutosMesVal - totalDespesasMes;
-  lucroLiquidoReal.innerText = lucroLiquidoFinal.toLocaleString('pt-PT') + " Db";
-
-  let topArr = Object.keys(topProdutosMap).map(k => ({ nome: k, qtd: topProdutosMap[k].qtd, valor: topProdutosMap[k].valor }));
-  topArr.sort((a, b) => b.valor - a.valor);
-  let top5 = topArr.slice(0, 5);
+  let arrTop = Object.keys(mapaProdutos).map(p => ({
+    nome: p,
+    qtd: mapaProdutos[p].qtd,
+    faturamento: mapaProdutos[p].faturamento
+  })).sort((a,b) => b.qtd - a.qtd).slice(0, 5);
 
   let htmlTop = "";
-  top5.forEach(t => {
-    htmlTop += `<tr><td style="text-align:left;"><b>${t.nome}</b></td><td>${t.qtd} un</td><td><b>${t.valor.toLocaleString('pt-PT')} Db</b></td></tr>`;
+  arrTop.forEach(item => {
+    htmlTop += `<tr><td style="text-align:left;"><b>${item.nome}</b></td><td>${item.qtd} un</td><td><b>${item.faturamento.toLocaleString('pt-PT')} Db</b></td></tr>`;
   });
-  listaTopProdutos.innerHTML = htmlTop || '<tr><td colspan="3" style="color:#94a3b8;">Nenhuma venda no período.</td></tr>';
+  listaTopProdutos.innerHTML = htmlTop || '<tr><td colspan="3" style="color:#94a3b8;">Nenhum dado.</td></tr>';
+
+  let arrEquipe = Object.keys(mapaEquipe).map(u => ({
+    usuario: u,
+    vendas: mapaEquipe[u].vendas,
+    total: mapaEquipe[u].total
+  })).sort((a,b) => b.total - a.total);
 
   let htmlEquipe = "";
-  Object.keys(equipeMap).forEach(e => {
-    htmlEquipe += `<tr><td style="text-align:left;"><b>${e}</b></td><td>${equipeMap[e].qtd} vendas</td><td><b>${equipeMap[e].valor.toLocaleString('pt-PT')} Db</b></td></tr>`;
+  arrEquipe.forEach(item => {
+    htmlEquipe += `<tr><td style="text-align:left;"><b>${item.usuario}</b></td><td>${item.vendas}</td><td><b>${item.total.toLocaleString('pt-PT')} Db</b></td></tr>`;
   });
-  listaDesempenhoEquipe.innerHTML = htmlEquipe || '<tr><td colspan="3" style="color:#94a3b8;">Sem dados no período.</td></tr>';
+  listaDesempenhoEquipe.innerHTML = htmlEquipe || '<tr><td colspan="3" style="color:#94a3b8;">Nenhum dado.</td></tr>';
 }
 
 function filtrarDashboardData() {
   let ini = dashDataInicio.value;
   let fim = dashDataFim.value;
-  if(!ini || !fim) return alert("Selecione a data inicial e final!");
+
+  if(!ini || !fim) return alert("Selecione a data de início e a data de fim!");
 
   dataFiltroInicioDash = new Date(ini + "T00:00:00");
   dataFiltroFimDash = new Date(fim + "T23:59:59");
 
-  tituloVendasPeriodo.innerText = "Vendas do Período";
-  tituloDespesasPeriodo.innerText = "Despesas (Período)";
+  tituloVendasPeriodo.innerText = `Vendas (${ini} a ${fim})`;
+  tituloDespesasPeriodo.innerText = `Despesas (${ini} a ${fim})`;
+
   processarDashboard();
 }
 
 function limparFiltroDashboard() {
-  dataFiltroInicioDash = null;
-  dataFiltroFimDash = null;
   dashDataInicio.value = "";
   dashDataFim.value = "";
+  dataFiltroInicioDash = null;
+  dataFiltroFimDash = null;
+
   tituloVendasPeriodo.innerText = "Vendas do Mês";
   tituloDespesasPeriodo.innerText = "Despesas (Mês)";
+
   processarDashboard();
 }
 
-/* =========================================================================
-   OUTRAS FUNCIONALIDADES EXISTENTES (FUNCIONÁRIOS, DESPESAS, COMPRAS, ETC)
-   ========================================================================= */
+function mudarFiltroOuBusca() {
+  paginaAtual = 1;
+  renderizarTabelaEstoque();
+}
 
-function carregarFuncionarios() {
-  if(listenerFuncionarios) listenerFuncionarios();
-  listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
-    let html = "";
-    s.forEach(d => {
-      let u = d.data();
-      u.id = d.id;
-      let st = u.status === "desativado" ? '<span class="status-caixa-fechado">DESATIVADO</span>' : '<span class="status-caixa-aberto">ATIVO</span>';
+function renderizarTabelaEstoque() {
+  let termo = inputBusca.value.toLowerCase().trim();
+  let catSel = selectCategoriaFiltro.value;
 
-      html += `
-        <tr>
-          <td><b>${u.email}</b></td>
-          <td>${(u.role||'venda1').toUpperCase()}</td>
-          <td>${st}</td>
-          <td>
-            <button class="btn-secondary btn-acao" onclick="toggleStatusFuncionario('${u.id}', '${u.status}')">
-              ${u.status === 'desativado' ? 'Ativar' : 'Desativar'}
-            </button>
-          </td>
-        </tr>
-      `;
+  let filtrados = todosProdutos.filter(p => {
+    let bateNome = p.nome.toLowerCase().includes(termo);
+    let bateBarcode = p.barcode ? p.barcode.toLowerCase().includes(termo) : false;
+    let bateBusca = bateNome || bateBarcode;
+    
+    let bateCat = (catSel === "" || p.categoria === catSel);
+
+    if(filtrarApenasBaixoEstoque) {
+      let q = Number(p.estoque) || 0;
+      let m = Number(p.minimo) || 0;
+      let isCritico = q <= m;
+      return bateBusca && bateCat && isCritico;
+    }
+
+    return bateBusca && bateCat;
+  });
+
+  let totalItens = filtrados.length;
+  let totalPaginas = Math.ceil(totalItens / itensPorPagina) || 1;
+
+  if(paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+  if(paginaAtual < 1) paginaAtual = 1;
+
+  let inicio = (paginaAtual - 1) * itensPorPagina;
+  let paginaItens = filtrados.slice(inicio, inicio + itensPorPagina);
+
+  let htmlBuffer = "";
+  let isAdmin = (usuarioRole === "admin");
+  let isEstoque = (usuarioRole === "estoque");
+  let podeAdicionarEstoque = (isAdmin || isEstoque);
+  let podeVender = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
+
+  paginaItens.forEach(p => {
+    let est = Number(p.estoque) || 0;
+    let min = Number(p.minimo) || 0;
+    let precC = Number(p.compra) || 0;
+    let precV = Number(p.venda) || 0;
+    let lucro = precV - precC;
+    let total = est * precV;
+
+    let classe = est <= min ? 'baixo' : '';
+    let barcodeBadge = p.barcode ? `<span class="barcode-badge">🏷️ ${p.barcode}</span>` : '<span style="color:#cbd5e1;">-</span>';
+
+    htmlBuffer += `<tr class="${classe}">
+      <td>${p.foto ? `<img src="${p.foto}" class="img-thumb" alt="Foto">` : '📷'}</td>
+      <td><b>${p.nome}</b></td>
+      <td>${barcodeBadge}</td>
+      <td><small>${p.categoria || 'Geral'}</small></td>
+      <td><b>${est} un</b></td>
+      <td>${min}</td>
+      ${isAdmin ? `<td>${precC.toLocaleString('pt-PT')} Db</td>` : ''}
+      <td><b>${precV.toLocaleString('pt-PT')} Db</b></td>
+      ${isAdmin ? `<td style="color:${lucro >= 0 ? '#10b981' : '#ef4444'}; font-weight:bold;">${lucro.toLocaleString('pt-PT')} Db</td>` : ''}
+      <td><b>${total.toLocaleString('pt-PT')} Db</b></td>
+      ${podeAdicionarEstoque ? `<td><button onclick="adicionar('${p.id}')" class="btn-secondary btn-acao">+</button></td>` : ''}
+      ${podeVender ? `<td><button onclick="abrirModalVenda('${p.id}')" class="btn-success btn-acao">🛒 Vender</button></td>` : ''}
+      ${isAdmin ? `<td>
+        <div class="acoes-cell">
+          <button onclick="editarProduto('${p.id}')" class="btn-warning btn-acao">✏️</button>
+          <button onclick="deletar('${p.id}')" class="btn-danger btn-acao">🗑️</button>
+        </div>
+      </td>` : ''}
+    </tr>`;
+  });
+
+  lista.innerHTML = htmlBuffer || '<tr><td colspan="13" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>';
+  infoPaginacao.innerText = `Página ${paginaAtual} de ${totalPaginas} (${totalItens} produtos)`;
+
+  btnPagAnt.disabled = (paginaAtual === 1);
+  btnPagProx.disabled = (paginaAtual === totalPaginas);
+}
+
+function paginaAnterior() {
+  if(paginaAtual > 1) { paginaAtual--; renderizarTabelaEstoque(); }
+}
+
+function proximaPagina() {
+  paginaAtual++; renderizarTabelaEstoque();
+}
+
+function salvarProduto(){
+  let n = nome.value.trim();
+  let bc = barcodeInput.value.trim();
+  let cat = categoriaInput.value.trim() || "Geral";
+  let e = Number(estoque.value) || 0;
+  let m = Number(minimo.value) || 0;
+  let c = Number(compra.value) || 0;
+  let v = Number(venda.value) || 0;
+  let f = fotoBase64.value || "";
+
+  if(!n || v <= 0) return alert("Preencha o nome do produto e o preço de venda!");
+
+  // FASE 3: VERIFICAÇÃO DE CÓDIGO DE BARRAS DUPLICADO
+  if(bc) {
+    let dup = todosProdutos.find(prod => prod.barcode && prod.barcode.toLowerCase() === bc.toLowerCase() && prod.id !== editandoProdutoId);
+    if(dup) {
+      return alert(`O código de barras "${bc}" já está associado ao produto "${dup.nome}"! Evite duplicados.`);
+    }
+  }
+
+  let payload = {
+    nome: n,
+    barcode: bc,
+    categoria: cat,
+    estoque: e,
+    minimo: m,
+    compra: c,
+    venda: v,
+    foto: f
+  };
+
+  if(editandoProdutoId) {
+    db.collection("produtos").doc(editandoProdutoId).update(payload).then(() => {
+      cancelarEdicaoProduto();
+      alert("Produto atualizado com sucesso!");
     });
-    listaFuncionarios.innerHTML = html || '<tr><td colspan="4" style="color:#94a3b8;">Nenhum funcionário cadastrado.</td></tr>';
+  } else {
+    db.collection("produtos").add(payload).then(() => {
+      limparCamposProduto();
+      alert("Produto cadastrado com sucesso!");
+    });
+  }
+}
+
+function editarProduto(id) {
+  let p = todosProdutos.find(item => item.id === id);
+  if(!p) return;
+
+  editandoProdutoId = id;
+  tituloFormProduto.innerText = "✏️ Editar Produto";
+
+  nome.value = p.nome;
+  barcodeInput.value = p.barcode || "";
+  categoriaInput.value = p.categoria || "Geral";
+  estoque.value = p.estoque;
+  minimo.value = p.minimo;
+  compra.value = p.compra;
+  venda.value = p.venda;
+
+  if(p.foto) {
+    fotoBase64.value = p.foto;
+    previewFoto.src = p.foto;
+    previewFoto.classList.remove("hidden");
+  } else {
+    fotoBase64.value = "";
+    previewFoto.src = "";
+    previewFoto.classList.add("hidden");
+  }
+
+  btnSalvarProduto.innerText = "Atualizar Produto";
+  btnCancelarProduto.classList.remove("hidden");
+  window.scrollTo({ top: cardNovoProduto.offsetTop - 20, behavior: 'smooth' });
+}
+
+function cancelarEdicaoProduto() {
+  editandoProdutoId = null;
+  tituloFormProduto.innerText = "📦 Novo Produto";
+  limparCamposProduto();
+  btnSalvarProduto.innerText = "Salvar Produto";
+  btnCancelarProduto.classList.add("hidden");
+}
+
+function limparCamposProduto() {
+  nome.value = ""; barcodeInput.value = ""; categoriaInput.value = ""; estoque.value = ""; minimo.value = "";
+  compra.value = ""; venda.value = ""; fotoInput.value = ""; fotoBase64.value = "";
+  previewFoto.src = ""; previewFoto.classList.add("hidden");
+}
+
+function adicionar(id){
+  let p = todosProdutos.find(item => item.id === id);
+  let qPrompt = prompt(`Adicionar quanto ao estoque de "${p.nome}"?`, "1");
+  if(!qPrompt) return;
+  let q = Number(qPrompt);
+  if(!q || q <= 0) return alert("Quantidade inválida!");
+
+  let cId = caixaAtualObj ? caixaAtualObj.id : null;
+
+  db.collection("produtos").doc(id).update({
+    estoque: firebase.firestore.FieldValue.increment(q)
+  }).then(() => {
+    let movPayload = {
+      produto: p.nome,
+      tipo: "entrada",
+      quantidade: q,
+      valor: q * Number(p.compra || 0),
+      formaPagamento: "Entrada Manual Estoque",
+      usuario: auth.currentUser.email,
+      uid: auth.currentUser.uid,
+      role: usuarioRole,
+      data: new Date()
+    };
+    if(cId) movPayload.caixaId = cId;
+
+    db.collection("movimentacoes").add(movPayload);
   });
 }
 
-function salvarFuncionario() {
-  let e = funcEmail.value.trim();
-  let s = funcSenha.value.trim();
-  let r = funcRole.value;
+function abrirModalVenda(id) {
+  // FASE 2: EXIGE CAIXA ABERTO PARA REALIZAR VENDA
+  if(!caixaAtualObj) {
+    alert("⚠️ Você não possui um caixa aberto no momento!\nVá até a página 'Gestão de Caixa & Turno' e abra o seu caixa antes de realizar vendas.");
+    navegarPara('paginaCaixa');
+    return;
+  }
 
-  if(!e || !s) return alert("E-mail e senha são obrigatórios!");
+  let p = todosProdutos.find(item => item.id === id);
+  if(!p) return;
 
-  auth.createUserWithEmailAndPassword(e, s).then(res => {
-    return db.collection("usuarios").doc(res.user.uid).set({
-      email: e,
-      role: r,
-      status: "ativo",
-      dataCriacao: new Date()
+  if(Number(p.estoque) <= 0) {
+    return alert("Produto esgotado no estoque!");
+  }
+
+  produtoVendaAtual = p;
+  modalProdNome.innerText = p.nome;
+  modalProdQtd.value = 1;
+  modalProdQtd.max = p.estoque;
+  modalValorRecebido.value = "";
+  modalNomeCliente.value = "";
+
+  alternarCampoTroco();
+  calcularTotalVendaModal();
+
+  modalVenda.classList.remove("hidden");
+}
+
+function fecharModalVenda() {
+  modalVenda.classList.add("hidden");
+  produtoVendaAtual = null;
+}
+
+function alternarCampoTroco() {
+  let fPag = modalFormaPagamento.value;
+  if(fPag === "Dinheiro") {
+    boxCalculoTroco.classList.remove("hidden");
+  } else {
+    boxCalculoTroco.classList.add("hidden");
+  }
+}
+
+function calcularTotalVendaModal() {
+  if(!produtoVendaAtual) return;
+  let q = Number(modalProdQtd.value) || 1;
+  let total = q * Number(produtoVendaAtual.venda);
+  modalTotalPagar.innerText = total.toLocaleString('pt-PT') + " Db";
+  calcularTroco();
+}
+
+function calcularTroco() {
+  if(!produtoVendaAtual) return;
+  let q = Number(modalProdQtd.value) || 1;
+  let total = q * Number(produtoVendaAtual.venda);
+  let rec = Number(modalValorRecebido.value) || 0;
+  let troco = rec - total;
+
+  if(troco >= 0) {
+    lblTroco.className = "dif-certo";
+    lblTroco.innerText = troco.toLocaleString('pt-PT') + " Db";
+  } else {
+    lblTroco.className = "dif-quebra";
+    lblTroco.innerText = "Valor insuficiente";
+  }
+}
+
+// TRANSACTION SEGURA DA FASE 1 MANTIDA + VINCULADA AO CAIXA DA FASE 2
+function confirmarVendaModal() {
+  if(!produtoVendaAtual) return;
+
+  let btn = document.getElementById("btnConfirmarVenda");
+  btn.disabled = true;
+
+  let q = Number(modalProdQtd.value);
+  if(!q || q <= 0) {
+    btn.disabled = false;
+    return alert("Quantidade inválida!");
+  }
+
+  let fPag = modalFormaPagamento.value;
+  let valRec = Number(modalValorRecebido.value) || 0;
+  let totalPagar = q * Number(produtoVendaAtual.venda);
+
+  if(fPag === "Dinheiro" && valRec < totalPagar) {
+    btn.disabled = false;
+    return alert("O valor entregue pelo cliente é inferior ao total da venda!");
+  }
+
+  let nomeCli = modalNomeCliente.value.trim() || "Consumidor Final";
+  let trocoCalculado = fPag === "Dinheiro" ? (valRec - totalPagar) : 0;
+  let pId = produtoVendaAtual.id;
+  let pNome = produtoVendaAtual.nome;
+  let pPreco = Number(produtoVendaAtual.venda);
+  let user = auth.currentUser;
+
+  // FASE 3: SE ESTIVER OFFLINE, AVISA O OPERADOR E IMPEDE GRAVAÇÃO PARCIAL INSEGURA
+  if(!navigator.onLine) {
+    btn.disabled = false;
+    adicionarOperacaoFilaLocal("venda_pendente", { produtoId: pId, qtd: q, valorTotal: totalPagar, caixaId: caixaAtualObj.id });
+    return alert("🔴 O sistema está OFFLINE no momento.\nA venda foi adicionada à fila local, mas para decrementar o estoque com segurança e emitir o recibo oficial é necessária conexão com o Firebase.");
+  }
+
+  db.runTransaction(function(transaction) {
+    let prodRef = db.collection("produtos").doc(pId);
+
+    return transaction.get(prodRef).then(function(prodDoc) {
+      if (!prodDoc.exists) throw "Produto não existe mais!";
+      
+      let estAtual = Number(prodDoc.data().estoque) || 0;
+      if (estAtual < q) throw `Estoque insuficiente! Disponível apenas: ${estAtual} un.`;
+
+      let novoEstoque = estAtual - q;
+      transaction.update(prodRef, { estoque: novoEstoque });
+
+      let movRef = db.collection("movimentacoes").doc();
+      transaction.set(movRef, {
+        produto: pNome,
+        tipo: "saida",
+        quantidade: q,
+        valor: totalPagar,
+        formaPagamento: fPag,
+        cliente: nomeCli,
+        caixaId: caixaAtualObj.id,
+        usuario: user.email,
+        uid: user.uid,
+        role: usuarioRole,
+        data: new Date()
+      });
     });
   }).then(() => {
-    funcEmail.value = "";
-    funcSenha.value = "";
-    alert("Funcionário criado com sucesso!");
-  }).catch(err => alert("Erro ao criar funcionário: " + err.message));
-}
+    btn.disabled = false;
+    fecharModalVenda();
 
-function toggleStatusFuncionario(uid, statusAtual) {
-  let novoStatus = statusAtual === "desativado" ? "ativo" : "desativado";
-  db.collection("usuarios").doc(uid).update({ status: novoStatus }).then(() => {
-    alert("Estado do funcionário alterado!");
+    reciboData.innerText = new Date().toLocaleString('pt-PT');
+    reciboCliente.innerText = nomeCli;
+    reciboVendedor.innerText = user.email;
+    reciboItem.innerText = pNome;
+    reciboQtd.innerText = q;
+    reciboPrecoUnit.innerText = pPreco.toLocaleString('pt-PT');
+    reciboTotalItem.innerText = totalPagar.toLocaleString('pt-PT');
+    reciboTotal.innerText = totalPagar.toLocaleString('pt-PT');
+    reciboPagamento.innerText = fPag;
+
+    if(fPag === "Dinheiro") {
+      reciboTrocoRow.style.display = "block";
+      reciboTroco.innerText = trocoCalculado.toLocaleString('pt-PT');
+    } else {
+      reciboTrocoRow.style.display = "none";
+    }
+
+    setTimeout(() => {
+      window.print();
+    }, 300);
+
+  }).catch(e => {
+    btn.disabled = false;
+    alert("Erro ao realizar venda: " + e);
   });
 }
 
-function cancelarEdicaoFunc() {
-  funcEmail.value = "";
-  funcSenha.value = "";
-  btnCancelarFunc.classList.add("hidden");
+function registrarCompraProduto() {
+  let pId = compraSelectProduto.value;
+  let q = Number(compraQtd.value) || 0;
+  let cTotal = Number(compraCustoTotal.value) || 0;
+  let forn = compraFornecedor.value.trim() || "Fornecedor Local";
+  let fPag = compraFormaPag.value;
+
+  if(!pId || q <= 0 || cTotal <= 0) {
+    return alert("Selecione o produto, informe a quantidade e o custo total pago!");
+  }
+
+  let p = todosProdutos.find(item => item.id === pId);
+  if(!p) return;
+
+  let custoUnitarioNovo = Math.round(cTotal / q);
+  let cId = caixaAtualObj ? caixaAtualObj.id : null;
+
+  db.collection("produtos").doc(pId).update({
+    estoque: firebase.firestore.FieldValue.increment(q),
+    compra: custoUnitarioNovo
+  }).then(() => {
+    let movPayload = {
+      produto: p.nome,
+      tipo: "compra",
+      quantidade: q,
+      valor: cTotal,
+      formaPagamento: fPag,
+      fornecedor: forn,
+      usuario: auth.currentUser.email,
+      uid: auth.currentUser.uid,
+      role: usuarioRole,
+      data: new Date()
+    };
+    if(cId) movPayload.caixaId = cId;
+
+    return db.collection("movimentacoes").add(movPayload);
+  }).then(() => {
+    compraSelectProduto.value = ""; compraQtd.value = "";
+    compraCustoTotal.value = ""; compraFornecedor.value = "";
+    alert("Entrada de compra registrada com sucesso!");
+  });
 }
 
-function carregarDespesas() {
-  if(listenerDespesas) listenerDespesas();
-  listenerDespesas = db.collection("despesas").orderBy("data", "desc").onSnapshot(s => {
-    todasDespesas = [];
-    s.forEach(d => {
-      let desp = d.data();
-      desp.id = d.id;
-      todasDespesas.push(desp);
-    });
-    processarDashboard();
+function atualizarRotulosCambio() {
+  let dir = cambioDirecao.value;
+  if(dir === "PT_STP") {
+    cambioResumoTxt.innerText = "0 € = 0 Db";
+  } else {
+    cambioResumoTxt.innerText = "0 Db = 0 €";
+  }
+  calcularCalculoCambioSimulado();
+}
+
+function calcularCalculoCambioSimulado() {
+  let dir = cambioDirecao.value;
+  let eur = Number(cambioQtdEur.value) || 0;
+  let taxa = Number(cambioTaxa.value) || 26.0;
+
+  if(dir === "PT_STP") {
+    let totalSTN = Math.round(eur * taxa);
+    let taxaOficial = 24.5;
+    let lucroEstimado = Math.round(eur * (taxa - taxaOficial));
+
+    cambioResumoTxt.innerText = `${eur} € ➔ Entregar ${totalSTN.toLocaleString('pt-PT')} Db em São Tomé`;
+    cambioLucroEstimadoTxt.innerText = `Lucro Estimado de Câmbio: +${lucroEstimado.toLocaleString('pt-PT')} Db`;
+  } else {
+    let totalSTNReceber = Math.round(eur * taxa);
+    let taxaOficial = 24.5;
+    let lucroEstimado = Math.round(eur * (taxa - taxaOficial));
+
+    cambioResumoTxt.innerText = `Receber ${totalSTNReceber.toLocaleString('pt-PT')} Db ➔ Entregar ${eur} € em Lisboa`;
+    cambioLucroEstimadoTxt.innerText = `Lucro Estimado de Câmbio: +${lucroEstimado.toLocaleString('pt-PT')} Db`;
+  }
+}
+
+function registrarOperacaoCambio() {
+  let dir = cambioDirecao.value;
+  let eur = Number(cambioQtdEur.value) || 0;
+  let taxa = Number(cambioTaxa.value) || 26.0;
+  let cli = cambioCliente.value.trim() || "Remessa Câmbio";
+
+  if(eur <= 0 || taxa <= 0) return alert("Informe a quantidade em Euros e a Taxa de Câmbio válida!");
+
+  let totalSTN = Math.round(eur * taxa);
+  let taxaOficial = 24.5;
+  let lucroEstimado = Math.round(eur * (taxa - taxaOficial));
+  let cId = caixaAtualObj ? caixaAtualObj.id : null;
+
+  let movPayload = {
+    produto: `Câmbio ${dir === 'PT_STP' ? 'PT ➔ STP' : 'STP ➔ PT'}: ${eur} € (Taxa: ${taxa})`,
+    tipo: "cambio",
+    quantidade: eur,
+    valor: totalSTN,
+    lucroCambio: lucroEstimado,
+    formaPagamento: "Remessa Moeda",
+    cliente: cli,
+    usuario: auth.currentUser.email,
+    uid: auth.currentUser.uid,
+    role: usuarioRole,
+    data: new Date()
+  };
+  if(cId) movPayload.caixaId = cId;
+
+  db.collection("movimentacoes").add(movPayload).then(() => {
+    cambioQtdEur.value = ""; cambioCliente.value = "";
+    calcularCalculoCambioSimulado();
+    alert("Operação de Câmbio / Remessa registrada com sucesso!");
   });
 }
 
@@ -2646,308 +2915,144 @@ function salvarDespesa() {
   let val = Number(despValor.value) || 0;
   let cat = despCategoria.value;
 
-  if(!desc || val <= 0) return alert("Preencha a descrição e valor válido!");
+  if(!desc || val <= 0) return alert("Preencha a descrição e o valor da despesa!");
 
-  db.collection("despesas").add({
+  let payload = {
     descricao: desc,
     valor: val,
     categoria: cat,
-    usuario: auth.currentUser.email,
-    data: new Date()
-  }).then(() => {
-    despDescricao.value = "";
-    despValor.value = "";
-    alert("Despesa registrada com sucesso!");
-  });
-}
-
-function registrarCompraProduto() {
-  let pId = compraSelectProduto.value;
-  let qtd = Number(compraQtd.value) || 0;
-  let custoTot = Number(compraCustoTotal.value) || 0;
-  let forn = compraFornecedor.value.trim() || "Fornecedor Geral";
-  let fPag = compraFormaPag.value;
-
-  if(!pId || qtd <= 0 || custoTot <= 0) return alert("Selecione o produto, quantidade e custo total!");
-
-  let p = todosProdutos.find(item => item.id === pId);
-  if(!p) return;
-
-  let novoEstoque = (Number(p.estoque) || 0) + qtd;
-  let novoCustoUnit = Math.round(custoTot / qtd);
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-  db.collection("produtos").doc(pId).update({
-    estoque: novoEstoque,
-    compra: novoCustoUnit
-  }).then(() => {
-    let payload = {
-      produto: p.nome,
-      tipo: "entrada",
-      quantidade: qtd,
-      valor: custoTot,
-      formaPagamento: `Compra: ${forn} (${fPag})`,
-      usuario: auth.currentUser.email,
-      uid: auth.currentUser.uid,
-      role: usuarioRole,
-      data: new Date()
-    };
-    if(cId) payload.caixaId = cId;
-
-    return db.collection("movimentacoes").add(payload);
-  }).then(() => {
-    compraQtd.value = "";
-    compraCustoTotal.value = "";
-    compraFornecedor.value = "";
-    alert("Reabastecimento gravado com sucesso!");
-  });
-}
-
-function carregarEncomendas() {
-  if(listenerEncomendas) listenerEncomendas();
-  listenerEncomendas = db.collection("encomendas").orderBy("dataCriacao", "desc").onSnapshot(s => {
-    todasEncomendas = [];
-    let html = "";
-
-    s.forEach(d => {
-      let enc = d.data();
-      enc.id = d.id;
-      todasEncomendas.push(enc);
-
-      let total = Number(enc.valorTotal) || 0;
-      let sinal = Number(enc.sinalPago) || 0;
-      let falta = total - sinal;
-      let custo = Number(enc.custoCompra) || 0;
-
-      let badgeSt = enc.estado === "CONCLUIDO" ? 
-        '<span class="badge-concluido">ENTREGUE / CONCLUÍDO</span>' : 
-        '<span class="badge-em-transito">EM TRÂNSITO</span>';
-
-      let btnConcluir = enc.estado === "CONCLUIDO" ? '-' : 
-        `<button class="btn-success btn-acao" onclick="concluirEncomenda('${enc.id}')">✅ Entregar & Receber Restante</button>`;
-
-      html += `
-        <tr>
-          <td><b>${enc.cliente}</b></td>
-          <td><b>${enc.produto}</b></td>
-          <td>${total.toLocaleString('pt-PT')} Db</td>
-          <td style="color:#10b981; font-weight:bold;">${sinal.toLocaleString('pt-PT')} Db</td>
-          <td style="color:#ef4444; font-weight:bold;">${falta.toLocaleString('pt-PT')} Db</td>
-          <td>${usuarioRole === 'admin' ? custo.toLocaleString('pt-PT') + ' Db' : '***'}</td>
-          <td>${badgeSt}</td>
-          <td><small>${enc.telefone || '-'}</small></td>
-          <td>${btnConcluir}</td>
-        </tr>
-      `;
-    });
-
-    listaEncomendas.innerHTML = html || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma encomenda em acompanhamento.</td></tr>';
-  });
-}
-
-function calcularSinalAutomatico() {
-  let val = Number(encValorTotal.value) || 0;
-  encSinalPago.value = Math.round(val * 0.5);
-}
-
-function registrarNovaEncomenda() {
-  let cli = encCliente.value.trim();
-  let tel = encTelefone.value.trim();
-  let prod = encProduto.value.trim();
-  let tot = Number(encValorTotal.value) || 0;
-  let sin = Number(encSinalPago.value) || 0;
-  let cust = Number(encCustoCompra.value) || 0;
-
-  if(!cli || !prod || tot <= 0 || sin < 0) return alert("Preencha o cliente, produto, valor total e sinal pago!");
-
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-  db.collection("encomendas").add({
-    cliente: cli,
-    telefone: tel,
-    produto: prod,
-    valorTotal: tot,
-    sinalPago: sin,
-    custoCompra: cust,
-    estado: "EM_TRANSITO",
-    usuario: auth.currentUser.email,
-    uid: auth.currentUser.uid,
-    dataCriacao: new Date()
-  }).then(() => {
-    if(sin > 0) {
-      let payload = {
-        produto: `ENCOMENDA (Sinal): ${prod} - ${cli}`,
-        tipo: "entrada",
-        quantidade: 1,
-        valor: sin,
-        formaPagamento: "Sinal Encomenda",
-        usuario: auth.currentUser.email,
-        uid: auth.currentUser.uid,
-        role: usuarioRole,
-        data: new Date()
-      };
-      if(cId) payload.caixaId = cId;
-      db.collection("movimentacoes").add(payload);
-    }
-
-    encCliente.value = "";
-    encTelefone.value = "";
-    encProduto.value = "";
-    encValorTotal.value = "";
-    encSinalPago.value = "";
-    encCustoCompra.value = "";
-    alert("Encomenda registrada com sucesso!");
-  });
-}
-
-function concluirEncomenda(id) {
-  let enc = todasEncomendas.find(e => e.id === id);
-  if(!enc) return;
-
-  let restaPagar = (Number(enc.valorTotal) || 0) - (Number(enc.sinalPago) || 0);
-
-  if(confirm(`Confirmar entrega do produto ao cliente ${enc.cliente} e recebimento do valor restante (${restaPagar} Db)?`)) {
-    let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-    db.collection("encomendas").doc(id).update({
-      estado: "CONCLUIDO",
-      dataConclusao: new Date()
-    }).then(() => {
-      if(restaPagar > 0) {
-        let payload = {
-          produto: `ENCOMENDA (Entrega Final): ${enc.produto} - ${enc.cliente}`,
-          tipo: "entrada",
-          quantidade: 1,
-          valor: restaPagar,
-          formaPagamento: "Entrega Encomenda",
-          usuario: auth.currentUser.email,
-          uid: auth.currentUser.uid,
-          role: usuarioRole,
-          data: new Date()
-        };
-        if(cId) payload.caixaId = cId;
-        db.collection("movimentacoes").add(payload);
-      }
-      alert("Encomenda concluída com sucesso!");
-    });
-  }
-}
-
-function atualizarRotulosCambio() {
-  calcularCalculoCambioSimulado();
-}
-
-function calcularCalculoCambioSimulado() {
-  let eur = Number(cambioQtdEur.value) || 0;
-  let tx = Number(cambioTaxa.value) || 26.0;
-  let dir = cambioDirecao.value;
-
-  let totalDb = Math.round(eur * tx);
-  let taxaOficial = 24.5;
-  let margem = Math.abs(tx - taxaOficial);
-  let lucroEst = Math.round(eur * margem);
-
-  if(dir === "PT_STP") {
-    cambioResumoTxt.innerText = `${eur.toLocaleString('pt-PT')} € = ${totalDb.toLocaleString('pt-PT')} Db (Receber EUR / Entregar Db)`;
-  } else {
-    cambioResumoTxt.innerText = `${totalDb.toLocaleString('pt-PT')} Db = ${eur.toLocaleString('pt-PT')} € (Receber Db / Entregar EUR)`;
-  }
-
-  cambioLucroEstimadoTxt.innerText = `Lucro estimado da transação: ${lucroEst.toLocaleString('pt-PT')} Db`;
-}
-
-function registrarOperacaoCambio() {
-  let eur = Number(cambioQtdEur.value) || 0;
-  let tx = Number(cambioTaxa.value) || 26.0;
-  let cli = cambioCliente.value.trim() || "Cliente Remessa";
-  let dir = cambioDirecao.value;
-
-  if(eur <= 0 || tx <= 0) return alert("Digite um valor em Euros e cotação válidos!");
-
-  let totalDb = Math.round(eur * tx);
-  let cId = caixaAtualObj ? caixaAtualObj.id : null;
-
-  let payload = {
-    produto: `CÂMBIO/REMESSA: ${eur}€ (${dir}) - ${cli}`,
-    tipo: dir === "PT_STP" ? "saida" : "entrada",
-    quantidade: 1,
-    valor: totalDb,
-    formaPagamento: `Câmbio ${dir}`,
     usuario: auth.currentUser.email,
     uid: auth.currentUser.uid,
     role: usuarioRole,
     data: new Date()
   };
-  if(cId) payload.caixaId = cId;
 
-  db.collection("movimentacoes").add(payload).then(() => {
-    cambioQtdEur.value = "";
-    cambioCliente.value = "";
-    alert("Operação de Câmbio/Remessa registrada no sistema!");
+  db.collection("despesas").add(payload).then(() => {
+    despDescricao.value = ""; despValor.value = "";
+    alert("Despesa operada com sucesso!");
   });
+}
+
+function renderizarHistorico(listaMovs) {
+  let htmlBuffer = "";
+  let prodMap = {};
+  todosProdutos.forEach(p => { prodMap[p.nome] = p.foto; });
+
+  listaMovs.forEach(m => {
+    let d = m.data ? m.data.toDate().toLocaleString('pt-PT') : '-';
+    let val = Number(m.valor) || 0;
+    let tipoBadge = '';
+
+    if(m.tipo === 'saida') tipoBadge = '<span style="color:#10b981; font-weight:bold;">Venda</span>';
+    else if(m.tipo === 'entrada') tipoBadge = '<span style="color:#2563eb; font-weight:bold;">Entrada Stock</span>';
+    else if(m.tipo === 'compra') tipoBadge = '<span style="color:#d97706; font-weight:bold;">Compra Fornec.</span>';
+    else if(m.tipo === 'cambio') tipoBadge = '<span style="color:#8b5cf6; font-weight:bold;">Câmbio</span>';
+
+    let fotoProd = prodMap[m.produto] ? `<img src="${prodMap[m.produto]}" class="img-thumb" alt="Foto">` : '📜';
+
+    let btnApagar = (usuarioRole === 'admin') ? 
+      `<button onclick="apagarMovimentacao('${m.id}')" class="btn-danger btn-acao">🗑️</button>` : '-';
+
+    htmlBuffer += `
+      <tr>
+        <td>${fotoProd}</td>
+        <td><b>${m.produto}</b></td>
+        <td>${tipoBadge}</td>
+        <td>${m.quantidade} un</td>
+        <td><small>${m.formaPagamento || '-'}</small></td>
+        <td><b>${val.toLocaleString('pt-PT')} Db</b></td>
+        <td><small>${m.usuario || 'Sistema'}</small></td>
+        <td><small>${d}</small></td>
+        <td>${btnApagar}</td>
+      </tr>
+    `;
+  });
+
+  historico.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma movimentação registada.</td></tr>';
+}
+
+function apagarMovimentacao(id) {
+  if(confirm("Tem a certeza que deseja apagar este registo de histórico?")) {
+    db.collection("movimentacoes").doc(id).delete();
+  }
+}
+
+function carregarFuncionarios() {
+  if(listenerFuncionarios) listenerFuncionarios();
+  listenerFuncionarios = db.collection("usuarios").onSnapshot(s => {
+    let htmlBuffer = "";
+    s.forEach(d => {
+      let f = d.data();
+      f.id = d.id;
+      let statusSt = f.status || "ativo";
+      let isAtivo = statusSt === "ativo";
+
+      htmlBuffer += `
+        <tr>
+          <td><b>${f.email || f.id}</b></td>
+          <td><small>${(f.role || 'venda1').toUpperCase()}</small></td>
+          <td><span class="${isAtivo ? 'status-caixa-aberto' : 'status-caixa-fechado'}">${statusSt.toUpperCase()}</span></td>
+          <td>
+            <div class="acoes-cell">
+              <button onclick="alternarStatusFunc('${f.id}', '${statusSt}')" class="${isAtivo ? 'btn-status-inativo' : 'btn-status-ativo'} btn-acao">
+                ${isAtivo ? 'Desativar' : 'Ativar'}
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+    listaFuncionarios.innerHTML = htmlBuffer || '<tr><td colspan="4">Nenhum funcionário cadastrado.</td></tr>';
+  });
+}
+
+function salvarFuncionario() {
+  let e = funcEmail.value.trim();
+  let s = funcSenha.value.trim();
+  let r = funcRole.value;
+
+  if(!e || !s) return alert("Preencha o e-mail e a senha inicial do funcionário!");
+
+  db.collection("usuarios").add({
+    email: e,
+    role: r,
+    status: "ativo",
+    dataCriacao: new Date()
+  }).then(() => {
+    funcEmail.value = ""; funcSenha.value = "";
+    alert("Perfil de funcionário registado no Firestore com sucesso!");
+  });
+}
+
+function alternarStatusFunc(id, statusAtual) {
+  let novoStatus = statusAtual === "ativo" ? "desativado" : "ativo";
+  db.collection("usuarios").doc(id).update({ status: novoStatus });
 }
 
 function exportarEstoque() {
-  let csv = "Produto;CodigoBarras;Categoria;Estoque;EstoqueMinimo;PrecoCompra;PrecoVenda;ValorTotal\n";
+  let csv = "Produto;Categoria;Estoque;Minimo;Compra;Venda;Total\n";
   todosProdutos.forEach(p => {
-    let comp = Number(p.compra) || 0;
-    let vend = Number(p.venda) || 0;
-    let q = Number(p.estoque) || 0;
-    csv += `"${p.nome}";"${p.barcode||''}";"${p.categoria}";${q};${p.minimo};${comp};${vend};${q*vend}\n`;
+    let tot = (Number(p.estoque)||0) * (Number(p.venda)||0);
+    csv += `"${p.nome}";"${p.categoria}";${p.estoque};${p.minimo};${p.compra};${p.venda};${tot}\n`;
   });
-
-  let blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-  let url = URL.createObjectURL(blob);
-  let a = document.createElement("a");
-  a.href = url;
-  a.download = `Estoque_MundoDigitalSTP_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
+  downloadCSV(csv, "estoque_mundo_digital_stp.csv");
 }
 
 function exportarHistorico() {
-  let csv = "Data;Produto;Tipo;Quantidade;FormaPagamento;ValorTotal;Usuario\n";
+  let csv = "Produto;Tipo;Quantidade;FormaPagamento;ValorTotal;Usuario;Data\n";
   todasMovimentacoes.forEach(m => {
-    let dFmt = m.data ? m.data.toDate().toLocaleString('pt-PT') : '';
-    csv += `"${dFmt}";"${m.produto}";"${m.tipo}";${m.quantidade};"${m.formaPagamento||''}";${m.valor};"${m.usuario}"\n`;
+    let d = m.data ? m.data.toDate().toLocaleString('pt-PT') : '';
+    csv += `"${m.produto}";"${m.tipo}";${m.quantidade};"${m.formaPagamento||''}";${m.valor};"${m.usuario||''}";"${d}"\n`;
   });
-
-  let blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-  let url = URL.createObjectURL(blob);
-  let a = document.createElement("a");
-  a.href = url;
-  a.download = `Historico_MundoDigitalSTP_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
+  downloadCSV(csv, "historico_mundo_digital_stp.csv");
 }
 
-function filtrarHistoricoIntervalo() {
-  let ini = histDataInicio.value;
-  let fim = histDataFim.value;
-  if(!ini || !fim) return alert("Selecione a data inicial e final!");
-
-  let dIni = new Date(ini + "T00:00:00");
-  let dFim = new Date(fim + "T23:59:59");
-
-  let filtrados = todasMovimentacoes.filter(m => {
-    let mDt = m.data ? m.data.toDate() : new Date();
-    return mDt >= dIni && mDt <= dFim;
-  });
-
-  renderizarHistorico(filtrados);
-}
-
-function filtrarHistoricoHoje() {
-  let hojeStr = new Date().toDateString();
-  let filtrados = todasMovimentacoes.filter(m => {
-    let mDt = m.data ? m.data.toDate() : new Date();
-    return mDt.toDateString() === hojeStr;
-  });
-  renderizarHistorico(filtrados);
-}
-
-function limparFiltroHistorico() {
-  histDataInicio.value = "";
-  histDataFim.value = "";
-  renderizarHistorico(todasMovimentacoes);
+function downloadCSV(content, filename) {
+  let blob = new Blob(["\ufeff" + content], { type: 'text/csv;charset=utf-8;' });
+  let link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
 }
 </script>
 </body>
