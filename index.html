@@ -705,7 +705,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <thead>
             <tr>
               <th>Foto</th><th>Produto/Serviço</th><th>Tipo</th><th>Qtd</th><th>Pag/Detalhes</th>
-              <th>Valor Total</th><th>Usuário</th><th>Data</th>
+              <th>Valor Total</th><th>Usuário</th><th>Data</th><th>Ação</th>
             </tr>
           </thead>
           <tbody id="historico"></tbody>
@@ -2940,6 +2940,7 @@ function confirmarVendaModal() {
 }
 
 function emitirReciboComprovativo(d) {
+  // Mesmo recibo usado tanto para vendas novas como para vendas recuperadas do histórico.
   reciboData.innerText = d.data;
   reciboCliente.innerText = d.cliente;
   reciboVendedor.innerText = d.vendedor;
@@ -2987,7 +2988,7 @@ function renderizarHistorico(listaMovs) {
     `;
   });
 
-  historico.innerHTML = htmlBuffer || '<tr><td colspan="8" style="color:#94a3b8;">Nenhuma movimentação registada.</td></tr>';
+  historico.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma movimentação registada.</td></tr>';
 }
 
 function filtrarHistoricoIntervalo() {
@@ -3354,10 +3355,51 @@ async function confirmarVendaModal() {
 }
 
 // Histórico sem exclusão: apenas visualização e auditoria.
+function obterDataMovimentacaoParaRecibo(dataValor) {
+  if(!dataValor) return new Date();
+  if(typeof dataValor.toDate === "function") return dataValor.toDate();
+  if(dataValor instanceof Date) return dataValor;
+  const d = new Date(dataValor);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
+function emitirReciboHistorico(movId) {
+  const m = todasMovimentacoes.find(item => item.id === movId);
+  if(!m) return alert("Não foi possível localizar esta movimentação.");
+
+  // O recibo histórico é reconstruído a partir do registro já existente.
+  // Nenhum documento do Firestore é criado, alterado ou apagado.
+  if(m.tipo !== "saida") {
+    return alert("O recibo está disponível para movimentações de venda.");
+  }
+
+  const quantidade = Number(m.quantidade) || 1;
+  const total = Number(m.valor) || 0;
+  const precoUnitario = quantidade > 0 ? total / quantidade : total;
+  const dataMov = obterDataMovimentacaoParaRecibo(m.data);
+  const formaPagamento = m.formaPagamento || "Dinheiro";
+  const cliente = m.cliente || "Consumidor Final";
+  const vendedor = m.usuario || "-";
+
+  const recibo = {
+    data: dataMov.toLocaleString('pt-PT'),
+    cliente: cliente,
+    vendedor: vendedor,
+    item: m.produto || "Produto",
+    qtd: quantidade,
+    precoUnit: precoUnitario,
+    total: total,
+    pagamento: formaPagamento,
+    troco: 0
+  };
+
+  emitirReciboComprovativo(recibo);
+}
+
 function renderizarHistorico(listaMovs) {
   let html="";
   listaMovs.forEach(m=>{
-    const dt=m.data?m.data.toDate().toLocaleString('pt-PT'):'-';
+    const dt=m.data?obterDataMovimentacaoParaRecibo(m.data).toLocaleString('pt-PT'):'-';
     const prod=todosProdutos.find(p=>p.nome===m.produto);
     const foto=prod?.foto?`<img src="${prod.foto}" class="img-thumb">`:'📜';
     let badge, cor="#2563eb";
@@ -3365,9 +3407,24 @@ function renderizarHistorico(listaMovs) {
     else if(m.tipo==="despesa_caixa"){badge='<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">SAÍDA CAIXA</span>';cor="#dc2626";}
     else if(m.tipo==="cambio_comissao"){badge='<span style="background:#f3e8ff;color:#7e22ce;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">CÂMBIO</span>';cor="#10b981";}
     else badge='<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">ENTRADA</span>';
-    html+=`<tr><td>${foto}</td><td><b>${m.produto||'-'}</b></td><td>${badge}</td><td><b>${m.quantidade||0}</b></td><td><small>${m.formaPagamento||'Geral'}</small></td><td style="font-weight:bold;color:${cor};">${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</td><td><small>${m.usuario||'-'}</small></td><td><small>${dt}</small></td></tr>`;
+
+    const botaoRecibo = m.tipo === "saida"
+      ? `<button class="btn-secondary btn-acao" onclick="emitirReciboHistorico('${m.id}')" title="Ver, imprimir ou guardar este recibo em PDF">🧾 Recibo</button>`
+      : '<span style="color:#94a3b8;font-size:11px;">—</span>';
+
+    html+=`<tr>
+      <td>${foto}</td>
+      <td><b>${m.produto||'-'}</b></td>
+      <td>${badge}</td>
+      <td><b>${m.quantidade||0}</b></td>
+      <td><small>${m.formaPagamento||'Geral'}</small></td>
+      <td style="font-weight:bold;color:${cor};">${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</td>
+      <td><small>${m.usuario||'-'}</small></td>
+      <td><small>${dt}</small></td>
+      <td>${botaoRecibo}</td>
+    </tr>`;
   });
-  historico.innerHTML=html||'<tr><td colspan="8" style="color:#94a3b8;">Nenhuma movimentação registada.</td></tr>';
+  historico.innerHTML=html||'<tr><td colspan="9" style="color:#94a3b8;">Nenhuma movimentação registada.</td></tr>';
 }
 
 // Armazém PT: novo fluxo de receção + pagamento/acerto da fábrica.
