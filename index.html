@@ -3329,8 +3329,14 @@ async function confirmarVendaModal() {
     if(forma==="Dinheiro" && recebido<total) throw new Error(`Valor recebido (${recebido} Db) é menor que o total (${total} Db).`);
     const troco=forma==="Dinheiro" ? recebido-total : 0;
     const caixaId=caixaAtualObj?.id||null;
-    if(usuarioRole!=="admin" && !caixaId) throw new Error("É obrigatório ter um Caixa/Turno aberto para vender.");
-    const prodRef=db.collection("produtos").doc(produtoId);
+
+// TODOS os perfis precisam ter um caixa/turno aberto para realizar vendas.
+// Isso inclui ADMIN, VENDA1 e VENDA2.
+if(!caixaId) {
+  throw new Error("É obrigatório ter um Caixa/Turno aberto para vender. Abra o caixa antes de confirmar a venda.");
+}
+
+const prodRef=db.collection("produtos").doc(produtoId);
     await db.runTransaction(async transaction=>{
       if(caixaId){
         const caixaRef=db.collection("caixas").doc(caixaId), caixaDoc=await transaction.get(caixaRef);
