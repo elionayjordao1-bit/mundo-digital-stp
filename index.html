@@ -745,14 +745,44 @@ tr:nth-child(even) { background-color: #f8fafc; }
             <span id="kpiCaixaInicial" class="kpi-value">0 Db</span>
           </div>
           <div class="kpi-card green">
-            <span class="kpi-title">Vendas em Dinheiro</span>
+            <span class="kpi-title">Entradas Físicas</span>
             <span id="kpiCaixaVendasDinheiro" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card red">
+            <span class="kpi-title">Saídas Físicas</span>
+            <span id="kpiCaixaSaidasDinheiro" class="kpi-value">0 Db</span>
           </div>
           <div class="kpi-card purple">
             <span class="kpi-title">Dinheiro Esperado no Caixa</span>
             <span id="kpiCaixaDinheiroEsperado" class="kpi-value">0 Db</span>
           </div>
         </div>
+
+        <div class="card" style="background:#f8fafc;border:1px solid #cbd5e1;margin-bottom:15px;box-shadow:none;">
+          <h4 style="margin:0 0 12px;color:#0f172a;">💵 Movimentos físicos do caixa</h4>
+          <p style="margin:-4px 0 12px;color:#64748b;font-size:12px;line-height:1.5;">
+            Use <b>Suprimento</b> quando dinheiro da empresa/reserva entra fisicamente na loja.
+            Use <b>Sangria</b> quando dinheiro é retirado fisicamente da gaveta sem ser uma venda ou transferência.
+          </p>
+          <div class="form-grid">
+            <input id="caixaSuprimentoValor" type="number" min="0.01" step="0.01" placeholder="Valor do Suprimento (Db)">
+            <select id="caixaSuprimentoOrigem">
+              <option value="Reserva da Loja">Reserva da Loja</option>
+              <option value="Banco">Levantamento no Banco</option>
+              <option value="Responsável">Entregue pela Responsável</option>
+              <option value="Outro">Outra origem</option>
+            </select>
+            <input id="caixaSuprimentoObs" placeholder="Observação do suprimento (opcional)">
+            <button onclick="registrarSuprimentoCaixa()" class="btn-success">➕ Registar Suprimento</button>
+          </div>
+          <div style="height:1px;background:#e2e8f0;margin:14px 0;"></div>
+          <div class="form-grid">
+            <input id="caixaSangriaValor" type="number" min="0.01" step="0.01" placeholder="Valor da Sangria (Db)">
+            <input id="caixaSangriaMotivo" placeholder="Motivo / destino da retirada">
+            <button onclick="registrarSangriaCaixa()" class="btn-warning">➖ Registar Sangria</button>
+          </div>
+        </div>
+
         <button onclick="abrirModalFecharCaixa()" class="btn-danger" style="padding: 12px; font-size: 14px; width: 100%;">🔒 Fechar Caixa do Turno</button>
       </div>
     </div>
@@ -4731,6 +4761,265 @@ function navegarPara(paginaId) {
 function registrarOperacaoCambio() {
   navegarPara("paginaTransferencias");
   alert("O câmbio/remessa agora é feito exclusivamente no módulo Transferências.");
+}
+
+
+/* =========================================================================
+   FASE 5.1 — CONTROLE FÍSICO DE CAIXA
+   - Suprimento: dinheiro da empresa/reserva entra fisicamente na loja
+   - Sangria: retirada física da gaveta
+   - Transferência PT→STP em dinheiro é bloqueada sem saldo físico suficiente
+   - Dinheiro contado no fechamento nunca pode ser negativo
+   ========================================================================= */
+
+function calcularResumoCaixaFisico(movs, caixaId, valorInicial) {
+  let entradas = 0;
+  let saidas = 0;
+
+  (movs || []).forEach(m => {
+    if(m.caixaId !== caixaId) return;
+    const v = Number(m.valor) || 0;
+    const f = String(m.formaPagamento || "");
+
+    if(m.tipo === "suprimento_caixa") { entradas += v; return; }
+    if(m.tipo === "sangria_caixa") { saidas += v; return; }
+
+    if(m.tipo === "transferencia_entrada") {
+      if(f.includes("Dinheiro")) entradas += v;
+      return;
+    }
+    if(m.tipo === "transferencia_saida") {
+      if(f.includes("Dinheiro")) saidas += v;
+      return;
+    }
+    if(m.tipo === "despesa_caixa") {
+      if(f.includes("Dinheiro")) saidas += v;
+      return;
+    }
+    if(m.tipo === "saida") {
+      if(typeof ehTransferenciaLegacy === "function" && ehTransferenciaLegacy(m)) {
+        const dirLegacy = typeof direcaoTransferenciaLegacy === "function" ? direcaoTransferenciaLegacy(m) : "PT_STP";
+        if(dirLegacy === "STP_PT") entradas += v; else saidas += v;
+      } else if(f.includes("Dinheiro") || (!f.includes("Transferencia") && !f.includes("Cartao"))) {
+        entradas += v;
+      }
+    }
+  });
+
+  return {
+    entradas,
+    saidas,
+    esperado: (Number(valorInicial)||0) + entradas - saidas
+  };
+}
+
+async function obterResumoCaixaAtualFirestore() {
+  if(!caixaAtualObj) return null;
+  const snap = await db.collection("movimentacoes").where("caixaId", "==", caixaAtualObj.id).get();
+  const movs = [];
+  snap.forEach(d => movs.push(d.data()));
+  return calcularResumoCaixaFisico(movs, caixaAtualObj.id, caixaAtualObj.valorInicial);
+}
+
+function atualizarKpiCaixaAbertoLocal() {
+  if(!caixaAtualObj) return;
+  const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+  const elSaidas = document.getElementById("kpiCaixaSaidasDinheiro");
+  kpiCaixaInicial.innerText = (Number(caixaAtualObj.valorInicial)||0).toLocaleString('pt-PT') + " Db";
+  kpiCaixaVendasDinheiro.innerText = r.entradas.toLocaleString('pt-PT') + " Db";
+  if(elSaidas) elSaidas.innerText = r.saidas.toLocaleString('pt-PT') + " Db";
+  kpiCaixaDinheiroEsperado.innerText = r.esperado.toLocaleString('pt-PT') + " Db";
+}
+
+async function registrarSuprimentoCaixa() {
+  if(!navigator.onLine) return alert("O suprimento de caixa exige ligação à internet.");
+  if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") return alert("Abra primeiro o Caixa/Turno.");
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const valor = Number(document.getElementById("caixaSuprimentoValor")?.value);
+  const origem = document.getElementById("caixaSuprimentoOrigem")?.value || "Reserva da Loja";
+  const observacao = document.getElementById("caixaSuprimentoObs")?.value.trim() || "";
+  if(!valor || valor <= 0) return alert("Informe um valor de suprimento maior que zero.");
+
+  if(!confirm(`Confirmar entrada física de ${valor.toLocaleString('pt-PT')} Db no caixa?\n\nOrigem: ${origem}`)) return;
+
+  try {
+    const caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
+    const movRef = db.collection("movimentacoes").doc();
+    await db.runTransaction(async tx => {
+      const caixaDoc = await tx.get(caixaRef);
+      if(!caixaDoc.exists || caixaDoc.data().estado !== "aberto") throw new Error("O caixa já não está aberto.");
+      if(usuarioRole !== "admin" && caixaDoc.data().uid !== user.uid) throw new Error("Este caixa não pertence ao utilizador atual.");
+      tx.set(movRef, {
+        produto: `Suprimento de Caixa — ${origem}`,
+        tipo: "suprimento_caixa",
+        quantidade: 1,
+        valor,
+        formaPagamento: "Dinheiro - Suprimento",
+        origemSuprimento: origem,
+        observacao,
+        usuario: user.email, uid: user.uid, role: usuarioRole,
+        data: new Date(), caixaId: caixaAtualObj.id
+      });
+    });
+    document.getElementById("caixaSuprimentoValor").value = "";
+    document.getElementById("caixaSuprimentoObs").value = "";
+    alert("Suprimento registado. O dinheiro já faz parte do saldo físico do caixa.");
+  } catch(e) { alert("Erro ao registar suprimento: " + (e.message || e)); }
+}
+
+async function registrarSangriaCaixa() {
+  if(!navigator.onLine) return alert("A sangria de caixa exige ligação à internet.");
+  if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") return alert("Abra primeiro o Caixa/Turno.");
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const valor = Number(document.getElementById("caixaSangriaValor")?.value);
+  const motivo = document.getElementById("caixaSangriaMotivo")?.value.trim() || "";
+  if(!valor || valor <= 0) return alert("Informe um valor de sangria maior que zero.");
+  if(!motivo) return alert("Informe o motivo ou destino da sangria.");
+
+  try {
+    const r = await obterResumoCaixaAtualFirestore();
+    if(!r || r.esperado < valor) {
+      const saldo = r ? Math.max(0, r.esperado) : 0;
+      return alert(`Saldo físico insuficiente.\n\nDisponível no caixa: ${saldo.toLocaleString('pt-PT')} Db\nSangria solicitada: ${valor.toLocaleString('pt-PT')} Db`);
+    }
+    if(!confirm(`Confirmar sangria de ${valor.toLocaleString('pt-PT')} Db?\n\nMotivo: ${motivo}`)) return;
+
+    await db.collection("movimentacoes").add({
+      produto: `Sangria de Caixa — ${motivo}`, tipo: "sangria_caixa", quantidade: 1, valor,
+      formaPagamento: "Dinheiro - Sangria", observacao: motivo,
+      usuario: user.email, uid: user.uid, role: usuarioRole, data: new Date(), caixaId: caixaAtualObj.id
+    });
+    document.getElementById("caixaSangriaValor").value = "";
+    document.getElementById("caixaSangriaMotivo").value = "";
+    alert("Sangria registada com sucesso.");
+  } catch(e) { alert("Erro ao registar sangria: " + (e.message || e)); }
+}
+
+async function registrarTransferencia() {
+  if(!usuarioPodeTransferencias()) return alert("Acesso restrito.");
+  if(!navigator.onLine) return alert("Para registar uma transferência é necessária ligação à internet.");
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const calc = calcularTransferencia();
+  if(!calc || calc.eur <= 0 || calc.ref <= 0 || calc.aplicada <= 0) return alert("Informe o valor em Euros e as duas taxas.");
+
+  const cliente = document.getElementById("transfCliente").value.trim();
+  const telefone = document.getElementById("transfTelefone").value.trim();
+  const formaSTP = document.getElementById("transfFormaSTP").value;
+  const observacao = document.getElementById("transfObservacao").value.trim();
+  if(!cliente) return alert("Informe o nome do cliente/remetente.");
+
+  const exigeCaixa = formaSTP === "Dinheiro";
+  if(exigeCaixa && (!caixaAtualObj || caixaAtualObj.estado !== "aberto")) return alert("Esta operação usa dinheiro físico em São Tomé. Abra primeiro o Caixa/Turno.");
+
+  // PT→STP em dinheiro é uma retirada física. Não pode sair dinheiro que não existe.
+  if(exigeCaixa && calc.dir === "PT_STP") {
+    try {
+      const r = await obterResumoCaixaAtualFirestore();
+      const disponivel = r ? r.esperado : 0;
+      if(disponivel < calc.totalDb) {
+        const falta = calc.totalDb - Math.max(0, disponivel);
+        return alert(
+          `Saldo físico insuficiente para esta transferência.\n\n` +
+          `Disponível no caixa: ${Math.max(0, disponivel).toLocaleString('pt-PT')} Db\n` +
+          `Necessário entregar: ${calc.totalDb.toLocaleString('pt-PT')} Db\n` +
+          `Falta colocar no caixa: ${falta.toLocaleString('pt-PT')} Db\n\n` +
+          `Registe primeiro um SUPRIMENTO DE CAIXA e depois volte a confirmar a transferência.`
+        );
+      }
+    } catch(e) { return alert("Não foi possível validar o saldo físico do caixa: " + (e.message || e)); }
+  }
+
+  const direcaoTexto = calc.dir === "PT_STP" ? "Portugal → São Tomé" : "São Tomé → Portugal";
+  const acaoCaixa = calc.dir === "PT_STP" ? "SAÍDA" : "ENTRADA";
+  if(!confirm(
+    `Confirmar transferência?\n\n${direcaoTexto}\nCliente: ${cliente}\n` +
+    `${calc.eur.toLocaleString("pt-PT",{minimumFractionDigits:2})} € = ${calc.totalDb.toLocaleString("pt-PT")} Db\n` +
+    `Taxa referência: ${calc.ref.toFixed(2)} Db/€\nTaxa aplicada: ${calc.aplicada.toFixed(2)} Db/€\n` +
+    `Margem estimada: ${calc.margemDb.toLocaleString("pt-PT")} Db\n` +
+    `${formaSTP === "Dinheiro" ? `Impacto no caixa: ${acaoCaixa} ${calc.totalDb.toLocaleString("pt-PT")} Db` : "Sem impacto no caixa físico"}`
+  )) return;
+
+  const btn = document.querySelector('#paginaTransferencias button[onclick="registrarTransferencia()"]');
+  if(btn) btn.disabled = true;
+  try {
+    const transferenciaRef = db.collection("transferencias").doc();
+    const agora = new Date();
+    const transferenciaPayload = {
+      direcao: calc.dir, cliente, telefone, qtdEur: calc.eur, taxaReferencia: calc.ref,
+      taxaAplicada: calc.aplicada, totalDb: calc.totalDb, margemDb: calc.margemDb, formaSTP,
+      estado: "CONCLUIDA", observacao, caixaId: exigeCaixa ? caixaAtualObj.id : null,
+      usuario: user.email, uid: user.uid, role: usuarioRole, data: agora
+    };
+
+    await db.runTransaction(async tx => {
+      if(exigeCaixa) {
+        const caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
+        const caixaDoc = await tx.get(caixaRef);
+        if(!caixaDoc.exists || caixaDoc.data().estado !== "aberto") throw new Error("O caixa já não está aberto.");
+        if(usuarioRole !== "admin" && caixaDoc.data().uid !== user.uid) throw new Error("O caixa aberto não pertence ao utilizador atual.");
+      }
+      tx.set(transferenciaRef, transferenciaPayload);
+      if(exigeCaixa) {
+        const movRef = db.collection("movimentacoes").doc();
+        tx.set(movRef, {
+          produto: `Transferência ${calc.dir === "PT_STP" ? "PT→STP" : "STP→PT"} — ${cliente}`,
+          tipo: calc.dir === "PT_STP" ? "transferencia_saida" : "transferencia_entrada",
+          quantidade: 1, valor: calc.totalDb, formaPagamento: "Dinheiro - Transferência",
+          cliente, telefone, usuario: user.email, uid: user.uid, role: usuarioRole, data: agora,
+          caixaId: caixaAtualObj.id, transferenciaId: transferenciaRef.id, direcao: calc.dir
+        });
+      }
+    });
+
+    document.getElementById("transfCliente").value = "";
+    document.getElementById("transfTelefone").value = "";
+    document.getElementById("transfQtdEur").value = "";
+    document.getElementById("transfObservacao").value = "";
+    calcularTransferencia();
+    alert("Transferência registada com sucesso.");
+  } catch(e) { alert("Erro ao registar transferência: " + (e.message || e)); }
+  finally { if(btn) btn.disabled = false; }
+}
+
+function abrirModalFecharCaixa() {
+  if(!caixaAtualObj) return alert("Nenhum caixa aberto para fechar.");
+  const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+  if(r.esperado < 0) {
+    return alert(
+      `O caixa apresenta saldo físico impossível (${r.esperado.toLocaleString('pt-PT')} Db).\n\n` +
+      `Registe o suprimento que efetivamente entrou na loja antes de tentar fechar o turno.`
+    );
+  }
+  lblModalValorInicial.innerText = (Number(caixaAtualObj.valorInicial)||0).toLocaleString('pt-PT') + " Db";
+  lblModalVendasDinheiro.innerText = r.entradas.toLocaleString('pt-PT') + " Db";
+  lblModalDinheiroEsperado.innerText = r.esperado.toLocaleString('pt-PT') + " Db";
+  modalDinheiroContado.value = "";
+  modalObservacaoFechamento.value = "";
+  calcularDiferencaFechamento();
+  modalFecharCaixa.classList.remove("hidden");
+}
+
+function calcularDiferencaFechamento() {
+  if(!caixaAtualObj) return;
+  const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+  const raw = modalDinheiroContado.value;
+  if(raw !== "" && Number(raw) < 0) {
+    modalDinheiroContado.value = "";
+    lblModalDiferenca.className = "dif-quebra";
+    lblModalDiferenca.innerText = "Dinheiro físico contado não pode ser negativo.";
+    return;
+  }
+  const contado = raw === "" ? 0 : Number(raw);
+  const diferenca = contado - r.esperado;
+  if(diferenca === 0) { lblModalDiferenca.className="dif-certo"; lblModalDiferenca.innerText="🟢 0 Db (Caixa certo)"; }
+  else if(diferenca < 0) { lblModalDiferenca.className="dif-quebra"; lblModalDiferenca.innerText=`🔴 ${diferenca.toLocaleString('pt-PT')} Db (Falta / Quebra de Caixa)`; }
+  else { lblModalDiferenca.className="dif-sobra"; lblModalDiferenca.innerText=`🟡 +${diferenca.toLocaleString('pt-PT')} Db (Sobra de Caixa)`; }
 }
 
 
