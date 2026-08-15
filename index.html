@@ -799,8 +799,11 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
         <input id="transfTaxaReferencia" type="number" min="0.01" step="0.01" value="26.00"
                placeholder="Taxa de referência (Db/€)" oninput="calcularTransferencia()">
-        <input id="transfTaxaAplicada" type="number" min="0.01" step="0.01" value="26.00"
+        <input id="transfTaxaAplicada" type="number" min="0.01" step="0.01" value="25.00"
                placeholder="Taxa aplicada ao cliente (Db/€)" oninput="calcularTransferencia()">
+        <small id="transfNotaTaxa" style="grid-column:1/-1;color:#64748b;margin-top:-6px;">
+          PT → STP: referência 26,00 Db/€; taxa aplicada padrão 25,00 Db/€. A taxa aplicada pode ser alterada em cada operação.
+        </small>
 
         <select id="transfFormaSTP">
           <option value="Dinheiro">💵 Dinheiro no caixa de São Tomé</option>
@@ -822,6 +825,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
             <div>
               <small style="color:#6b21a8;font-weight:700;">MARGEM ESTIMADA</small>
               <div id="transfResumoMargem" style="font-size:20px;font-weight:800;color:#059669;">0 Db</div>
+            </div>
+            <div>
+              <small style="color:#6b21a8;font-weight:700;">MARGEM POR EURO</small>
+              <div id="transfResumoMargemEuro" style="font-size:20px;font-weight:800;color:#059669;">0 Db/€</div>
             </div>
           </div>
           <div id="transfResumoOperacao" style="margin-top:12px;text-align:center;font-size:13px;color:#475569;font-weight:600;">
@@ -3653,13 +3660,25 @@ function atualizarTransferenciaForm() {
   const dir = document.getElementById("transfDirecao")?.value || "PT_STP";
   const ref = document.getElementById("transfTaxaReferencia");
   const aplicada = document.getElementById("transfTaxaAplicada");
+  const nota = document.getElementById("transfNotaTaxa");
   if(!ref || !aplicada) return;
 
-  const valorPadrao = dir === "PT_STP" ? 26.00 : 27.50;
-  ref.value = valorPadrao.toFixed(2);
-  if(!aplicada.value || Number(aplicada.value) <= 0 || Number(aplicada.value) === 26 || Number(aplicada.value) === 27.5) {
-    aplicada.value = valorPadrao.toFixed(2);
+  // Regra comercial atual da empresa:
+  // referência real = 26,00 Db/€ em ambas as direções;
+  // PT → STP normalmente cobra 25,00 Db/€;
+  // STP → PT normalmente cobra 27,50 Db/€.
+  const taxaReferenciaPadrao = 26.00;
+  const taxaAplicadaPadrao = dir === "PT_STP" ? 25.00 : 27.50;
+
+  ref.value = taxaReferenciaPadrao.toFixed(2);
+  aplicada.value = taxaAplicadaPadrao.toFixed(2);
+
+  if(nota) {
+    nota.innerText = dir === "PT_STP"
+      ? "PT → STP: referência 26,00 Db/€; taxa aplicada padrão 25,00 Db/€. Pode alterar a taxa nesta operação."
+      : "STP → PT: referência 26,00 Db/€; taxa aplicada padrão 27,50 Db/€. Pode alterar a taxa nesta operação.";
   }
+
   calcularTransferencia();
 }
 
@@ -3681,6 +3700,7 @@ function calcularTransferencia() {
   const elEur = document.getElementById("transfResumoEur");
   const elDb = document.getElementById("transfResumoDb");
   const elMargem = document.getElementById("transfResumoMargem");
+  const elMargemEuro = document.getElementById("transfResumoMargemEuro");
   const elResumo = document.getElementById("transfResumoOperacao");
 
   if(elEur) elEur.innerText = eur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2}) + " €";
@@ -3688,6 +3708,11 @@ function calcularTransferencia() {
   if(elMargem) {
     elMargem.innerText = (margemDb > 0 ? "+" : "") + margemDb.toLocaleString("pt-PT") + " Db";
     elMargem.style.color = margemDb >= 0 ? "#059669" : "#dc2626";
+  }
+  if(elMargemEuro) {
+    const margemPorEuro = dir === "PT_STP" ? (ref - aplicada) : (aplicada - ref);
+    elMargemEuro.innerText = (margemPorEuro > 0 ? "+" : "") + margemPorEuro.toFixed(2) + " Db/€";
+    elMargemEuro.style.color = margemPorEuro >= 0 ? "#059669" : "#dc2626";
   }
 
   if(elResumo) {
@@ -3740,8 +3765,9 @@ async function registrarTransferencia() {
     `${direcaoTexto}\n` +
     `Cliente: ${cliente}\n` +
     `${calc.eur.toLocaleString("pt-PT",{minimumFractionDigits:2})} € = ${calc.totalDb.toLocaleString("pt-PT")} Db\n` +
-    `Taxa referência: ${calc.ref.toFixed(2)}\n` +
-    `Taxa aplicada: ${calc.aplicada.toFixed(2)}\n` +
+    `Taxa referência: ${calc.ref.toFixed(2)} Db/€\n` +
+    `Taxa aplicada: ${calc.aplicada.toFixed(2)} Db/€\n` +
+    `Margem por euro: ${(calc.dir === "PT_STP" ? calc.ref - calc.aplicada : calc.aplicada - calc.ref).toFixed(2)} Db/€\n` +
     `Margem estimada: ${calc.margemDb.toLocaleString("pt-PT")} Db\n` +
     `${formaSTP === "Dinheiro" ? `Impacto no caixa: ${acaoCaixa} ${calc.totalDb.toLocaleString("pt-PT")} Db` : "Sem impacto no caixa físico"}`
   )) return;
@@ -3849,7 +3875,16 @@ function renderizarTransferencias() {
 
 function processarResumoTransferencias() {
   let margem = 0, ptStp = 0, stpPt = 0;
+  const agora = new Date();
+  const anoAtual = agora.getFullYear();
+  const mesAtual = agora.getMonth();
+  const dataInicio = dataFiltroInicioDash || new Date(anoAtual, mesAtual, 1);
+  const dataFim = dataFiltroFimDash || new Date(anoAtual, mesAtual + 1, 0, 23, 59, 59);
+
   todasTransferencias.forEach(t => {
+    const dt = t.data ? obterDataSegura(t.data) : null;
+    if(!dt || dt < dataInicio || dt > dataFim) return;
+
     const eur = Number(t.qtdEur) || 0;
     const m = Number(t.margemDb) || 0;
     margem += m;
