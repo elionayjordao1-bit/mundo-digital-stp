@@ -395,6 +395,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   <nav class="main-nav">
     <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas</button>
     <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Gestão de Caixa</button>
+    <button class="nav-btn hidden" id="btnPageTransferencias" onclick="navegarPara('paginaTransferencias')">💱 Transferências</button>
     <button class="nav-btn" id="btnPageArmazem" onclick="navegarPara('paginaArmazemPT')">🇵🇹 Armazém Portugal</button>
   </nav>
 
@@ -501,9 +502,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
         </div>
 
         <div class="kpi-card purple">
-          <span class="kpi-title">Lucro Câmbio / Remessas</span>
+          <span class="kpi-title">Lucro Transferências</span>
           <span id="lucroCambioKpi" class="kpi-value">0 Db</span>
-          <span style="font-size: 11px; color:#8b5cf6;">Comissões de Câmbio</span>
+          <span style="font-size: 11px; color:#8b5cf6;">Margem das Transferências</span>
         </div>
 
         <div class="kpi-card red">
@@ -515,7 +516,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <div class="kpi-card green">
           <span class="kpi-title">Lucro Líquido Real</span>
           <span id="lucroLiquidoReal" class="kpi-value">0 Db</span>
-          <span style="font-size: 11px; color:#10b981;">(Vendas + Import + Câmbio - Desp)</span>
+          <span style="font-size: 11px; color:#10b981;">(Vendas + Encomendas + Transferências - Desp)</span>
         </div>
       </div>
 
@@ -776,6 +777,114 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 
   <!-- PÁGINA 2: ARMAZÉM PORTUGAL -->
+
+  <!-- PÁGINA: TRANSFERÊNCIAS PORTUGAL ⇄ SÃO TOMÉ -->
+  <div id="paginaTransferencias" class="hidden">
+    <div class="card" style="border-top: 4px solid #8b5cf6;">
+      <h3 style="color:#7c3aed;">💱 Módulo de Transferências Portugal ⇄ São Tomé</h3>
+      <p style="margin-top:-6px;color:#64748b;font-size:13px;">
+        Este módulo é separado das vendas. Regista o valor em EUR, a taxa de referência,
+        a taxa aplicada ao cliente e o impacto real no caixa físico de São Tomé.
+      </p>
+
+      <div class="form-grid">
+        <select id="transfDirecao" onchange="atualizarTransferenciaForm()">
+          <option value="PT_STP">🇵🇹 Portugal → 🇸🇹 São Tomé (recebe EUR / entrega Db)</option>
+          <option value="STP_PT">🇸🇹 São Tomé → 🇵🇹 Portugal (recebe Db / entrega EUR)</option>
+        </select>
+
+        <input id="transfCliente" placeholder="Nome do Cliente / Remetente">
+        <input id="transfTelefone" placeholder="Telefone / WhatsApp (opcional)">
+        <input id="transfQtdEur" type="number" min="0.01" step="0.01" placeholder="Valor em Euros (€)" oninput="calcularTransferencia()">
+
+        <input id="transfTaxaReferencia" type="number" min="0.01" step="0.01" value="26.00"
+               placeholder="Taxa de referência (Db/€)" oninput="calcularTransferencia()">
+        <input id="transfTaxaAplicada" type="number" min="0.01" step="0.01" value="26.00"
+               placeholder="Taxa aplicada ao cliente (Db/€)" oninput="calcularTransferencia()">
+
+        <select id="transfFormaSTP">
+          <option value="Dinheiro">💵 Dinheiro no caixa de São Tomé</option>
+          <option value="Transferencia">🏦 Transferência / DobraPay (não mexe no caixa físico)</option>
+        </select>
+
+        <input id="transfObservacao" placeholder="Observação (opcional)">
+
+        <div style="grid-column:1/-1;background:#f5f3ff;padding:15px;border-radius:10px;border:1px solid #ddd6fe;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;text-align:center;">
+            <div>
+              <small style="color:#6b21a8;font-weight:700;">VALOR EM EUR</small>
+              <div id="transfResumoEur" style="font-size:20px;font-weight:800;color:#1e293b;">0 €</div>
+            </div>
+            <div>
+              <small style="color:#6b21a8;font-weight:700;">VALOR EM DOBRAS</small>
+              <div id="transfResumoDb" style="font-size:20px;font-weight:800;color:#1e293b;">0 Db</div>
+            </div>
+            <div>
+              <small style="color:#6b21a8;font-weight:700;">MARGEM ESTIMADA</small>
+              <div id="transfResumoMargem" style="font-size:20px;font-weight:800;color:#059669;">0 Db</div>
+            </div>
+          </div>
+          <div id="transfResumoOperacao" style="margin-top:12px;text-align:center;font-size:13px;color:#475569;font-weight:600;">
+            Preencha o valor e as taxas para ver o resumo.
+          </div>
+        </div>
+
+        <button onclick="registrarTransferencia()" class="btn-success" style="grid-column:1/-1;background:#8b5cf6;">
+          💱 Registar Transferência
+        </button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card purple">
+        <span class="kpi-title">Margem das Transferências</span>
+        <span id="transfKpiMargem" class="kpi-value">0 Db</span>
+        <span class="kpi-sub">No período carregado</span>
+      </div>
+      <div class="kpi-card blue">
+        <span class="kpi-title">PT → STP</span>
+        <span id="transfKpiPTSTP" class="kpi-value">0 €</span>
+        <span class="kpi-sub">EUR recebidos em Portugal</span>
+      </div>
+      <div class="kpi-card teal">
+        <span class="kpi-title">STP → PT</span>
+        <span id="transfKpiSTPPT" class="kpi-value">0 €</span>
+        <span class="kpi-sub">EUR entregues em Portugal</span>
+      </div>
+      <div class="kpi-card orange">
+        <span class="kpi-title">Posição Líquida EUR</span>
+        <span id="transfKpiSaldoEur" class="kpi-value">0 €</span>
+        <span class="kpi-sub">Líquido das transferências registadas; não é saldo bancário</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="color:#7c3aed;">📜 Histórico de Transferências</h3>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th><th>Direção</th><th>Cliente</th><th>EUR</th>
+              <th>Taxa Ref.</th><th>Taxa Aplicada</th><th>Db</th>
+              <th>Margem</th><th>Forma STP</th><th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="listaTransferencias"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="background:#f8fafc;">
+      <h4 style="margin-top:0;">ℹ️ Como o caixa funciona neste módulo</h4>
+      <ul style="margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;">
+        <li><b>Portugal → São Tomé:</b> se a entrega em STP for em dinheiro, o valor em Db é uma <b>saída física do caixa</b>.</li>
+        <li><b>São Tomé → Portugal:</b> se o cliente pagar em dinheiro em STP, o valor em Db é uma <b>entrada física no caixa</b>.</li>
+        <li>Se a operação for marcada como <b>Transferência / DobraPay</b>, ela fica registada financeiramente, mas <b>não altera o caixa físico</b>.</li>
+        <li>O valor total da transferência <b>não é uma venda</b>. Apenas a margem da operação entra no cálculo do lucro.</li>
+      </ul>
+    </div>
+  </div>
+
   <div id="paginaArmazemPT" class="hidden">
     
     <div class="card pt-step-card">
@@ -1047,6 +1156,7 @@ let listenerMovimentacoes = null;
 let listenerFuncionarios = null;
 let listenerDespesas = null;
 let listenerEncomendas = null;
+let listenerTransferencias = null;
 let listenerArmazemPT = null;
 let listenerLotesPT = null;
 
@@ -1057,6 +1167,7 @@ let todosProdutos = [];
 let todasMovimentacoes = [];
 let todasDespesas = [];
 let todasEncomendas = [];
+let todasTransferencias = [];
 let todosItensSoltosPT = [];
 let todosLotesPT = [];
 
@@ -1149,6 +1260,7 @@ function resetarInterface() {
   cardCompras.classList.add("hidden");
   cardCambio.classList.add("hidden");
   cardEncomendas.classList.add("hidden");
+  document.getElementById("btnPageTransferencias")?.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
   btnToggleFunc.classList.add("hidden");
@@ -1166,6 +1278,7 @@ function logout(){
   if(listenerFuncionarios) listenerFuncionarios();
   if(listenerDespesas) listenerDespesas();
   if(listenerEncomendas) listenerEncomendas();
+  if(listenerTransferencias) listenerTransferencias();
   if(listenerArmazemPT) listenerArmazemPT();
   if(listenerLotesPT) listenerLotesPT();
   if(listenerCaixaAtual) listenerCaixaAtual();
@@ -1207,7 +1320,7 @@ auth.onAuthStateChanged(u => {
         cardRelatorio.classList.remove("hidden");
         cardDespesas.classList.remove("hidden");
         cardCompras.classList.remove("hidden");
-        cardCambio.classList.remove("hidden");
+        btnPageTransferencias.classList.remove("hidden");
         cardEncomendas.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
@@ -1224,7 +1337,7 @@ auth.onAuthStateChanged(u => {
         cardAuditoriaCaixas.classList.add("hidden");
         encCustoCompra.classList.add("hidden");
       } else {
-        cardCambio.classList.remove("hidden");
+        btnPageTransferencias.classList.remove("hidden");
         cardEncomendas.classList.remove("hidden");
         cardAuditoriaCaixas.classList.add("hidden");
         encCustoCompra.classList.add("hidden");
@@ -3234,6 +3347,28 @@ function carregar() {
     s.forEach(d => { const m = d.data(); m.id = d.id; todasMovimentacoes.push(m); });
     renderizarHistorico(todasMovimentacoes); processarDashboard(); atualizarKpiCaixaAbertoLocal();
   }, err => console.warn("Movimentações: modo offline/erro", err));
+
+  if(listenerTransferencias) listenerTransferencias();
+  if(usuarioPodeTransferencias()) {
+    listenerTransferencias = db.collection("transferencias").onSnapshot(s => {
+      todasTransferencias = [];
+      s.forEach(d => {
+        const t = d.data();
+        t.id = d.id;
+        todasTransferencias.push(t);
+      });
+      todasTransferencias.sort((a,b) => {
+        const da = a.data?.toDate ? a.data.toDate().getTime() : new Date(a.data || 0).getTime();
+        const dbb = b.data?.toDate ? b.data.toDate().getTime() : new Date(b.data || 0).getTime();
+        return dbb - da;
+      });
+      renderizarTransferencias();
+      processarResumoTransferencias();
+      processarDashboard();
+    }, err => console.warn("Transferências: modo offline/erro", err));
+  } else {
+    todasTransferencias = [];
+  }
 }
 
 // Corrige a proteção do próprio administrador.
@@ -3488,6 +3623,642 @@ auth.onAuthStateChanged(function(u){
     if(!permitido && document.getElementById("paginaArmazemPT") && !document.getElementById("paginaArmazemPT").classList.contains("hidden")) navegarPara("paginaPrincipal");
   }).catch(()=>{});
 });
+
+
+/* =========================================================================
+   FASE 4 — MÓDULO SEPARADO DE TRANSFERÊNCIAS PT ⇄ STP
+   Implementação adicional sobre a Fase 3.1, sem reescrever os módulos existentes.
+   ========================================================================= */
+
+function usuarioPodeTransferencias() {
+  return usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2";
+}
+
+function obterDataSegura(valor) {
+  if(!valor) return new Date();
+  if(valor.toDate && typeof valor.toDate === "function") return valor.toDate();
+  const d = new Date(valor);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
+function navegarParaTransferenciasComAcesso() {
+  if(!usuarioPodeTransferencias()) {
+    alert("Acesso restrito ao Administrador e aos Vendedores.");
+    return;
+  }
+  navegarPara("paginaTransferencias");
+}
+
+function atualizarTransferenciaForm() {
+  const dir = document.getElementById("transfDirecao")?.value || "PT_STP";
+  const ref = document.getElementById("transfTaxaReferencia");
+  const aplicada = document.getElementById("transfTaxaAplicada");
+  if(!ref || !aplicada) return;
+
+  const valorPadrao = dir === "PT_STP" ? 26.00 : 27.50;
+  ref.value = valorPadrao.toFixed(2);
+  if(!aplicada.value || Number(aplicada.value) <= 0 || Number(aplicada.value) === 26 || Number(aplicada.value) === 27.5) {
+    aplicada.value = valorPadrao.toFixed(2);
+  }
+  calcularTransferencia();
+}
+
+function calcularTransferencia() {
+  const dir = document.getElementById("transfDirecao")?.value || "PT_STP";
+  const eur = Number(document.getElementById("transfQtdEur")?.value) || 0;
+  const ref = Number(document.getElementById("transfTaxaReferencia")?.value) || 0;
+  const aplicada = Number(document.getElementById("transfTaxaAplicada")?.value) || 0;
+
+  const totalDb = Math.round(eur * aplicada);
+  let margemDb = 0;
+
+  if(dir === "PT_STP") {
+    margemDb = Math.round((eur * ref) - totalDb);
+  } else {
+    margemDb = Math.round(totalDb - (eur * ref));
+  }
+
+  const elEur = document.getElementById("transfResumoEur");
+  const elDb = document.getElementById("transfResumoDb");
+  const elMargem = document.getElementById("transfResumoMargem");
+  const elResumo = document.getElementById("transfResumoOperacao");
+
+  if(elEur) elEur.innerText = eur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2}) + " €";
+  if(elDb) elDb.innerText = totalDb.toLocaleString("pt-PT") + " Db";
+  if(elMargem) {
+    elMargem.innerText = (margemDb > 0 ? "+" : "") + margemDb.toLocaleString("pt-PT") + " Db";
+    elMargem.style.color = margemDb >= 0 ? "#059669" : "#dc2626";
+  }
+
+  if(elResumo) {
+    if(eur <= 0 || ref <= 0 || aplicada <= 0) {
+      elResumo.innerText = "Preencha o valor e as taxas para ver o resumo.";
+    } else if(dir === "PT_STP") {
+      elResumo.innerText = `Cliente envia ${eur.toLocaleString("pt-PT",{minimumFractionDigits:2})} € → entrega ${totalDb.toLocaleString("pt-PT")} Db em São Tomé.`;
+    } else {
+      elResumo.innerText = `Cliente entrega ${totalDb.toLocaleString("pt-PT")} Db → recebe ${eur.toLocaleString("pt-PT",{minimumFractionDigits:2})} € em Portugal.`;
+    }
+  }
+
+  return {dir, eur, ref, aplicada, totalDb, margemDb};
+}
+
+async function registrarTransferencia() {
+  if(!usuarioPodeTransferencias()) return alert("Acesso restrito.");
+  if(!navigator.onLine) return alert("Para registar uma transferência é necessária ligação à internet.");
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const calc = calcularTransferencia();
+  if(!calc || calc.eur <= 0 || calc.ref <= 0 || calc.aplicada <= 0) {
+    return alert("Informe o valor em Euros e as duas taxas.");
+  }
+
+  const cliente = document.getElementById("transfCliente").value.trim();
+  const telefone = document.getElementById("transfTelefone").value.trim();
+  const formaSTP = document.getElementById("transfFormaSTP").value;
+  const observacao = document.getElementById("transfObservacao").value.trim();
+
+  if(!cliente) return alert("Informe o nome do cliente/remetente.");
+
+  const exigeCaixa =
+    formaSTP === "Dinheiro";
+
+  if(exigeCaixa && !caixaAtualObj) {
+    return alert("Esta operação usa dinheiro físico em São Tomé. Abra primeiro o Caixa/Turno.");
+  }
+
+  if(exigeCaixa && caixaAtualObj.estado !== "aberto") {
+    return alert("O Caixa/Turno selecionado não está aberto.");
+  }
+
+  const direcaoTexto = calc.dir === "PT_STP" ? "Portugal → São Tomé" : "São Tomé → Portugal";
+  const acaoCaixa = calc.dir === "PT_STP" ? "SAÍDA" : "ENTRADA";
+
+  if(!confirm(
+    `Confirmar transferência?\n\n` +
+    `${direcaoTexto}\n` +
+    `Cliente: ${cliente}\n` +
+    `${calc.eur.toLocaleString("pt-PT",{minimumFractionDigits:2})} € = ${calc.totalDb.toLocaleString("pt-PT")} Db\n` +
+    `Taxa referência: ${calc.ref.toFixed(2)}\n` +
+    `Taxa aplicada: ${calc.aplicada.toFixed(2)}\n` +
+    `Margem estimada: ${calc.margemDb.toLocaleString("pt-PT")} Db\n` +
+    `${formaSTP === "Dinheiro" ? `Impacto no caixa: ${acaoCaixa} ${calc.totalDb.toLocaleString("pt-PT")} Db` : "Sem impacto no caixa físico"}`
+  )) return;
+
+  const btn = document.querySelector('#paginaTransferencias button[onclick="registrarTransferencia()"]');
+  if(btn) btn.disabled = true;
+
+  try {
+    const transferenciaRef = db.collection("transferencias").doc();
+    const agora = new Date();
+
+    const transferenciaPayload = {
+      direcao: calc.dir,
+      cliente,
+      telefone,
+      qtdEur: calc.eur,
+      taxaReferencia: calc.ref,
+      taxaAplicada: calc.aplicada,
+      totalDb: calc.totalDb,
+      margemDb: calc.margemDb,
+      formaSTP,
+      estado: "CONCLUIDA",
+      observacao,
+      caixaId: (formaSTP === "Dinheiro" && caixaAtualObj) ? caixaAtualObj.id : null,
+      usuario: user.email,
+      uid: user.uid,
+      role: usuarioRole,
+      data: agora
+    };
+
+    await db.runTransaction(async transaction => {
+      transaction.set(transferenciaRef, transferenciaPayload);
+
+      // Só cria movimento no caixa físico quando a operação realmente mexe em dinheiro.
+      if(formaSTP === "Dinheiro") {
+        const movRef = db.collection("movimentacoes").doc();
+        transaction.set(movRef, {
+          produto: `Transferência ${calc.dir === "PT_STP" ? "PT→STP" : "STP→PT"} — ${cliente}`,
+          tipo: calc.dir === "PT_STP" ? "transferencia_saida" : "transferencia_entrada",
+          quantidade: 1,
+          valor: calc.totalDb,
+          formaPagamento: "Dinheiro - Transferência",
+          cliente,
+          telefone,
+          usuario: user.email,
+          uid: user.uid,
+          role: usuarioRole,
+          data: agora,
+          caixaId: caixaAtualObj.id,
+          transferenciaId: transferenciaRef.id,
+          direcao: calc.dir
+        });
+      }
+    });
+
+    document.getElementById("transfCliente").value = "";
+    document.getElementById("transfTelefone").value = "";
+    document.getElementById("transfQtdEur").value = "";
+    document.getElementById("transfObservacao").value = "";
+    calcularTransferencia();
+
+    alert("Transferência registada com sucesso. A operação não foi classificada como venda.");
+  } catch(e) {
+    alert("Erro ao registar transferência: " + (e.message || e));
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}
+
+function renderizarTransferencias() {
+  const tbody = document.getElementById("listaTransferencias");
+  if(!tbody) return;
+
+  if(!todasTransferencias.length) {
+    tbody.innerHTML = '<tr><td colspan="10" style="color:#94a3b8;">Nenhuma transferência registada.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = todasTransferencias.map(t => {
+    const dt = obterDataSegura(t.data).toLocaleString("pt-PT");
+    const dir = t.direcao === "PT_STP"
+      ? '<span style="background:#dbeafe;color:#1d4ed8;padding:3px 8px;border-radius:10px;font-weight:700;font-size:11px;">PT → STP</span>'
+      : '<span style="background:#ccfbf1;color:#0f766e;padding:3px 8px;border-radius:10px;font-weight:700;font-size:11px;">STP → PT</span>';
+    const margem = Number(t.margemDb) || 0;
+    const corMargem = margem >= 0 ? "#059669" : "#dc2626";
+    const forma = t.formaSTP === "Dinheiro" ? "💵 Dinheiro" : "🏦 Transferência";
+    const estado = t.estado === "CONCLUIDA"
+      ? '<span style="color:#15803d;font-weight:700;">CONCLUÍDA</span>'
+      : `<span style="color:#b45309;font-weight:700;">${t.estado || "-"}</span>`;
+
+    return `<tr>
+      <td><small>${dt}</small></td>
+      <td>${dir}</td>
+      <td><b>${t.cliente || "-"}</b>${t.telefone ? `<br><small>${t.telefone}</small>` : ""}</td>
+      <td>${Number(t.qtdEur || 0).toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €</td>
+      <td>${Number(t.taxaReferencia || 0).toFixed(2)}</td>
+      <td>${Number(t.taxaAplicada || 0).toFixed(2)}</td>
+      <td><b>${Number(t.totalDb || 0).toLocaleString("pt-PT")} Db</b></td>
+      <td style="font-weight:800;color:${corMargem};">${margem > 0 ? "+" : ""}${margem.toLocaleString("pt-PT")} Db</td>
+      <td><small>${forma}</small></td>
+      <td>${estado}</td>
+    </tr>`;
+  }).join("");
+}
+
+function processarResumoTransferencias() {
+  let margem = 0, ptStp = 0, stpPt = 0;
+  todasTransferencias.forEach(t => {
+    const eur = Number(t.qtdEur) || 0;
+    const m = Number(t.margemDb) || 0;
+    margem += m;
+    if(t.direcao === "PT_STP") ptStp += eur;
+    if(t.direcao === "STP_PT") stpPt += eur;
+  });
+
+  const elM = document.getElementById("transfKpiMargem");
+  const elP = document.getElementById("transfKpiPTSTP");
+  const elS = document.getElementById("transfKpiSTPPT");
+  const elN = document.getElementById("transfKpiSaldoEur");
+
+  if(elM) elM.innerText = margem.toLocaleString("pt-PT") + " Db";
+  if(elP) elP.innerText = ptStp.toLocaleString("pt-PT",{minimumFractionDigits:2}) + " €";
+  if(elS) elS.innerText = stpPt.toLocaleString("pt-PT",{minimumFractionDigits:2}) + " €";
+  if(elN) elN.innerText = (ptStp - stpPt).toLocaleString("pt-PT",{minimumFractionDigits:2}) + " €";
+}
+
+function ehTransferenciaLegacy(m) {
+  const fp = String(m.formaPagamento || "").toLowerCase();
+  const produto = String(m.produto || "").toLowerCase();
+  return fp.includes("remessa câmbio") ||
+         fp.includes("remessa cambio") ||
+         produto.includes("câmbio pt") ||
+         produto.includes("cambio pt") ||
+         produto.includes("câmbio stp") ||
+         produto.includes("cambio stp");
+}
+
+function direcaoTransferenciaLegacy(m) {
+  const texto = `${String(m.produto || "")} ${String(m.formaPagamento || "")}`.toLowerCase();
+  if(texto.includes("pt➔stp") || texto.includes("pt->stp") || texto.includes("pt → stp") || texto.includes("pt_stp")) return "PT_STP";
+  if(texto.includes("stp➔pt") || texto.includes("stp->pt") || texto.includes("stp → pt") || texto.includes("stp_pt")) return "STP_PT";
+  return null;
+}
+
+function ehMovimentoTransferenciaNovo(m) {
+  return m.tipo === "transferencia_saida" || m.tipo === "transferencia_entrada";
+}
+
+function ehMovimentoVendaReal(m) {
+  return m.tipo === "saida" && !ehTransferenciaLegacy(m);
+}
+
+/* Reclassificação visual do histórico: transferências não aparecem como VENDA. */
+function renderizarHistorico(listaMovs) {
+  let html = "";
+
+  listaMovs.forEach(m => {
+    const dt = m.data ? obterDataSegura(m.data).toLocaleString('pt-PT') : '-';
+    const prod = todosProdutos.find(p => p.nome === m.produto);
+    const foto = prod?.foto ? `<img src="${prod.foto}" class="img-thumb">` : '📜';
+
+    let badge = '<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">ENTRADA</span>';
+    let cor = "#2563eb";
+
+    if(ehMovimentoTransferenciaNovo(m)) {
+      const entrada = m.tipo === "transferencia_entrada";
+      badge = entrada
+        ? '<span style="background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">TRANSF. ENTRADA</span>'
+        : '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">TRANSF. SAÍDA</span>';
+      cor = entrada ? "#0f766e" : "#dc2626";
+    } else if(ehTransferenciaLegacy(m)) {
+      badge = '<span style="background:#f3e8ff;color:#7e22ce;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">CÂMBIO LEGADO</span>';
+      cor = m.tipo === "saida" ? "#dc2626" : "#7c3aed";
+    } else if(m.tipo === "saida") {
+      badge = '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">VENDA</span>';
+      cor = "#10b981";
+    } else if(m.tipo === "despesa_caixa") {
+      badge = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">SAÍDA CAIXA</span>';
+      cor = "#dc2626";
+    } else if(m.tipo === "cambio_comissao") {
+      badge = '<span style="background:#f3e8ff;color:#7e22ce;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">MARGEM LEGADA</span>';
+      cor = "#7c3aed";
+    }
+
+    const botaoRecibo = (m.tipo === "saida" && !ehTransferenciaLegacy(m))
+      ? `<button class="btn-secondary btn-acao" onclick="emitirReciboHistorico('${m.id}')" title="Ver, imprimir ou guardar este recibo em PDF">🧾 Recibo</button>`
+      : '<span style="color:#94a3b8;font-size:11px;">—</span>';
+
+    html += `<tr>
+      <td>${foto}</td>
+      <td><b>${m.produto || '-'}</b></td>
+      <td>${badge}</td>
+      <td><b>${m.quantidade || 0}</b></td>
+      <td><small>${m.formaPagamento || 'Geral'}</small></td>
+      <td style="font-weight:bold;color:${cor};">${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</td>
+      <td><small>${m.usuario || '-'}</small></td>
+      <td><small>${dt}</small></td>
+      <td>${botaoRecibo}</td>
+    </tr>`;
+  });
+
+  historico.innerHTML = html || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma movimentação registada.</td></tr>';
+}
+
+/* Dashboard: vendas reais e margens de transferências separados. */
+function processarDashboard() {
+  if(usuarioRole !== "admin") return;
+
+  let totalValorEstoque = 0;
+  let totalQtdEstoque = 0;
+  todosProdutos.forEach(p => {
+    const q = Number(p.estoque) || 0;
+    const precoV = Number(p.venda) || 0;
+    totalValorEstoque += q * precoV;
+    totalQtdEstoque += q;
+  });
+
+  valorTotalEstoqueKpi.innerText = totalValorEstoque.toLocaleString('pt-PT') + " Db";
+  qtdTotalEstoqueKpi.innerText = `${totalQtdEstoque} unidades (${todosProdutos.length} produtos)`;
+
+  const agora = new Date();
+  const hojeStr = agora.toISOString().split('T')[0];
+  const anoAtual = agora.getFullYear();
+  const mesAtual = agora.getMonth();
+  const dataInicio = dataFiltroInicioDash || new Date(anoAtual, mesAtual, 1);
+  const dataFim = dataFiltroFimDash || new Date(anoAtual, mesAtual + 1, 0, 23, 59, 59);
+
+  let totalVendasHoje = 0, qtdVendasHojeVal = 0;
+  let totalVendasPeriodo = 0, lucroVendasPeriodo = 0;
+  let pagDin = 0, pagTrans = 0, pagCar = 0;
+  const contagemProdutos = {};
+  const contagemVendedores = {};
+
+  todasMovimentacoes.forEach(m => {
+    if(!ehMovimentoVendaReal(m)) return;
+
+    const dt = m.data ? obterDataSegura(m.data) : null;
+    const val = Number(m.valor) || 0;
+    const q = Number(m.quantidade) || 1;
+
+    if(dt && dt.toISOString().split('T')[0] === hojeStr) {
+      totalVendasHoje += val;
+      qtdVendasHojeVal++;
+    }
+
+    if(dt && dt >= dataInicio && dt <= dataFim) {
+      totalVendasPeriodo += val;
+
+      const prod = todosProdutos.find(p => p.nome === m.produto);
+      if(prod) {
+        const cUnit = Number(prod.compra) || 0;
+        lucroVendasPeriodo += (val - (cUnit * q));
+      }
+
+      const fPag = m.formaPagamento || "Dinheiro";
+      if(fPag.includes("Dinheiro") || fPag.includes("Sinal") || fPag.includes("Quitação")) pagDin += val;
+      else if(fPag.includes("Transfer")) pagTrans += val;
+      else if(fPag.includes("Cart")) pagCar += val;
+      else pagDin += val;
+
+      if(!contagemProdutos[m.produto]) contagemProdutos[m.produto] = {qtd:0,val:0};
+      contagemProdutos[m.produto].qtd += q;
+      contagemProdutos[m.produto].val += val;
+
+      const vendedor = m.usuario || "Outro";
+      if(!contagemVendedores[vendedor]) contagemVendedores[vendedor] = {qtd:0,val:0};
+      contagemVendedores[vendedor].qtd++;
+      contagemVendedores[vendedor].val += val;
+    }
+  });
+
+  let lucroEncomendas = 0;
+  let encAtivas = 0;
+  todasEncomendas.forEach(enc => {
+    if(enc.estado === "EM_TRANSITO") encAtivas++;
+    const dt = enc.data ? obterDataSegura(enc.data) : null;
+    if(dt && dt >= dataInicio && dt <= dataFim) {
+      lucroEncomendas += (Number(enc.valorTotal)||0) - (Number(enc.custoCompra)||0);
+    }
+  });
+
+  // Margem das novas transferências.
+  let lucroTransferencias = 0;
+  todasTransferencias.forEach(t => {
+    const dt = t.data ? obterDataSegura(t.data) : null;
+    if(dt && dt >= dataInicio && dt <= dataFim) {
+      lucroTransferencias += Number(t.margemDb) || 0;
+    }
+  });
+
+  // Registros antigos continuam no histórico, mas NÃO são mais tratados como vendas.
+  // A margem legada só é somada para manter continuidade do dashboard.
+  todasMovimentacoes.forEach(m => {
+    if(m.tipo === "cambio_comissao") {
+      const dt = m.data ? obterDataSegura(m.data) : null;
+      if(dt && dt >= dataInicio && dt <= dataFim) {
+        lucroTransferencias += Number(m.valor) || 0;
+      }
+    }
+  });
+
+  let totalDespesasPeriodo = 0;
+  todasDespesas.forEach(d => {
+    const dt = d.data ? obterDataSegura(d.data) : null;
+    if(dt && dt >= dataInicio && dt <= dataFim) totalDespesasPeriodo += Number(d.valor) || 0;
+  });
+
+  const lucroLiquidoFinal = (lucroVendasPeriodo + lucroEncomendas + lucroTransferencias) - totalDespesasPeriodo;
+
+  vendasHoje.innerText = totalVendasHoje.toLocaleString('pt-PT') + " Db";
+  qtdVendasHoje.innerText = `${qtdVendasHojeVal} transações hoje`;
+  vendasMes.innerText = totalVendasPeriodo.toLocaleString('pt-PT') + " Db";
+  lucroMes.innerText = `Lucro Produtos: ${lucroVendasPeriodo.toLocaleString('pt-PT')} Db`;
+  lucroEncomendasKpi.innerText = lucroEncomendas.toLocaleString('pt-PT') + " Db";
+  subEncomendasKpi.innerText = `${encAtivas} em trânsito`;
+  lucroCambioKpi.innerText = lucroTransferencias.toLocaleString('pt-PT') + " Db";
+  despesasMes.innerText = totalDespesasPeriodo.toLocaleString('pt-PT') + " Db";
+  lucroLiquidoReal.innerText = lucroLiquidoFinal.toLocaleString('pt-PT') + " Db";
+
+  pagDinheiro.innerText = pagDin.toLocaleString('pt-PT') + " Db";
+  pagTransf.innerText = pagTrans.toLocaleString('pt-PT') + " Db";
+  pagCartao.innerText = pagCar.toLocaleString('pt-PT') + " Db";
+
+  const top = Object.entries(contagemProdutos).sort((a,b)=>b[1].val-a[1].val).slice(0,5);
+  listaTopProdutos.innerHTML = top.map(([nome,d]) => `<tr><td><b>${nome}</b></td><td>${d.qtd}</td><td style="font-weight:bold;color:#2563eb;">${d.val.toLocaleString('pt-PT')} Db</td></tr>`).join("") || '<tr><td colspan="3">Sem vendas no período.</td></tr>';
+
+  const equipe = Object.entries(contagemVendedores).sort((a,b)=>b[1].val-a[1].val);
+  listaDesempenhoEquipe.innerHTML = equipe.map(([nome,d]) => `<tr><td><b>${nome}</b></td><td>${d.qtd} vendas</td><td style="font-weight:bold;color:#059669;">${d.val.toLocaleString('pt-PT')} Db</td></tr>`).join("") || '<tr><td colspan="3">Sem vendas no período.</td></tr>';
+}
+
+/* Caixa: calcula somente movimentos físicos. */
+function calcularResumoCaixaFisico(movs, caixaId, valorInicial) {
+  let entradas = 0;
+  let saidas = 0;
+
+  (movs || []).forEach(m => {
+    if(m.caixaId !== caixaId) return;
+    const v = Number(m.valor) || 0;
+    const f = String(m.formaPagamento || "");
+
+    if(m.tipo === "transferencia_entrada") {
+      if(f.includes("Dinheiro")) entradas += v;
+      return;
+    }
+
+    if(m.tipo === "transferencia_saida") {
+      if(f.includes("Dinheiro")) saidas += v;
+      return;
+    }
+
+    if(m.tipo === "despesa_caixa") {
+      if(f.includes("Dinheiro")) saidas += v;
+      return;
+    }
+
+    if(m.tipo === "saida") {
+      // Venda normal = entrada no caixa.
+      // Registros antigos de câmbio são reclassificados pelo sentido da operação.
+      if(ehTransferenciaLegacy(m)) {
+        const dirLegacy = direcaoTransferenciaLegacy(m);
+        if(dirLegacy === "STP_PT") {
+          entradas += v;
+        } else {
+          // PT→STP: a loja entregou Db ao cliente, portanto foi saída física.
+          saidas += v;
+        }
+      } else if(f.includes("Dinheiro") || (!f.includes("Transferencia") && !f.includes("Cartao"))) {
+        entradas += v;
+      }
+    }
+  });
+
+  return {
+    entradas,
+    saidas,
+    esperado: (Number(valorInicial)||0) + entradas - saidas
+  };
+}
+
+function atualizarKpiCaixaAbertoLocal() {
+  if(!caixaAtualObj) return;
+  const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+  kpiCaixaInicial.innerText = (Number(caixaAtualObj.valorInicial)||0).toLocaleString('pt-PT') + " Db";
+  kpiCaixaVendasDinheiro.innerText = r.entradas.toLocaleString('pt-PT') + " Db";
+  kpiCaixaDinheiroEsperado.innerText = r.esperado.toLocaleString('pt-PT') + " Db";
+}
+
+function abrirModalFecharCaixa() {
+  if(!caixaAtualObj) return alert("Nenhum caixa aberto para fechar.");
+
+  const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+
+  lblModalValorInicial.innerText = (Number(caixaAtualObj.valorInicial)||0).toLocaleString('pt-PT') + " Db";
+  lblModalVendasDinheiro.innerText = r.entradas.toLocaleString('pt-PT') + " Db";
+  lblModalDinheiroEsperado.innerText = r.esperado.toLocaleString('pt-PT') + " Db";
+
+  modalDinheiroContado.value = "";
+  modalObservacaoFechamento.value = "";
+  calcularDiferencaFechamento();
+  modalFecharCaixa.classList.remove("hidden");
+}
+
+function calcularDiferencaFechamento() {
+  if(!caixaAtualObj) return;
+
+  const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+  const contado = Number(modalDinheiroContado.value) || 0;
+  const diferenca = contado - r.esperado;
+
+  if(diferenca === 0) {
+    lblModalDiferenca.className = "dif-certo";
+    lblModalDiferenca.innerText = "🟢 0 Db (Caixa certo)";
+  } else if(diferenca < 0) {
+    lblModalDiferenca.className = "dif-quebra";
+    lblModalDiferenca.innerText = `🔴 ${diferenca.toLocaleString('pt-PT')} Db (Falta / Quebra de Caixa)`;
+  } else {
+    lblModalDiferenca.className = "dif-sobra";
+    lblModalDiferenca.innerText = `🟡 +${diferenca.toLocaleString('pt-PT')} Db (Sobra de Caixa)`;
+  }
+}
+
+async function confirmarFechamentoCaixa() {
+  if(!navigator.onLine) return alert("O fechamento de caixa exige conexão com a internet.");
+  if(!caixaAtualObj) return;
+
+  const btn = document.getElementById("btnConfirmarFecharCaixa");
+  if(btn) btn.disabled = true;
+
+  const contado = Number(modalDinheiroContado.value);
+  if(modalDinheiroContado.value === "" || isNaN(contado) || contado < 0) {
+    if(btn) btn.disabled = false;
+    return alert("Digite o valor contado fisicamente.");
+  }
+
+  const obs = modalObservacaoFechamento.value.trim();
+  const user = auth.currentUser;
+
+  try {
+    await db.runTransaction(async transaction => {
+      const caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
+      const caixaDoc = await transaction.get(caixaRef);
+      if(!caixaDoc.exists) throw new Error("Caixa não encontrado.");
+      const c = caixaDoc.data();
+      if(c.estado !== "aberto") throw new Error("Este caixa já está fechado.");
+
+      // Nota: a leitura da query dentro da transação mantém o cálculo baseado no Firestore.
+      const movSnap = await db.collection("movimentacoes").where("caixaId","==",caixaAtualObj.id).get();
+      const movs = [];
+      movSnap.forEach(d => movs.push(d.data()));
+
+      const r = calcularResumoCaixaFisico(movs, caixaAtualObj.id, c.valorInicial);
+
+      transaction.update(caixaRef, {
+        estado: "fechado",
+        dinheiroEsperado: r.esperado,
+        dinheiroContado: contado,
+        diferenca: contado - r.esperado,
+        totalEntradasDinheiro: r.entradas,
+        totalSaidasDinheiro: r.saidas,
+        observacaoFechamento: obs,
+        fechadoPorUid: user.uid,
+        fechadoPorUsuario: user.email,
+        dataFechamento: new Date()
+      });
+    });
+
+    fecharModalFecharCaixa();
+    alert("Caixa fechado com sucesso. Entradas, saídas e transferências físicas foram consideradas.");
+  } catch(e) {
+    alert("Erro ao fechar caixa: " + (e.message || e));
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}
+
+/* Navegação final da Fase 4: adiciona a página de Transferências sem remover as páginas da Fase 3. */
+function navegarPara(paginaId) {
+  if(paginaId === "paginaTransferencias" && !usuarioPodeTransferencias()) {
+    alert("Acesso restrito: o módulo Transferências é exclusivo do Administrador e dos Vendedores.");
+    return;
+  }
+  if(paginaId === "paginaArmazemPT" && !usuarioPodeArmazemPT()) {
+    alert("Acesso restrito: o Armazém Portugal é exclusivo do Administrador e do Estoque.");
+    return;
+  }
+
+  const paginas = ["paginaPrincipal","paginaCaixa","paginaTransferencias","paginaArmazemPT"];
+  const botoes = ["btnPageMain","btnPageCaixa","btnPageTransferencias","btnPageArmazem"];
+
+  paginas.forEach(id => document.getElementById(id)?.classList.add("hidden"));
+  botoes.forEach(id => document.getElementById(id)?.classList.remove("active"));
+
+  const mapa = {
+    paginaPrincipal: ["paginaPrincipal","btnPageMain"],
+    paginaCaixa: ["paginaCaixa","btnPageCaixa"],
+    paginaTransferencias: ["paginaTransferencias","btnPageTransferencias"],
+    paginaArmazemPT: ["paginaArmazemPT","btnPageArmazem"]
+  };
+
+  const par = mapa[paginaId];
+  if(!par) return;
+  document.getElementById(par[0])?.classList.remove("hidden");
+  document.getElementById(par[1])?.classList.add("active");
+
+  if(paginaId === "paginaTransferencias") {
+    atualizarTransferenciaForm();
+    renderizarTransferencias();
+    processarResumoTransferencias();
+  }
+}
+
+/* Desativa o formulário antigo de câmbio da tela principal para evitar dois caminhos. */
+function registrarOperacaoCambio() {
+  navegarPara("paginaTransferencias");
+  alert("O câmbio/remessa agora é feito exclusivamente no módulo Transferências.");
+}
+
 
 </script>
 </body>
