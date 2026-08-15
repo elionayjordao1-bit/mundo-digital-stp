@@ -396,6 +396,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas</button>
     <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Gestão de Caixa</button>
     <button class="nav-btn hidden" id="btnPageTransferencias" onclick="navegarPara('paginaTransferencias')">💱 Transferências</button>
+    <button class="nav-btn hidden" id="btnPageEncomendas" onclick="navegarPara('paginaEncomendas')">🚚 Encomendas</button>
     <button class="nav-btn" id="btnPageArmazem" onclick="navegarPara('paginaArmazemPT')">🇵🇹 Armazém Portugal</button>
   </nav>
 
@@ -554,7 +555,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
 
     <!-- ENCOMENDAS & IMPORTAÇÃO -->
-    <div class="card hidden" id="cardEncomendas">
+    <div class="card hidden" id="cardEncomendas" style="display:none !important;">
       <h3 style="color:#0d9488;">🚚 Encomendas & Importações (Sinal 50% + Entrega)</h3>
       <div class="form-grid" style="margin-bottom: 15px;">
         <input id="encCliente" placeholder="Nome do Cliente">
@@ -778,6 +779,91 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
   <!-- PÁGINA 2: ARMAZÉM PORTUGAL -->
 
+  <!-- PÁGINA 4: MÓDULO EXCLUSIVO DE ENCOMENDAS — FASE 5 -->
+  <div id="paginaEncomendas" class="hidden">
+    <div class="card" style="border-top:4px solid #0d9488;">
+      <h3 style="color:#0f766e;">🚚 Módulo de Encomendas & Importações</h3>
+      <p style="margin-top:-6px;color:#64748b;font-size:13px;">
+        Registe a encomenda, o sinal, os custos reais de chegada e o pagamento final. O lucro só é considerado realizado quando a encomenda é entregue.
+      </p>
+
+      <div class="form-grid">
+        <input id="f5EncCliente" placeholder="Nome do Cliente">
+        <input id="f5EncTelefone" placeholder="Telefone / WhatsApp">
+        <input id="f5EncProduto" placeholder="Produto Encomendado">
+        <input id="f5EncQtd" type="number" min="1" value="1" placeholder="Quantidade">
+        <input id="f5EncValorTotal" type="number" min="0.01" step="0.01" placeholder="Valor de Venda Total (Db)" oninput="f5CalcularSinal()">
+        <input id="f5EncSinalPago" type="number" min="0.01" step="0.01" placeholder="Sinal Recebido (Db)">
+        <select id="f5EncFormaSinal">
+          <option value="Dinheiro">💵 Sinal em Dinheiro</option>
+          <option value="Transferencia">🏦 Sinal por Transferência / DobraPay</option>
+        </select>
+        <input id="f5EncCustoCompra" type="number" min="0" step="0.01" placeholder="Custo de Compra (Db)">
+        <input id="f5EncObservacao" placeholder="Observação (opcional)">
+
+        <div style="grid-column:1/-1;background:#ecfeff;border:1px solid #99f6e4;padding:14px;border-radius:10px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;text-align:center;">
+            <div><small style="color:#0f766e;font-weight:700;">VENDA</small><div id="f5ResumoVenda" style="font-size:19px;font-weight:800;">0 Db</div></div>
+            <div><small style="color:#0f766e;font-weight:700;">SINAL</small><div id="f5ResumoSinal" style="font-size:19px;font-weight:800;color:#059669;">0 Db</div></div>
+            <div><small style="color:#0f766e;font-weight:700;">FALTA PAGAR</small><div id="f5ResumoFalta" style="font-size:19px;font-weight:800;color:#dc2626;">0 Db</div></div>
+          </div>
+        </div>
+
+        <button onclick="f5RegistrarEncomenda()" class="btn-success" style="grid-column:1/-1;background:#0d9488;">📦 Registar Encomenda & Receber Sinal</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card teal">
+        <span class="kpi-title">Encomendas em Trânsito</span>
+        <span id="f5KpiAtivas" class="kpi-value">0</span>
+        <span class="kpi-sub">Aguardando chegada/entrega</span>
+      </div>
+      <div class="kpi-card blue">
+        <span class="kpi-title">Valor a Receber</span>
+        <span id="f5KpiAReceber" class="kpi-value">0 Db</span>
+        <span class="kpi-sub">Saldos das encomendas em trânsito</span>
+      </div>
+      <div class="kpi-card green">
+        <span class="kpi-title">Lucro Realizado</span>
+        <span id="f5KpiLucro" class="kpi-value">0 Db</span>
+        <span class="kpi-sub">Encomendas já entregues</span>
+      </div>
+      <div class="kpi-card orange">
+        <span class="kpi-title">Custos de Chegada</span>
+        <span id="f5KpiCustos" class="kpi-value">0 Db</span>
+        <span class="kpi-sub">Correios / alfândega / levantamento / outros</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="color:#0f766e;">📋 Acompanhamento das Encomendas</h3>
+      <div class="table-responsive">
+        <table style="min-width:1200px;">
+          <thead>
+            <tr>
+              <th>Cliente</th><th>Produto</th><th>Qtd</th><th>Venda</th><th>Sinal</th><th>Falta</th>
+              <th>Custo Compra</th><th>Custos Chegada</th><th>Custo Real</th><th>Estado</th><th>Contacto</th><th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="listaEncomendasFase5"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="background:#f8fafc;">
+      <h4 style="margin-top:0;">ℹ️ Lógica financeira das encomendas</h4>
+      <ul style="margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;">
+        <li>O <b>sinal</b> entra no caixa somente quando realmente recebido.</li>
+        <li>Ao chegar, podem ser registados <b>Correios, Alfândega, Levantamento e Outros custos</b>.</li>
+        <li>Se o custo de chegada for pago em dinheiro, ele sai do <b>caixa físico aberto</b>.</li>
+        <li>O pagamento final do cliente pode ser em <b>Dinheiro</b> ou <b>Transferência / DobraPay</b>.</li>
+        <li><b>Lucro real = Valor de venda − Custo de compra − Custos de chegada.</b></li>
+        <li>Uma encomenda em trânsito não é tratada como lucro realizado.</li>
+      </ul>
+    </div>
+  </div>
+
   <!-- PÁGINA: TRANSFERÊNCIAS PORTUGAL ⇄ SÃO TOMÉ -->
   <div id="paginaTransferencias" class="hidden">
     <div class="card" style="border-top: 4px solid #8b5cf6;">
@@ -974,6 +1060,55 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
   </div> <!-- FIM PAGINA ARMAZEM PT -->
 
+</div>
+
+<!-- MODAL FASE 5 — CHEGADA / CUSTOS / PAGAMENTO FINAL DA ENCOMENDA -->
+<div id="modalFinalizarEncomendaFase5" class="modal-overlay hidden">
+  <div class="modal-content large">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f1f5f9;padding-bottom:8px;margin-bottom:15px;">
+      <h3 style="margin:0;color:#0f766e;">📦 Concluir Encomenda & Entregar</h3>
+      <button onclick="f5FecharModalFinalizar()" class="btn-secondary" style="padding:4px 10px;min-height:36px;">✕</button>
+    </div>
+    <input type="hidden" id="f5FinalId">
+    <div id="f5FinalResumo" style="background:#ecfeff;border:1px solid #99f6e4;padding:14px;border-radius:10px;margin-bottom:15px;"></div>
+
+    <h4 style="margin:0 0 10px;color:#334155;">💸 Custos pagos para receber/levantar a encomenda</h4>
+    <div class="form-grid" style="margin-bottom:15px;">
+      <input id="f5CustoCorreios" type="number" min="0" step="0.01" value="0" placeholder="Correios / despacho (Db)" oninput="f5AtualizarFinalResumo()">
+      <input id="f5CustoAlfandega" type="number" min="0" step="0.01" value="0" placeholder="Alfândega (Db)" oninput="f5AtualizarFinalResumo()">
+      <input id="f5CustoLevantamento" type="number" min="0" step="0.01" value="0" placeholder="Levantamento / taxa de retirada (Db)" oninput="f5AtualizarFinalResumo()">
+      <input id="f5CustoOutros" type="number" min="0" step="0.01" value="0" placeholder="Outros custos (Db)" oninput="f5AtualizarFinalResumo()">
+      <select id="f5CustoFormaPagamento">
+        <option value="Dinheiro">💵 Pago em Dinheiro (sai do caixa)</option>
+        <option value="Transferencia">🏦 Pago por Transferência / DobraPay</option>
+      </select>
+      <input id="f5CustoObservacao" placeholder="Observação dos custos (opcional)">
+    </div>
+
+    <h4 style="margin:0 0 10px;color:#334155;">💰 Recebimento final do cliente</h4>
+    <div class="form-grid">
+      <input id="f5FinalValorReceber" type="number" readonly style="background:#f8fafc;font-weight:700;">
+      <select id="f5FinalFormaPagamento">
+        <option value="Dinheiro">💵 Dinheiro no caixa</option>
+        <option value="Transferencia">🏦 Transferência / DobraPay</option>
+      </select>
+      <input id="f5FinalObservacao" placeholder="Observação da entrega (opcional)">
+    </div>
+
+    <div style="margin-top:15px;background:#f8fafc;border:1px solid #e2e8f0;padding:14px;border-radius:10px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;text-align:center;">
+        <div><small>VENDA</small><div id="f5FinalVenda" style="font-weight:800;font-size:18px;">0 Db</div></div>
+        <div><small>CUSTO COMPRA</small><div id="f5FinalCompra" style="font-weight:800;font-size:18px;">0 Db</div></div>
+        <div><small>CUSTOS CHEGADA</small><div id="f5FinalCustos" style="font-weight:800;font-size:18px;color:#d97706;">0 Db</div></div>
+        <div><small>LUCRO REAL</small><div id="f5FinalLucro" style="font-weight:800;font-size:18px;color:#059669;">0 Db</div></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px;">
+      <button id="btnF5ConfirmarFinal" onclick="f5ConfirmarFinalizacao()" class="btn-success" style="flex:1;min-width:180px;background:#0d9488;">✅ Confirmar Chegada, Custos & Entrega</button>
+      <button onclick="f5FecharModalFinalizar()" class="btn-secondary" style="min-width:100px;">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL POS -->
@@ -1268,6 +1403,8 @@ function resetarInterface() {
   cardCambio.classList.add("hidden");
   cardEncomendas.classList.add("hidden");
   document.getElementById("btnPageTransferencias")?.classList.add("hidden");
+  document.getElementById("btnPageEncomendas")?.classList.add("hidden");
+  document.getElementById("paginaEncomendas")?.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
   btnToggleFunc.classList.add("hidden");
@@ -1328,7 +1465,7 @@ auth.onAuthStateChanged(u => {
         cardDespesas.classList.remove("hidden");
         cardCompras.classList.remove("hidden");
         btnPageTransferencias.classList.remove("hidden");
-        cardEncomendas.classList.remove("hidden");
+        btnPageEncomendas.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnToggleFunc.classList.remove("hidden");
@@ -1345,7 +1482,7 @@ auth.onAuthStateChanged(u => {
         encCustoCompra.classList.add("hidden");
       } else {
         btnPageTransferencias.classList.remove("hidden");
-        cardEncomendas.classList.remove("hidden");
+        btnPageEncomendas.classList.remove("hidden");
         cardAuditoriaCaixas.classList.add("hidden");
         encCustoCompra.classList.add("hidden");
       }
@@ -2263,6 +2400,7 @@ function carregarEncomendas() {
     });
 
     listaEncomendas.innerHTML = htmlBuffer || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma encomenda registada.</td></tr>';
+    f5AtualizarResumoPagina();
     processarDashboard();
   });
 }
@@ -3926,7 +4064,7 @@ function ehMovimentoTransferenciaNovo(m) {
 }
 
 function ehMovimentoVendaReal(m) {
-  return m.tipo === "saida" && !ehTransferenciaLegacy(m);
+  return m.tipo === "saida" && !ehTransferenciaLegacy(m) && m.origem !== "encomenda";
 }
 
 /* Reclassificação visual do histórico: transferências não aparecem como VENDA. */
@@ -3941,7 +4079,13 @@ function renderizarHistorico(listaMovs) {
     let badge = '<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">ENTRADA</span>';
     let cor = "#2563eb";
 
-    if(ehMovimentoTransferenciaNovo(m)) {
+    if(m.origem === "encomenda") {
+      const custo = m.tipo === "despesa_caixa";
+      badge = custo
+        ? '<span style="background:#fff7ed;color:#c2410c;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">CUSTO ENCOMENDA</span>'
+        : '<span style="background:#ecfeff;color:#0f766e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">ENCOMENDA</span>';
+      cor = custo ? "#c2410c" : "#0f766e";
+    } else if(ehMovimentoTransferenciaNovo(m)) {
       const entrada = m.tipo === "transferencia_entrada";
       badge = entrada
         ? '<span style="background:#ccfbf1;color:#0f766e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">TRANSF. ENTRADA</span>'
@@ -4053,8 +4197,12 @@ function processarDashboard() {
   todasEncomendas.forEach(enc => {
     if(enc.estado === "EM_TRANSITO") encAtivas++;
     const dt = enc.data ? obterDataSegura(enc.data) : null;
-    if(dt && dt >= dataInicio && dt <= dataFim) {
-      lucroEncomendas += (Number(enc.valorTotal)||0) - (Number(enc.custoCompra)||0);
+    if(dt && dt >= dataInicio && dt <= dataFim && enc.estado === "CONCLUIDO") {
+      const venda = Number(enc.valorTotal)||0;
+      const compra = Number(enc.custoCompra)||0;
+      const chegada = Number(enc.custosChegada)||0;
+      const lucro = Number.isFinite(Number(enc.lucroReal)) ? Number(enc.lucroReal) : (venda - compra - chegada);
+      lucroEncomendas += lucro;
     }
   });
 
@@ -4252,10 +4400,256 @@ async function confirmarFechamentoCaixa() {
   }
 }
 
+function usuarioPodeEncomendasFase5() {
+  return usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2";
+}
+
+
+/* =========================================================================
+   FASE 5 — MÓDULO EXCLUSIVO DE ENCOMENDAS
+   - Sinal com forma de pagamento
+   - Custos reais de chegada/levantamento
+   - Pagamento final
+   - Lucro real apenas após entrega
+   - Operações físicas ligadas ao caixa aberto
+   ========================================================================= */
+
+let f5EncomendaAtual = null;
+
+function f5Numero(id) {
+  const el = document.getElementById(id);
+  return Number(el?.value) || 0;
+}
+
+function f5Moeda(v) {
+  return (Number(v)||0).toLocaleString('pt-PT', {maximumFractionDigits:2}) + ' Db';
+}
+
+function f5CalcularSinal() {
+  const total = f5Numero('f5EncValorTotal');
+  const sinalEl = document.getElementById('f5EncSinalPago');
+  if(total > 0 && (!sinalEl.value || Number(sinalEl.value) <= 0)) sinalEl.value = (total/2).toFixed(2);
+  f5AtualizarResumoPagina();
+}
+
+function f5AtualizarResumoPagina() {
+  const total = f5Numero('f5EncValorTotal');
+  const sinal = f5Numero('f5EncSinalPago');
+  const falta = Math.max(0, total - sinal);
+  const a = document.getElementById('f5ResumoVenda');
+  const b = document.getElementById('f5ResumoSinal');
+  const c = document.getElementById('f5ResumoFalta');
+  if(a) a.innerText = f5Moeda(total);
+  if(b) b.innerText = f5Moeda(sinal);
+  if(c) c.innerText = f5Moeda(falta);
+  f5RenderizarLista();
+}
+
+function f5RenderizarLista() {
+  const tbody = document.getElementById('listaEncomendasFase5');
+  if(!tbody) return;
+  let ativas = 0, aReceber = 0, lucro = 0, custos = 0;
+  const lista = [...todasEncomendas].sort((a,b) => obterDataSegura(b.data) - obterDataSegura(a.data));
+
+  tbody.innerHTML = lista.map(enc => {
+    const venda = Number(enc.valorTotal)||0;
+    const sinal = Number(enc.sinalPago)||0;
+    const falta = Math.max(0, venda-sinal);
+    const compra = Number(enc.custoCompra)||0;
+    const chegada = Number(enc.custosChegada)||0;
+    const custoReal = compra + chegada;
+    const lucroReal = Number.isFinite(Number(enc.lucroReal)) ? Number(enc.lucroReal) : (venda-custoReal);
+    if(enc.estado === 'EM_TRANSITO') { ativas++; aReceber += falta; }
+    if(enc.estado === 'CONCLUIDO') { lucro += lucroReal; custos += chegada; }
+    const wa = enc.telefone ? `<a href="https://wa.me/${String(enc.telefone).replace(/[^0-9]/g,'')}" target="_blank" style="text-decoration:none;"><button class="btn-success btn-acao" style="background:#25d366;">📲 WA</button></a>` : '-';
+    const estado = enc.estado === 'CONCLUIDO' ? '<span class="badge-concluido">CONCLUÍDO</span>' : '<span class="badge-em-transito">EM TRÂNSITO</span>';
+    let acao = enc.estado === 'EM_TRANSITO' ? `<button class="btn-success btn-acao" style="background:#0d9488;" onclick="f5AbrirFinalizacao('${enc.id}')">📦 Chegou / Entregar</button>` : `<span style="font-size:11px;color:#64748b;">Lucro: <b style="color:#059669;">${f5Moeda(lucroReal)}</b></span>`;
+    if(usuarioRole === 'admin') acao += ` <button class="btn-danger btn-acao" onclick="apagarEncomenda('${enc.id}')">🗑️</button>`;
+    return `<tr>
+      <td><b>${String(enc.cliente||'-')}</b></td>
+      <td><b>${String(enc.produto||'-')}</b></td>
+      <td>${Number(enc.quantidade||1)}</td>
+      <td>${f5Moeda(venda)}</td>
+      <td style="color:#059669;font-weight:700;">${f5Moeda(sinal)}</td>
+      <td style="color:#dc2626;font-weight:700;">${f5Moeda(falta)}</td>
+      <td>${f5Moeda(compra)}</td>
+      <td style="color:#d97706;font-weight:700;">${f5Moeda(chegada)}</td>
+      <td>${f5Moeda(custoReal)}</td>
+      <td>${estado}</td>
+      <td>${wa}</td>
+      <td><div class="acoes-cell">${acao}</div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="12" style="color:#94a3b8;">Nenhuma encomenda registada.</td></tr>';
+
+  const ka = document.getElementById('f5KpiAtivas');
+  const kr = document.getElementById('f5KpiAReceber');
+  const kl = document.getElementById('f5KpiLucro');
+  const kc = document.getElementById('f5KpiCustos');
+  if(ka) ka.innerText = ativas.toLocaleString('pt-PT');
+  if(kr) kr.innerText = f5Moeda(aReceber);
+  if(kl) kl.innerText = f5Moeda(lucro);
+  if(kc) kc.innerText = f5Moeda(custos);
+}
+
+async function f5RegistrarEncomenda() {
+  if(!usuarioPodeEncomendasFase5()) return alert('Acesso restrito.');
+  if(!navigator.onLine) return alert('É necessária ligação à internet para registar a encomenda com segurança.');
+  const user = auth.currentUser;
+  if(!user) return alert('Sessão expirada.');
+  const cliente = document.getElementById('f5EncCliente').value.trim();
+  const telefone = document.getElementById('f5EncTelefone').value.trim();
+  const produto = document.getElementById('f5EncProduto').value.trim();
+  const quantidade = Math.max(1, Math.floor(f5Numero('f5EncQtd') || 1));
+  const valorTotal = f5Numero('f5EncValorTotal');
+  const sinalPago = f5Numero('f5EncSinalPago');
+  const formaSinal = document.getElementById('f5EncFormaSinal').value;
+  const custoCompra = f5Numero('f5EncCustoCompra');
+  const observacao = document.getElementById('f5EncObservacao').value.trim();
+  if(!cliente || !produto || valorTotal <= 0 || sinalPago <= 0) return alert('Preencha cliente, produto, valor total e sinal recebido.');
+  if(sinalPago > valorTotal) return alert('O sinal não pode ser maior que o valor total da encomenda.');
+  if(formaSinal === 'Dinheiro' && !caixaAtualObj) return alert('Para receber o sinal em dinheiro, abra primeiro um Caixa/Turno.');
+
+  const btn = document.querySelector('#paginaEncomendas button[onclick="f5RegistrarEncomenda()"]');
+  if(btn) btn.disabled = true;
+  try {
+    const encRef = db.collection('encomendas').doc();
+    const movRef = db.collection('movimentacoes').doc();
+    await db.runTransaction(async tx => {
+      let caixaId = null;
+      if(formaSinal === 'Dinheiro') {
+        const caixaRef = db.collection('caixas').doc(caixaAtualObj.id);
+        const caixaDoc = await tx.get(caixaRef);
+        if(!caixaDoc.exists || caixaDoc.data().estado !== 'aberto') throw new Error('O caixa atual não está aberto.');
+        if(usuarioRole !== 'admin' && caixaDoc.data().uid !== user.uid) throw new Error('O caixa aberto não pertence ao usuário atual.');
+        caixaId = caixaAtualObj.id;
+      }
+      tx.set(encRef, {
+        cliente, telefone, produto, quantidade, valorTotal, sinalPago, formaSinal,
+        custoCompra, custosChegada:0, custoTotalReal:custoCompra, lucroReal:null,
+        estado:'EM_TRANSITO', usuario:user.email, uid:user.uid, role:usuarioRole,
+        observacao, data:new Date()
+      });
+      tx.set(movRef, {
+        produto:`Sinal Encomenda: ${produto}`,
+        tipo:'saida', quantidade, valor:sinalPago,
+        formaPagamento:`${formaSinal} - Sinal Encomenda`, cliente,
+        usuario:user.email, uid:user.uid, role:usuarioRole, data:new Date(),
+        ...(caixaId ? {caixaId} : {}), encomendaId:encRef.id, origem:'encomenda'
+      });
+    });
+    ['f5EncCliente','f5EncTelefone','f5EncProduto','f5EncValorTotal','f5EncSinalPago','f5EncCustoCompra','f5EncObservacao'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+    document.getElementById('f5EncQtd').value='1';
+    document.getElementById('f5EncFormaSinal').value='Dinheiro';
+    alert('Encomenda registada com sucesso. O sinal foi lançado separadamente do valor total da encomenda.');
+  } catch(e) { alert('Erro ao registar encomenda: ' + (e.message||e)); }
+  finally { if(btn) btn.disabled=false; }
+}
+
+function f5AbrirFinalizacao(id) {
+  const enc = todasEncomendas.find(x=>x.id===id);
+  if(!enc) return alert('Encomenda não encontrada.');
+  if(enc.estado !== 'EM_TRANSITO') return alert('Esta encomenda já foi concluída.');
+  f5EncomendaAtual = enc;
+  document.getElementById('f5FinalId').value = id;
+  document.getElementById('f5CustoCorreios').value = Number(enc.custoCorreios)||0;
+  document.getElementById('f5CustoAlfandega').value = Number(enc.custoAlfandega)||0;
+  document.getElementById('f5CustoLevantamento').value = Number(enc.custoLevantamento)||0;
+  document.getElementById('f5CustoOutros').value = Number(enc.custoOutros)||0;
+  document.getElementById('f5CustoFormaPagamento').value = enc.formaPagamentoCustos || 'Dinheiro';
+  document.getElementById('f5CustoObservacao').value = enc.observacaoCustos || '';
+  document.getElementById('f5FinalFormaPagamento').value = 'Dinheiro';
+  document.getElementById('f5FinalObservacao').value = '';
+  document.getElementById('f5FinalValorReceber').value = Math.max(0,(Number(enc.valorTotal)||0)-(Number(enc.sinalPago)||0)).toFixed(2);
+  f5AtualizarFinalResumo();
+  document.getElementById('modalFinalizarEncomendaFase5').classList.remove('hidden');
+}
+
+function f5AtualizarFinalResumo() {
+  if(!f5EncomendaAtual) return;
+  const venda=Number(f5EncomendaAtual.valorTotal)||0;
+  const compra=Number(f5EncomendaAtual.custoCompra)||0;
+  const custos=f5Numero('f5CustoCorreios')+f5Numero('f5CustoAlfandega')+f5Numero('f5CustoLevantamento')+f5Numero('f5CustoOutros');
+  const lucro=venda-compra-custos;
+  document.getElementById('f5FinalResumo').innerHTML=`<b>${String(f5EncomendaAtual.cliente||'-')}</b> — ${String(f5EncomendaAtual.produto||'-')}<br><span style="font-size:12px;color:#64748b;">Venda: ${f5Moeda(venda)} | Sinal já recebido: ${f5Moeda(f5EncomendaAtual.sinalPago)} | Falta: ${f5Moeda(Math.max(0,venda-(Number(f5EncomendaAtual.sinalPago)||0)))}</span>`;
+  document.getElementById('f5FinalVenda').innerText=f5Moeda(venda);
+  document.getElementById('f5FinalCompra').innerText=f5Moeda(compra);
+  document.getElementById('f5FinalCustos').innerText=f5Moeda(custos);
+  const lucroEl=document.getElementById('f5FinalLucro'); lucroEl.innerText=f5Moeda(lucro); lucroEl.style.color=lucro<0?'#dc2626':'#059669';
+}
+
+function f5FecharModalFinalizar() {
+  document.getElementById('modalFinalizarEncomendaFase5').classList.add('hidden');
+  f5EncomendaAtual=null;
+}
+
+async function f5ConfirmarFinalizacao() {
+  if(!f5EncomendaAtual) return;
+  if(!navigator.onLine) return alert('É necessária ligação à internet para concluir a encomenda com segurança.');
+  const user=auth.currentUser;
+  if(!user) return alert('Sessão expirada.');
+  const btn=document.getElementById('btnF5ConfirmarFinal');
+  btn.disabled=true;
+  try {
+    const id=f5EncomendaAtual.id;
+    const custoCorreios=f5Numero('f5CustoCorreios');
+    const custoAlfandega=f5Numero('f5CustoAlfandega');
+    const custoLevantamento=f5Numero('f5CustoLevantamento');
+    const custoOutros=f5Numero('f5CustoOutros');
+    const custosChegada=custoCorreios+custoAlfandega+custoLevantamento+custoOutros;
+    const formaCustos=document.getElementById('f5CustoFormaPagamento').value;
+    const obsCustos=document.getElementById('f5CustoObservacao').value.trim();
+    const formaFinal=document.getElementById('f5FinalFormaPagamento').value;
+    const obsFinal=document.getElementById('f5FinalObservacao').value.trim();
+    const valorFinal=Math.max(0,(Number(f5EncomendaAtual.valorTotal)||0)-(Number(f5EncomendaAtual.sinalPago)||0));
+    const custoCompra=Number(f5EncomendaAtual.custoCompra)||0;
+    const lucroReal=(Number(f5EncomendaAtual.valorTotal)||0)-custoCompra-custosChegada;
+    if(valorFinal < 0) throw new Error('Valor restante inválido.');
+    if(custosChegada < 0) throw new Error('Custos inválidos.');
+    if(valorFinal > 0 && formaFinal==='Dinheiro' && !caixaAtualObj) throw new Error('Para receber o pagamento final em dinheiro, abra primeiro um Caixa/Turno.');
+    if(custosChegada > 0 && formaCustos==='Dinheiro' && !caixaAtualObj) throw new Error('Para pagar custos de chegada em dinheiro, abra primeiro um Caixa/Turno.');
+
+    const encRef=db.collection('encomendas').doc(id);
+    await db.runTransaction(async tx=>{
+      const encDoc=await tx.get(encRef);
+      if(!encDoc.exists) throw new Error('Encomenda não encontrada.');
+      const enc=encDoc.data();
+      if(enc.estado!=='EM_TRANSITO') throw new Error('Esta encomenda já foi concluída por outro utilizador.');
+      if(usuarioRole!=='admin' && enc.uid!==user.uid) throw new Error('Esta encomenda pertence a outro utilizador.');
+      let caixaId=null;
+      if((formaFinal==='Dinheiro' && valorFinal>0) || (formaCustos==='Dinheiro' && custosChegada>0)) {
+        const caixaRef=db.collection('caixas').doc(caixaAtualObj.id);
+        const caixaDoc=await tx.get(caixaRef);
+        if(!caixaDoc.exists || caixaDoc.data().estado!=='aberto') throw new Error('O caixa atual não está aberto.');
+        if(usuarioRole!=='admin' && caixaDoc.data().uid!==user.uid) throw new Error('O caixa aberto não pertence ao usuário atual.');
+        caixaId=caixaAtualObj.id;
+      }
+      if(valorFinal>0) {
+        const movFinal=db.collection('movimentacoes').doc();
+        tx.set(movFinal,{produto:`Pagamento Final Encomenda: ${enc.produto}`,tipo:'saida',quantidade:Number(enc.quantidade)||1,valor:valorFinal,formaPagamento:`${formaFinal} - Quitação Encomenda`,cliente:enc.cliente,usuario:user.email,uid:user.uid,role:usuarioRole,data:new Date(),...(formaFinal==='Dinheiro'&&caixaId?{caixaId}:{}),encomendaId:id,origem:'encomenda',observacao:obsFinal});
+      }
+      if(custosChegada>0) {
+        const movCusto=db.collection('movimentacoes').doc();
+        tx.set(movCusto,{produto:`Custo Chegada Encomenda: ${enc.produto}`,tipo:'despesa_caixa',quantidade:1,valor:custosChegada,formaPagamento:`${formaCustos} - Custo Encomenda`,cliente:enc.cliente,usuario:user.email,uid:user.uid,role:usuarioRole,data:new Date(),...(formaCustos==='Dinheiro'&&caixaId?{caixaId}:{}),encomendaId:id,origem:'encomenda',observacao:obsCustos});
+      }
+      tx.update(encRef,{estado:'CONCLUIDO',dataConclusao:new Date(),custosChegada,custoCorreios,custoAlfandega,custoLevantamento,custoOutros,formaPagamentoCustos:formaCustos,observacaoCustos:obsCustos,valorFinalRecebido:valorFinal,formaPagamentoFinal:formaFinal,observacaoFinal:obsFinal,custoTotalReal:custoCompra+custosChegada,lucroReal,concluidoPorUid:user.uid,concluidoPorUsuario:user.email});
+    });
+
+    const recibo={data:new Date().toLocaleString('pt-PT'),cliente:f5EncomendaAtual.cliente,vendedor:user.email,item:f5EncomendaAtual.produto,qtd:Number(f5EncomendaAtual.quantidade)||1,precoUnit:(Number(f5EncomendaAtual.valorTotal)||0)/(Number(f5EncomendaAtual.quantidade)||1),total:valorFinal,pagamento:formaFinal,troco:0,observacao:`Quitação de encomenda. Sinal já recebido: ${f5Moeda(f5EncomendaAtual.sinalPago)}. Custos de chegada: ${f5Moeda(custosChegada)}. Lucro real: ${f5Moeda(lucroReal)}.`};
+    f5FecharModalFinalizar();
+    if(typeof emitirReciboComprovativo==='function') emitirReciboComprovativo(recibo);
+    alert(`Encomenda concluída com sucesso.\n\nLucro real: ${f5Moeda(lucroReal)}\nCustos de chegada: ${f5Moeda(custosChegada)}`);
+  } catch(e) { alert('Erro ao concluir encomenda: '+(e.message||e)); }
+  finally { btn.disabled=false; }
+}
+
 /* Navegação final da Fase 4: adiciona a página de Transferências sem remover as páginas da Fase 3. */
 function navegarPara(paginaId) {
   if(paginaId === "paginaTransferencias" && !usuarioPodeTransferencias()) {
     alert("Acesso restrito: o módulo Transferências é exclusivo do Administrador e dos Vendedores.");
+    return;
+  }
+  if(paginaId === "paginaEncomendas" && !usuarioPodeEncomendasFase5()) {
+    alert("Acesso restrito: o módulo Encomendas é exclusivo do Administrador e dos Vendedores.");
     return;
   }
   if(paginaId === "paginaArmazemPT" && !usuarioPodeArmazemPT()) {
@@ -4263,8 +4657,8 @@ function navegarPara(paginaId) {
     return;
   }
 
-  const paginas = ["paginaPrincipal","paginaCaixa","paginaTransferencias","paginaArmazemPT"];
-  const botoes = ["btnPageMain","btnPageCaixa","btnPageTransferencias","btnPageArmazem"];
+  const paginas = ["paginaPrincipal","paginaCaixa","paginaTransferencias","paginaEncomendas","paginaArmazemPT"];
+  const botoes = ["btnPageMain","btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageArmazem"];
 
   paginas.forEach(id => document.getElementById(id)?.classList.add("hidden"));
   botoes.forEach(id => document.getElementById(id)?.classList.remove("active"));
@@ -4273,6 +4667,7 @@ function navegarPara(paginaId) {
     paginaPrincipal: ["paginaPrincipal","btnPageMain"],
     paginaCaixa: ["paginaCaixa","btnPageCaixa"],
     paginaTransferencias: ["paginaTransferencias","btnPageTransferencias"],
+    paginaEncomendas: ["paginaEncomendas","btnPageEncomendas"],
     paginaArmazemPT: ["paginaArmazemPT","btnPageArmazem"]
   };
 
@@ -4285,6 +4680,9 @@ function navegarPara(paginaId) {
     atualizarTransferenciaForm();
     renderizarTransferencias();
     processarResumoTransferencias();
+  }
+  if(paginaId === "paginaEncomendas") {
+    f5AtualizarResumoPagina();
   }
 }
 
