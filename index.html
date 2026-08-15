@@ -442,6 +442,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div class="card hidden" id="cardFuncionarios">
       <h3>👥 Gestão de Funcionários</h3>
       <div class="form-grid" style="margin-bottom: 15px;">
+        <input id="funcNome" placeholder="Nome completo do Funcionário">
         <input id="funcEmail" placeholder="E-mail do Funcionário">
         <input id="funcSenha" type="password" placeholder="Senha Inicial">
         <select id="funcRole">
@@ -456,7 +457,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <div class="table-responsive">
         <table>
           <thead>
-            <tr><th>E-mail</th><th>Função</th><th>Estado</th><th>Ações</th></tr>
+            <tr><th>Nome</th><th>E-mail</th><th>Função</th><th>Estado</th><th>Ações</th></tr>
           </thead>
           <tbody id="listaFuncionarios"></tbody>
         </table>
@@ -1229,7 +1230,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
     <h2 style="margin: 0; font-size: 16px;">Mundo Digital STP</h2>
     <p style="margin: 2px 0; font-size: 11px;">São Tomé e Príncipe</p>
-    <p style="margin: 2px 0; font-size: 12px; font-weight: bold;">Comprovativo de Venda</p>
+    <p style="margin: 2px 0; font-size: 12px; font-weight: bold;">COMPROVATIVO DE VENDA</p>
   </div>
   <div style="font-size: 11px; margin-bottom: 8px;">
     <p style="margin: 2px 0;"><b>Data:</b> <span id="reciboData"></span></p>
@@ -1290,6 +1291,7 @@ db.enablePersistence({ synchronizeTabs: true }).catch(err => {
 });
 
 let usuarioRole = null;
+let usuarioNome = "";
 let editandoFuncId = null;
 let editandoProdutoId = null;
 
@@ -1429,6 +1431,7 @@ function logout(){
   if(listenerCaixasAuditoria) listenerCaixasAuditoria();
 
   usuarioRole = null;
+  usuarioNome = "";
   caixaAtualObj = null;
   resetarInterface();
   app.classList.add("hidden");
@@ -1458,6 +1461,7 @@ auth.onAuthStateChanged(u => {
       }
 
       usuarioRole = dados.role || "venda1";
+      usuarioNome = String(dados.nome || "").trim();
       userRoleSpan.innerText = usuarioRole;
 
       if(usuarioRole === "admin") {
@@ -2479,6 +2483,7 @@ function concluirEncomendaModal(id, cliente, produto, faltaPagar, valorTotal, cu
         formaPagamento: "Quitação 50% (Entrega Encomenda)",
         cliente: cliente,
         usuario: auth.currentUser.email,
+        nomeUsuario: usuarioNome || "Funcionário",
         uid: auth.currentUser.uid,
         role: usuarioRole,
         data: new Date()
@@ -3182,7 +3187,7 @@ function confirmarVendaModal() {
     emitirReciboComprovativo({
       data: new Date().toLocaleString('pt-PT'),
       cliente: nomeCli,
-      vendedor: auth.currentUser.email,
+      vendedor: usuarioNome || "Funcionário",
       item: produtoVendaAtual.nome,
       qtd: qtdVal,
       precoUnit: produtoVendaAtual.venda,
@@ -3201,7 +3206,8 @@ function emitirReciboComprovativo(d) {
   // Mesmo recibo usado tanto para vendas novas como para vendas recuperadas do histórico.
   reciboData.innerText = d.data;
   reciboCliente.innerText = d.cliente;
-  reciboVendedor.innerText = d.vendedor;
+  const vendedorExibicao = String(d.vendedor || "Funcionário").includes("@") ? "Funcionário" : String(d.vendedor || "Funcionário");
+  reciboVendedor.innerText = vendedorExibicao;
   reciboItem.innerText = d.item;
   reciboQtd.innerText = d.qtd;
   reciboPrecoUnit.innerText = (Number(d.precoUnit)||0).toLocaleString('pt-PT');
@@ -3298,12 +3304,13 @@ function carregarFuncionarios() {
 
       htmlBuffer += `
         <tr class="${f.status === 'desativado' ? 'desativado' : ''}">
+          <td><b>${f.nome || 'Nome não definido'}</b></td>
           <td><b>${f.email}</b></td>
           <td><small>${(f.role || 'venda1').toUpperCase()}</small></td>
           <td>${stBadge}</td>
           <td>
             <div class="acoes-cell">
-              <button class="btn-secondary btn-acao" onclick="editarFuncionario('${f.id}', '${f.email}', '${f.role}')">✏️</button>
+              <button class="btn-secondary btn-acao" onclick="editarFuncionario('${f.id}', '${String(f.nome||'').replace(/'/g,"\\'")}', '${f.email}', '${f.role}')">✏️</button>
               ${btnStatus}
             </div>
           </td>
@@ -3311,24 +3318,28 @@ function carregarFuncionarios() {
       `;
     });
 
-    listaFuncionarios.innerHTML = htmlBuffer || '<tr><td colspan="4" style="color:#94a3b8;">Nenhum funcionário cadastrado.</td></tr>';
+    listaFuncionarios.innerHTML = htmlBuffer || '<tr><td colspan="5" style="color:#94a3b8;">Nenhum funcionário cadastrado.</td></tr>';
   });
 }
 
 function salvarFuncionario() {
+  let nomeVal = funcNome.value.trim();
   let emailVal = funcEmail.value.trim();
   let senhaVal = funcSenha.value.trim();
   let roleVal = funcRole.value;
 
+  if(!nomeVal) return alert("Informe o nome completo do funcionário!");
   if(!emailVal) return alert("Informe o e-mail do funcionário!");
 
   if(editandoFuncId) {
-    db.collection("usuarios").doc(editandoFuncId).update({
-      role: roleVal
-    }).then(() => {
+    const ehPropriaConta = editandoFuncId === auth.currentUser?.uid;
+    const alteracoes = ehPropriaConta ? { nome: nomeVal } : { nome: nomeVal, role: roleVal };
+
+    db.collection("usuarios").doc(editandoFuncId).update(alteracoes).then(() => {
+      if(ehPropriaConta) usuarioNome = nomeVal;
       cancelarEdicaoFunc();
-      alert("Função do funcionário atualizada com sucesso!");
-    });
+      alert(ehPropriaConta ? "Nome atualizado com sucesso!" : "Dados do funcionário atualizados com sucesso!");
+    }).catch(err => alert("Erro ao atualizar funcionário: " + err.message));
   } else {
     if(!senhaVal) return alert("Informe a senha inicial do funcionário!");
 
@@ -3338,6 +3349,7 @@ function salvarFuncionario() {
       .then(userCredential => {
         let newUid = userCredential.user.uid;
         return db.collection("usuarios").doc(newUid).set({
+          nome: nomeVal,
           email: emailVal,
           role: roleVal,
           status: "ativo",
@@ -3356,24 +3368,28 @@ function salvarFuncionario() {
   }
 }
 
-function editarFuncionario(id, email, role) {
+function editarFuncionario(id, nome, email, role) {
   editandoFuncId = id;
+  funcNome.value = nome || "";
   funcEmail.value = email;
   funcEmail.disabled = true;
   funcSenha.placeholder = "Senha não alterável por aqui";
   funcSenha.disabled = true;
   funcRole.value = role;
+  funcRole.disabled = (id === auth.currentUser?.uid);
 
-  btnSalvarFunc.innerText = "Atualizar Função";
+  btnSalvarFunc.innerText = id === auth.currentUser?.uid ? "Atualizar Nome" : "Atualizar Funcionário";
   btnCancelarFunc.classList.remove("hidden");
 }
 
 function cancelarEdicaoFunc() {
   editandoFuncId = null;
+  funcNome.value = "";
   funcEmail.value = ""; funcEmail.disabled = false;
   funcSenha.value = ""; funcSenha.disabled = false;
   funcSenha.placeholder = "Senha Inicial";
   funcRole.value = "venda1";
+  funcRole.disabled = false;
 
   btnSalvarFunc.innerText = "Criar Funcionário";
   btnCancelarFunc.classList.add("hidden");
@@ -3528,21 +3544,28 @@ function carregarFuncionarios() {
       const proprioAdmin = usuarioRole === "admin" && d.id === uidAtual;
       const desativado = f.status === "desativado";
       const status = desativado ? '<span style="color:#ef4444;font-weight:bold;">Desativado</span>' : '<span style="color:#10b981;font-weight:bold;">Ativo</span>';
-      let acoes = proprioAdmin ? '<span style="color:#64748b;font-size:11px;font-weight:700;">🔒 CONTA ADMIN PROTEGIDA</span>' :
-        `<button class="btn-secondary btn-acao" onclick="editarFuncionario('${d.id}', '${String(f.email||'').replace(/'/g,"\\'")}', '${f.role||'venda1'}')">✏️</button>
+      const nomeSeguro = String(f.nome || '').replace(/'/g,"\\'");
+      const emailSeguro = String(f.email || '').replace(/'/g,"\\'");
+      let acoes = proprioAdmin ?
+        `<button class="btn-secondary btn-acao" onclick="editarFuncionario('${d.id}', '${nomeSeguro}', '${emailSeguro}', '${f.role||'admin'}')">✏️ Nome</button>
+         <span style="color:#64748b;font-size:11px;font-weight:700;">🔒 CONTA ADMIN PROTEGIDA</span>` :
+        `<button class="btn-secondary btn-acao" onclick="editarFuncionario('${d.id}', '${nomeSeguro}', '${emailSeguro}', '${f.role||'venda1'}')">✏️</button>
          ${desativado ? `<button class="btn-success btn-acao" onclick="alterarStatusFunc('${d.id}','ativo')">Ativar</button>` : `<button class="btn-warning btn-acao" onclick="alterarStatusFunc('${d.id}','desativado')">Desativar</button>`}`;
-      html += `<tr class="${desativado?'desativado':''}"><td><b>${f.email||'-'}</b></td><td><small>${String(f.role||'venda1').toUpperCase()}</small></td><td>${status}</td><td><div class="acoes-cell">${acoes}</div></td></tr>`;
+      html += `<tr class="${desativado?'desativado':''}"><td><b>${f.nome||'Nome não definido'}</b></td><td><b>${f.email||'-'}</b></td><td><small>${String(f.role||'venda1').toUpperCase()}</small></td><td>${status}</td><td><div class="acoes-cell">${acoes}</div></td></tr>`;
     });
-    if(tbody) tbody.innerHTML = html || '<tr><td colspan="4" style="color:#94a3b8;">Nenhum funcionário cadastrado.</td></tr>';
+    if(tbody) tbody.innerHTML = html || '<tr><td colspan="5" style="color:#94a3b8;">Nenhum funcionário cadastrado.</td></tr>';
   }, err => console.warn("Funcionários: erro", err));
 }
 
-function editarFuncionario(id, email, role) {
-  if(id === auth.currentUser?.uid) return alert("Ação negada: a conta do Administrador atualmente logado está protegida.");
+function editarFuncionario(id, nome, email, role) {
   editandoFuncId = id;
+  funcNome.value = nome || "";
   funcEmail.value = email; funcEmail.disabled = true;
   funcSenha.placeholder = "Senha não alterável por aqui"; funcSenha.disabled = true;
-  funcRole.value = role; btnSalvarFunc.innerText = "Atualizar Função"; btnCancelarFunc.classList.remove("hidden");
+  funcRole.value = role;
+  funcRole.disabled = (id === auth.currentUser?.uid);
+  btnSalvarFunc.innerText = id === auth.currentUser?.uid ? "Atualizar Nome" : "Atualizar Funcionário";
+  btnCancelarFunc.classList.remove("hidden");
 }
 
 function alterarStatusFunc(id, novoStatus) {
@@ -3631,9 +3654,9 @@ const prodRef=db.collection("produtos").doc(produtoId);
       if(estoque<qtd) throw new Error(`Estoque insuficiente! Restam apenas ${estoque} unidades.`);
       transaction.update(prodRef,{estoque:estoque-qtd});
       const movRef=db.collection("movimentacoes").doc();
-      transaction.set(movRef,{produto:produtoNome,tipo:"saida",quantidade:qtd,valor:total,formaPagamento:forma,cliente,usuario:user.email,uid:user.uid,role:usuarioRole,data:new Date(),...(caixaId?{caixaId}: {})});
+      transaction.set(movRef,{produto:produtoNome,tipo:"saida",quantidade:qtd,valor:total,formaPagamento:forma,cliente,usuario:user.email,nomeUsuario:usuarioNome||"Funcionário",uid:user.uid,role:usuarioRole,data:new Date(),...(caixaId?{caixaId}: {})});
     });
-    const recibo={data:new Date().toLocaleString('pt-PT'),cliente,vendedor:user.email,item:produtoNome,qtd,precoUnit,total,pagamento:forma,troco};
+    const recibo={data:new Date().toLocaleString('pt-PT'),cliente,vendedor:usuarioNome||"Funcionário",item:produtoNome,qtd,precoUnit,total,pagamento:forma,troco};
     fecharModalVenda();
     emitirReciboComprovativo(recibo);
   }catch(e){ alert("Erro ao processar venda: "+(e.message||e)); }
@@ -3649,7 +3672,25 @@ function obterDataMovimentacaoParaRecibo(dataValor) {
   return isNaN(d.getTime()) ? new Date() : d;
 }
 
-function emitirReciboHistorico(movId) {
+async function obterNomeUsuarioParaComprovativo(uid, nomeGravado) {
+  const nomeDireto = String(nomeGravado || "").trim();
+  if(nomeDireto) return nomeDireto;
+  if(uid && uid === auth.currentUser?.uid && usuarioNome) return usuarioNome;
+  if(uid) {
+    try {
+      const doc = await db.collection("usuarios").doc(uid).get();
+      if(doc.exists) {
+        const nome = String(doc.data()?.nome || "").trim();
+        if(nome) return nome;
+      }
+    } catch(e) {
+      console.warn("Não foi possível obter o nome do vendedor para o comprovativo histórico.", e);
+    }
+  }
+  return "Funcionário";
+}
+
+async function emitirReciboHistorico(movId) {
   const m = todasMovimentacoes.find(item => item.id === movId);
   if(!m) return alert("Não foi possível localizar esta movimentação.");
 
@@ -3665,7 +3706,7 @@ function emitirReciboHistorico(movId) {
   const dataMov = obterDataMovimentacaoParaRecibo(m.data);
   const formaPagamento = m.formaPagamento || "Dinheiro";
   const cliente = m.cliente || "Consumidor Final";
-  const vendedor = m.usuario || "-";
+  const vendedor = await obterNomeUsuarioParaComprovativo(m.uid, m.nomeUsuario);
 
   const recibo = {
     data: dataMov.toLocaleString('pt-PT'),
@@ -4625,7 +4666,7 @@ async function f5ConfirmarFinalizacao() {
       }
       if(valorFinal>0) {
         const movFinal=db.collection('movimentacoes').doc();
-        tx.set(movFinal,{produto:`Pagamento Final Encomenda: ${enc.produto}`,tipo:'saida',quantidade:Number(enc.quantidade)||1,valor:valorFinal,formaPagamento:`${formaFinal} - Quitação Encomenda`,cliente:enc.cliente,usuario:user.email,uid:user.uid,role:usuarioRole,data:new Date(),...(formaFinal==='Dinheiro'&&caixaId?{caixaId}:{}),encomendaId:id,origem:'encomenda',observacao:obsFinal});
+        tx.set(movFinal,{produto:`Pagamento Final Encomenda: ${enc.produto}`,tipo:'saida',quantidade:Number(enc.quantidade)||1,valor:valorFinal,formaPagamento:`${formaFinal} - Quitação Encomenda`,cliente:enc.cliente,usuario:user.email,nomeUsuario:usuarioNome||"Funcionário",uid:user.uid,role:usuarioRole,data:new Date(),...(formaFinal==='Dinheiro'&&caixaId?{caixaId}:{}),encomendaId:id,origem:'encomenda',observacao:obsFinal});
       }
       if(custosChegada>0) {
         const movCusto=db.collection('movimentacoes').doc();
@@ -4634,7 +4675,7 @@ async function f5ConfirmarFinalizacao() {
       tx.update(encRef,{estado:'CONCLUIDO',dataConclusao:new Date(),custosChegada,custoCorreios,custoAlfandega,custoLevantamento,custoOutros,formaPagamentoCustos:formaCustos,observacaoCustos:obsCustos,valorFinalRecebido:valorFinal,formaPagamentoFinal:formaFinal,observacaoFinal:obsFinal,custoTotalReal:custoCompra+custosChegada,lucroReal,concluidoPorUid:user.uid,concluidoPorUsuario:user.email});
     });
 
-    const recibo={data:new Date().toLocaleString('pt-PT'),cliente:f5EncomendaAtual.cliente,vendedor:user.email,item:f5EncomendaAtual.produto,qtd:Number(f5EncomendaAtual.quantidade)||1,precoUnit:(Number(f5EncomendaAtual.valorTotal)||0)/(Number(f5EncomendaAtual.quantidade)||1),total:valorFinal,pagamento:formaFinal,troco:0,observacao:`Quitação de encomenda. Sinal já recebido: ${f5Moeda(f5EncomendaAtual.sinalPago)}. Custos de chegada: ${f5Moeda(custosChegada)}. Lucro real: ${f5Moeda(lucroReal)}.`};
+    const recibo={data:new Date().toLocaleString('pt-PT'),cliente:f5EncomendaAtual.cliente,vendedor:usuarioNome||"Funcionário",item:f5EncomendaAtual.produto,qtd:Number(f5EncomendaAtual.quantidade)||1,precoUnit:(Number(f5EncomendaAtual.valorTotal)||0)/(Number(f5EncomendaAtual.quantidade)||1),total:valorFinal,pagamento:formaFinal,troco:0,observacao:`Quitação de encomenda. Sinal já recebido: ${f5Moeda(f5EncomendaAtual.sinalPago)}. Custos de chegada: ${f5Moeda(custosChegada)}. Lucro real: ${f5Moeda(lucroReal)}.`};
     f5FecharModalFinalizar();
     if(typeof emitirReciboComprovativo==='function') emitirReciboComprovativo(recibo);
     alert(`Encomenda concluída com sucesso.\n\nLucro real: ${f5Moeda(lucroReal)}\nCustos de chegada: ${f5Moeda(custosChegada)}`);
