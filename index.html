@@ -397,6 +397,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Gestão de Caixa</button>
     <button class="nav-btn hidden" id="btnPageTransferencias" onclick="navegarPara('paginaTransferencias')">💱 Transferências</button>
     <button class="nav-btn hidden" id="btnPageEncomendas" onclick="navegarPara('paginaEncomendas')">🚚 Encomendas</button>
+    <button class="nav-btn hidden" id="btnPageDespesas" onclick="navegarPara('paginaDespesas')">💸 Despesas Operacionais</button>
     <button class="nav-btn" id="btnPageArmazem" onclick="navegarPara('paginaArmazemPT')">🇵🇹 Armazém Portugal</button>
   </nav>
 
@@ -891,6 +892,113 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <li>O pagamento final do cliente pode ser em <b>Dinheiro</b> ou <b>Transferência / DobraPay</b>.</li>
         <li><b>Lucro real = Valor de venda − Custo de compra − Custos de chegada.</b></li>
         <li>Uma encomenda em trânsito não é tratada como lucro realizado.</li>
+      </ul>
+    </div>
+  </div>
+
+
+  <!-- PÁGINA: DESPESAS OPERACIONAIS — FASE 5.2 -->
+  <div id="paginaDespesas" class="hidden">
+    <div class="card" style="border-top:4px solid #ef4444;">
+      <h3 style="color:#b91c1c;">💸 Módulo de Despesas Operacionais</h3>
+      <p style="margin-top:-6px;color:#64748b;font-size:13px;">
+        Registe e acompanhe as despesas da loja. Despesa financeira e movimento físico do caixa são tratados separadamente.
+      </p>
+
+      <div class="form-grid">
+        <input id="desp52Descricao" placeholder="Descrição da despesa">
+        <select id="desp52Categoria">
+          <option value="Renda/Aluguer">Renda / Aluguer</option>
+          <option value="Energia/Agua">Energia / Água</option>
+          <option value="Internet/Telefone">Internet / Telefone</option>
+          <option value="Salarios/Comissoes">Salários / Comissões</option>
+          <option value="Transporte/Logistica">Transporte / Logística</option>
+          <option value="Manutencao">Manutenção</option>
+          <option value="MaterialLoja">Material da Loja</option>
+          <option value="Taxas/Impostos">Taxas / Impostos</option>
+          <option value="Outros">Outros</option>
+        </select>
+        <input id="desp52Valor" type="number" min="0.01" step="0.01" placeholder="Valor (Db)">
+        <select id="desp52FormaPagamento">
+          <option value="Dinheiro">💵 Dinheiro (Caixa)</option>
+          <option value="Transferencia">🏦 Transferência / DobraPay</option>
+        </select>
+        <input id="desp52Observacao" placeholder="Observação / referência (opcional)">
+        <button onclick="registrarDespesaFase52()" class="btn-danger" style="grid-column:1/-1;">💸 Registar Despesa</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card red">
+        <span class="kpi-title">Despesas no Período</span>
+        <span id="desp52KpiTotal" class="kpi-value">0 Db</span>
+        <span class="kpi-sub" style="color:#b91c1c;">Total financeiro</span>
+      </div>
+      <div class="kpi-card orange">
+        <span class="kpi-title">Pagas em Dinheiro</span>
+        <span id="desp52KpiDinheiro" class="kpi-value">0 Db</span>
+        <span class="kpi-sub" style="color:#d97706;">Saída física da loja</span>
+      </div>
+      <div class="kpi-card blue">
+        <span class="kpi-title">Transferência / DobraPay</span>
+        <span id="desp52KpiTransferencia" class="kpi-value">0 Db</span>
+        <span class="kpi-sub" style="color:#2563eb;">Sem saída da gaveta</span>
+      </div>
+      <div class="kpi-card purple">
+        <span class="kpi-title">Maior Categoria</span>
+        <span id="desp52KpiCategoria" class="kpi-value">-</span>
+        <span id="desp52KpiCategoriaValor" class="kpi-sub" style="color:#7c3aed;">0 Db</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <h3 style="color:#b91c1c;margin:0;border:none;">📜 Histórico de Despesas</h3>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="date" id="desp52DataInicio" style="width:auto;min-height:38px;padding:5px 8px;">
+          <input type="date" id="desp52DataFim" style="width:auto;min-height:38px;padding:5px 8px;">
+          <select id="desp52FiltroCategoria" style="width:auto;min-height:38px;padding:5px 8px;">
+            <option value="">Todas as categorias</option>
+            <option value="Renda/Aluguer">Renda / Aluguer</option>
+            <option value="Energia/Agua">Energia / Água</option>
+            <option value="Internet/Telefone">Internet / Telefone</option>
+            <option value="Salarios/Comissoes">Salários / Comissões</option>
+            <option value="Transporte/Logistica">Transporte / Logística</option>
+            <option value="Manutencao">Manutenção</option>
+            <option value="MaterialLoja">Material da Loja</option>
+            <option value="Taxas/Impostos">Taxas / Impostos</option>
+            <option value="Outros">Outros</option>
+          </select>
+          <select id="desp52FiltroForma" style="width:auto;min-height:38px;padding:5px 8px;">
+            <option value="">Todas as formas</option>
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Transferencia">Transferência</option>
+          </select>
+          <button onclick="renderizarDespesasFase52()" class="btn-secondary" style="min-height:38px;padding:5px 10px;">Filtrar</button>
+          <button onclick="limparFiltrosDespesasFase52()" class="btn-secondary" style="min-height:38px;padding:5px 10px;">Limpar</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table style="min-width:1050px;">
+          <thead>
+            <tr>
+              <th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th>
+              <th>Pagamento</th><th>Responsável</th><th>Observação</th><th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="listaDespesasFase52"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="background:#f8fafc;">
+      <h4 style="margin-top:0;">ℹ️ Lógica financeira</h4>
+      <ul style="margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;">
+        <li>Despesa paga em <b>Dinheiro</b> exige caixa aberto e saldo físico suficiente.</li>
+        <li>Despesa por <b>Transferência / DobraPay</b> é registada, mas não altera a gaveta.</li>
+        <li>Uma despesa registada fica no histórico; não há botão de apagar.</li>
+        <li>Suprimentos e sangrias continuam sendo movimentos de caixa, não despesas.</li>
       </ul>
     </div>
   </div>
@@ -1436,6 +1544,7 @@ function resetarInterface() {
   cardEncomendas.classList.add("hidden");
   document.getElementById("btnPageTransferencias")?.classList.add("hidden");
   document.getElementById("btnPageEncomendas")?.classList.add("hidden");
+  document.getElementById("btnPageDespesas")?.classList.add("hidden");
   document.getElementById("paginaEncomendas")?.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
@@ -1500,6 +1609,7 @@ auth.onAuthStateChanged(u => {
         cardCompras.classList.remove("hidden");
         btnPageTransferencias.classList.remove("hidden");
         btnPageEncomendas.classList.remove("hidden");
+        btnPageDespesas.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnToggleFunc.classList.remove("hidden");
@@ -4713,6 +4823,184 @@ async function f5ConfirmarFinalizacao() {
   finally { btn.disabled=false; }
 }
 
+
+/* =========================================================================
+   FASE 5.2 — MÓDULO DE DESPESAS OPERACIONAIS
+   ========================================================================= */
+let todasDespesasFase52 = [];
+let listenerDespesasFase52 = null;
+
+function usuarioPodeDespesasFase52() {
+  return usuarioRole === "admin";
+}
+
+function saldoFisicoAtualFase52() {
+  if(!caixaAtualObj) return 0;
+  const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+  return Math.max(0, Number(r.esperado) || 0);
+}
+
+function iniciarListenerDespesasFase52() {
+  if(listenerDespesasFase52) listenerDespesasFase52();
+  if(!usuarioPodeDespesasFase52()) {
+    todasDespesasFase52 = [];
+    return;
+  }
+  listenerDespesasFase52 = db.collection("despesas").orderBy("data","desc").onSnapshot(s => {
+    todasDespesasFase52 = [];
+    s.forEach(d => todasDespesasFase52.push({id:d.id, ...d.data()}));
+    renderizarDespesasFase52();
+  }, e => console.warn("Erro ao carregar despesas:", e));
+}
+
+async function registrarDespesaFase52() {
+  if(!usuarioPodeDespesasFase52()) return alert("Acesso restrito: apenas o Administrador pode registar despesas operacionais.");
+  if(!navigator.onLine) return alert("O registo de despesas exige ligação à internet.");
+
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const descricao = document.getElementById("desp52Descricao").value.trim();
+  const categoria = document.getElementById("desp52Categoria").value;
+  const valor = Number(document.getElementById("desp52Valor").value) || 0;
+  const forma = document.getElementById("desp52FormaPagamento").value;
+  const observacao = document.getElementById("desp52Observacao").value.trim();
+
+  if(!descricao) return alert("Informe a descrição da despesa.");
+  if(valor <= 0) return alert("Informe um valor válido.");
+
+  if(forma === "Dinheiro") {
+    if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") {
+      return alert("Esta despesa será paga em dinheiro. Abra primeiro o Caixa/Turno.");
+    }
+    const saldo = saldoFisicoAtualFase52();
+    if(saldo < valor) {
+      const falta = valor - saldo;
+      return alert(
+        "Saldo físico insuficiente para pagar esta despesa.\n\n" +
+        `Disponível: ${saldo.toLocaleString("pt-PT")} Db\n` +
+        `Despesa: ${valor.toLocaleString("pt-PT")} Db\n` +
+        `Falta: ${falta.toLocaleString("pt-PT")} Db\n\n` +
+        "Registe primeiro um Suprimento de Caixa."
+      );
+    }
+  }
+
+  if(!confirm(
+    `Confirmar despesa?\n\n${descricao}\nCategoria: ${categoria}\n` +
+    `Valor: ${valor.toLocaleString("pt-PT")} Db\nPagamento: ${forma}`
+  )) return;
+
+  const despRef = db.collection("despesas").doc();
+  const movRef = db.collection("movimentacoes").doc();
+  const agora = new Date();
+
+  try {
+    await db.runTransaction(async tx => {
+      tx.set(despRef, {
+        descricao, categoria, valor, formaPagamento: forma, observacao,
+        estado: "REGISTADA",
+        usuario: user.email,
+        nomeUsuario: usuarioNome || "",
+        uid: user.uid,
+        role: usuarioRole,
+        data: agora,
+        ...(forma === "Dinheiro" ? {caixaId: caixaAtualObj.id} : {})
+      });
+
+      if(forma === "Dinheiro") {
+        tx.set(movRef, {
+          produto: `Despesa Operacional: ${descricao}`,
+          tipo: "despesa_caixa",
+          origem: "despesa_operacional",
+          quantidade: 1,
+          valor,
+          formaPagamento: "Dinheiro - Despesa Operacional",
+          categoria,
+          observacao,
+          usuario: user.email,
+          nomeUsuario: usuarioNome || "",
+          uid: user.uid,
+          role: usuarioRole,
+          data: agora,
+          caixaId: caixaAtualObj.id,
+          despesaId: despRef.id
+        });
+      }
+    });
+
+    document.getElementById("desp52Descricao").value = "";
+    document.getElementById("desp52Valor").value = "";
+    document.getElementById("desp52Observacao").value = "";
+    alert("Despesa registada com sucesso.");
+  } catch(e) {
+    alert("Erro ao registar despesa: " + (e.message || e));
+  }
+}
+
+function renderizarDespesasFase52() {
+  const tbody = document.getElementById("listaDespesasFase52");
+  if(!tbody) return;
+
+  let lista = [...todasDespesasFase52];
+  const iniVal = document.getElementById("desp52DataInicio")?.value || "";
+  const fimVal = document.getElementById("desp52DataFim")?.value || "";
+  const cat = document.getElementById("desp52FiltroCategoria")?.value || "";
+  const forma = document.getElementById("desp52FiltroForma")?.value || "";
+  const ini = iniVal ? new Date(iniVal + "T00:00:00") : null;
+  const fim = fimVal ? new Date(fimVal + "T23:59:59") : null;
+
+  lista = lista.filter(d => {
+    const dt = obterDataSegura(d.data);
+    if(ini && dt < ini) return false;
+    if(fim && dt > fim) return false;
+    if(cat && d.categoria !== cat) return false;
+    if(forma && d.formaPagamento !== forma) return false;
+    return true;
+  });
+
+  let total = 0, dinheiro = 0, transferencia = 0;
+  const categorias = {};
+  lista.forEach(d => {
+    const v = Number(d.valor)||0;
+    total += v;
+    if(d.formaPagamento === "Dinheiro") dinheiro += v;
+    if(d.formaPagamento === "Transferencia") transferencia += v;
+    categorias[d.categoria || "Outros"] = (categorias[d.categoria || "Outros"] || 0) + v;
+  });
+
+  const maior = Object.entries(categorias).sort((a,b)=>b[1]-a[1])[0] || ["-",0];
+  document.getElementById("desp52KpiTotal").innerText = total.toLocaleString("pt-PT") + " Db";
+  document.getElementById("desp52KpiDinheiro").innerText = dinheiro.toLocaleString("pt-PT") + " Db";
+  document.getElementById("desp52KpiTransferencia").innerText = transferencia.toLocaleString("pt-PT") + " Db";
+  document.getElementById("desp52KpiCategoria").innerText = maior[0];
+  document.getElementById("desp52KpiCategoriaValor").innerText = Number(maior[1]).toLocaleString("pt-PT") + " Db";
+
+  tbody.innerHTML = lista.map(d => {
+    const dt = obterDataSegura(d.data).toLocaleString("pt-PT");
+    const resp = d.nomeUsuario || d.usuario || "-";
+    return `<tr>
+      <td><small>${dt}</small></td>
+      <td><b>${d.descricao || "-"}</b></td>
+      <td>${d.categoria || "-"}</td>
+      <td style="font-weight:bold;color:#b91c1c;">${(Number(d.valor)||0).toLocaleString("pt-PT")} Db</td>
+      <td>${d.formaPagamento === "Dinheiro" ? "💵 Dinheiro" : "🏦 Transferência"}</td>
+      <td>${resp}</td>
+      <td>${d.observacao || "-"}</td>
+      <td><span style="color:#15803d;font-weight:700;">${d.estado || "REGISTADA"}</span></td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="8" style="color:#94a3b8;">Nenhuma despesa encontrada.</td></tr>';
+}
+
+function limparFiltrosDespesasFase52() {
+  document.getElementById("desp52DataInicio").value = "";
+  document.getElementById("desp52DataFim").value = "";
+  document.getElementById("desp52FiltroCategoria").value = "";
+  document.getElementById("desp52FiltroForma").value = "";
+  renderizarDespesasFase52();
+}
+
+
 /* Navegação final da Fase 4: adiciona a página de Transferências sem remover as páginas da Fase 3. */
 function navegarPara(paginaId) {
   if(paginaId === "paginaTransferencias" && !usuarioPodeTransferencias()) {
@@ -4723,13 +5011,17 @@ function navegarPara(paginaId) {
     alert("Acesso restrito: o módulo Encomendas é exclusivo do Administrador e dos Vendedores.");
     return;
   }
+  if(paginaId === "paginaDespesas" && !usuarioPodeDespesasFase52()) {
+    alert("Acesso restrito: o módulo Despesas Operacionais é exclusivo do Administrador.");
+    return;
+  }
   if(paginaId === "paginaArmazemPT" && !usuarioPodeArmazemPT()) {
     alert("Acesso restrito: o Armazém Portugal é exclusivo do Administrador e do Estoque.");
     return;
   }
 
-  const paginas = ["paginaPrincipal","paginaCaixa","paginaTransferencias","paginaEncomendas","paginaArmazemPT"];
-  const botoes = ["btnPageMain","btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageArmazem"];
+  const paginas = ["paginaPrincipal","paginaCaixa","paginaTransferencias","paginaEncomendas","paginaDespesas","paginaArmazemPT"];
+  const botoes = ["btnPageMain","btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageDespesas","btnPageArmazem"];
 
   paginas.forEach(id => document.getElementById(id)?.classList.add("hidden"));
   botoes.forEach(id => document.getElementById(id)?.classList.remove("active"));
@@ -4739,6 +5031,7 @@ function navegarPara(paginaId) {
     paginaCaixa: ["paginaCaixa","btnPageCaixa"],
     paginaTransferencias: ["paginaTransferencias","btnPageTransferencias"],
     paginaEncomendas: ["paginaEncomendas","btnPageEncomendas"],
+    paginaDespesas: ["paginaDespesas","btnPageDespesas"],
     paginaArmazemPT: ["paginaArmazemPT","btnPageArmazem"]
   };
 
@@ -4754,6 +5047,10 @@ function navegarPara(paginaId) {
   }
   if(paginaId === "paginaEncomendas") {
     f5AtualizarResumoPagina();
+  }
+  if(paginaId === "paginaDespesas") {
+    iniciarListenerDespesasFase52();
+    renderizarDespesasFase52();
   }
 }
 
