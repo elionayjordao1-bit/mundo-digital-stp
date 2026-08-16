@@ -984,7 +984,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
             Ela identifica inconsistências antes da entrada oficial em produção.
           </p>
         </div>
-        <button onclick="executarAuditoriaIntegridade()" class="btn-success">🔎 Reexecutar Auditoria</button>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+          <button id="btnReexecutarAuditoria" onclick="executarAuditoriaIntegridade()" class="btn-success">🔎 Reexecutar Auditoria</button>
+          <small id="audUltimaExecucao" style="color:#64748b;">Ainda não executada</small>
+        </div>
       </div>
     </div>
 
@@ -1003,6 +1006,11 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <span class="kpi-title">Alertas</span>
         <span id="audKpiAlertas" class="kpi-value">0</span>
         <span class="kpi-sub" style="color:#d97706;">Requer revisão</span>
+      </div>
+      <div class="kpi-card blue" style="border-left-color:#6366f1;background:#eef2ff;">
+        <span class="kpi-title">Legado / Pré-GO-LIVE</span>
+        <span id="audKpiLegado" class="kpi-value">0</span>
+        <span class="kpi-sub" style="color:#4f46e5;">Histórico preservado</span>
       </div>
       <div class="kpi-card red">
         <span class="kpi-title">Críticos</span>
@@ -1026,6 +1034,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
             <option value="">Todos os níveis</option>
             <option value="CRITICO">🔴 Críticos</option>
             <option value="ALERTA">🟠 Alertas</option>
+            <option value="LEGADO">🔵 Legado / Pré-GO-LIVE</option>
             <option value="OK">🟢 OK</option>
           </select>
           <select id="audFiltroModulo" onchange="renderizarAuditoria()" style="width:auto;min-width:170px;">
@@ -1060,10 +1069,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <h3 style="color:#1d4ed8;">ℹ️ Como interpretar</h3>
       <div style="font-size:13px;color:#475569;line-height:1.8;">
         <b>🟢 OK:</b> regra verificada e coerente.<br>
-        <b>🟠 ALERTA:</b> normalmente dado antigo, incompleto ou situação que merece conferência; não altera dados automaticamente.<br>
-        <b>🔴 CRÍTICO:</b> inconsistência financeira/operacional que deve ser resolvida antes do GO LIVE.<br><br>
-        Registros antigos sem snapshot de custo podem aparecer como alerta. Isso não significa que a venda esteja errada:
-        significa apenas que o lucro histórico é estimado usando o custo atual do produto.
+        <b>🔵 LEGADO / PRÉ-GO-LIVE:</b> registro anterior a 16/08/2026 que não possui campos criados nas fases mais recentes. O histórico é preservado e não bloqueia homologação.<br>
+        <b>🟠 ALERTA:</b> situação atual que merece conferência, mas não representa automaticamente erro financeiro.<br>
+        <b>🔴 CRÍTICO:</b> inconsistência financeira/operacional atual que deve ser resolvida antes do GO LIVE.<br><br>
+        <b>Marco técnico desta auditoria:</b> 16/08/2026 às 00:00. Registros anteriores não são modificados nem apagados; apenas recebem classificação histórica quando a ausência de campos decorre das versões antigas do sistema.
       </div>
     </div>
 
@@ -6484,6 +6493,35 @@ function iniciarListenerTesouraria() {
 
 let resultadosAuditoria61 = [];
 
+// Marco técnico da arquitetura atual. Registros anteriores permanecem no histórico,
+// mas a ausência de campos introduzidos depois não bloqueia a homologação.
+const AUDITORIA_MARCO_GO_LIVE_61 = new Date(2026, 7, 16, 0, 0, 0); // 16/08/2026 00:00 no horário local
+
+function audEhLegado(obj) {
+  if(!obj) return false;
+  const d = audData(obj.data || obj.dataAbertura || obj.dataConclusao || obj.dataEntrega);
+  return !!d && d < AUDITORIA_MARCO_GO_LIVE_61;
+}
+
+function audNivelPorData(obj, nivelAtual="CRITICO") {
+  return audEhLegado(obj) ? "LEGADO" : nivelAtual;
+}
+
+function audRegistrarHistorico(nivelAtual, modulo, referencia, regra, detalheAtual, obj, detalheLegado=null) {
+  const nivel = audNivelPorData(obj, nivelAtual);
+  audAdicionar(
+    nivel,
+    modulo,
+    referencia,
+    regra,
+    nivel === "LEGADO"
+      ? (detalheLegado || `Registro anterior ao marco de 16/08/2026. ${detalheAtual}`)
+      : detalheAtual,
+    obj
+  );
+  return nivel;
+}
+
 function usuarioPodeAuditoria61() {
   return usuarioRole === "admin";
 }
@@ -6526,6 +6564,8 @@ function audResumoModulo(modulo, verificacao, qtdProblemas, detalheOk) {
 function executarAuditoriaIntegridade() {
   if(!usuarioPodeAuditoria61()) return alert("Acesso restrito: Auditoria é exclusiva do Administrador.");
 
+  const btnAud = document.getElementById("btnReexecutarAuditoria");
+  if(btnAud) { btnAud.disabled = true; btnAud.innerText = "⏳ A verificar..."; }
   resultadosAuditoria61 = [];
 
   // =========================================================
@@ -6567,9 +6607,10 @@ function executarAuditoriaIntegridade() {
     const ref = audRef("MOV", m.id);
 
     if(!m.uid || !audData(m.data)) {
-      problemasVendas++;
-      audAdicionar("CRITICO","Vendas",ref,"Rastro de auditoria incompleto",
-        "Venda sem UID do responsável e/ou data válida.",m);
+      const nv = audRegistrarHistorico("CRITICO","Vendas",ref,"Rastro de auditoria incompleto",
+        "Venda nova sem UID do responsável e/ou data válida.",m,
+        "Venda histórica criada antes da trilha de auditoria atual; UID/campos antigos podem estar ausentes.");
+      if(nv !== "LEGADO") problemasVendas++;
     }
     if(audNum(m.quantidade) <= 0 || audNum(m.valor) <= 0) {
       problemasVendas++;
@@ -6581,15 +6622,17 @@ function executarAuditoriaIntegridade() {
     const vendaEmDinheiro = forma.includes("Dinheiro") ||
       (!forma.includes("Transferencia") && !forma.includes("Cartao") && !forma.includes("Cartão"));
     if(vendaEmDinheiro && !m.caixaId) {
-      problemasVendas++;
-      audAdicionar("ALERTA","Vendas",ref,"Venda em dinheiro sem caixaId",
-        "Pode ser um registro antigo anterior ao controle obrigatório de caixa.",m);
+      const nv = audRegistrarHistorico("CRITICO","Vendas",ref,"Venda em dinheiro sem caixaId",
+        "Venda nova em dinheiro deveria estar vinculada ao caixa/turno.",m,
+        "Venda histórica anterior ao controle obrigatório de caixa; não possuía caixaId nas versões antigas.");
+      if(nv !== "LEGADO") problemasVendas++;
     }
 
     if(!Number.isFinite(Number(m.custoTotalVenda)) && !Number.isFinite(Number(m.custoUnitarioVenda))) {
-      vendasSemSnapshot++;
-      audAdicionar("ALERTA","Vendas",ref,"Venda antiga sem snapshot de custo",
-        "O lucro histórico desta venda é estimado usando o custo atual do produto.",m);
+      const nv = audRegistrarHistorico("CRITICO","Vendas",ref,"Snapshot de custo ausente",
+        "Venda nova sem custoUnitarioVenda/custoTotalVenda; o lucro não fica historicamente congelado.",m,
+        "Venda histórica anterior ao snapshot de custo; o lucro histórico continua estimado usando o custo atual do produto.");
+      if(nv !== "LEGADO") vendasSemSnapshot++;
     }
   });
 
@@ -6614,9 +6657,10 @@ function executarAuditoriaIntegridade() {
     const ref = audRef("CAIXA", c.id);
     const estado = String(c.estado || "");
     if(!c.uid || !audData(c.dataAbertura)) {
-      problemasCaixa++;
-      audAdicionar("CRITICO","Caixa",ref,"Abertura sem rastro completo",
-        "Turno sem UID e/ou data de abertura válida.",c);
+      const nv = audRegistrarHistorico("CRITICO","Caixa",ref,"Abertura sem rastro completo",
+        "Turno novo sem UID e/ou data de abertura válida.",c,
+        "Turno histórico anterior à trilha completa de auditoria; UID/campos antigos podem estar ausentes.");
+      if(nv !== "LEGADO") problemasCaixa++;
     }
     if(!["aberto","fechado"].includes(estado)) {
       problemasCaixa++;
@@ -6649,9 +6693,10 @@ function executarAuditoriaIntegridade() {
     const fisico = tiposFisicos.has(m.tipo) ||
       (m.tipo === "saida" && forma.includes("Dinheiro") && !ehTransferenciaLegacy(m));
     if(fisico && !m.caixaId) {
-      problemasCaixa++;
-      audAdicionar("ALERTA","Caixa",audRef("MOV",m.id),"Movimento físico sem caixaId",
-        `${m.tipo || "movimento"} — ${m.produto || m.formaPagamento || "sem descrição"}.`,m);
+      const nv = audRegistrarHistorico("CRITICO","Caixa",audRef("MOV",m.id),"Movimento físico sem caixaId",
+        `${m.tipo || "movimento"} — ${m.produto || m.formaPagamento || "sem descrição"}.`,m,
+        `Movimento físico histórico anterior ao vínculo obrigatório com caixa/turno: ${m.tipo || "movimento"} — ${m.produto || m.formaPagamento || "sem descrição"}.`);
+      if(nv !== "LEGADO") problemasCaixa++;
     }
   });
 
@@ -6670,14 +6715,16 @@ function executarAuditoriaIntegridade() {
         `Valor: ${d.valor ?? "-"}.`,d);
     }
     if(!d.uid || !audData(d.data)) {
-      problemasDespesas++;
-      audAdicionar("CRITICO","Despesas",ref,"Rastro de auditoria incompleto",
-        "Despesa sem UID e/ou data válida.",d);
+      const nv = audRegistrarHistorico("CRITICO","Despesas",ref,"Rastro de auditoria incompleto",
+        "Despesa nova sem UID e/ou data válida.",d,
+        "Despesa histórica anterior à trilha de auditoria atual; campos de UID podem estar ausentes.");
+      if(nv !== "LEGADO") problemasDespesas++;
     }
     if(d.formaPagamento === "Dinheiro" && !d.caixaId) {
-      problemasDespesas++;
-      audAdicionar("CRITICO","Despesas",ref,"Despesa em dinheiro sem caixa",
-        "Despesa física deveria estar vinculada ao turno.",d);
+      const nv = audRegistrarHistorico("CRITICO","Despesas",ref,"Despesa em dinheiro sem caixa",
+        "Despesa nova em dinheiro deveria estar vinculada ao turno.",d,
+        "Despesa histórica anterior ao vínculo obrigatório com caixa/turno.");
+      if(nv !== "LEGADO") problemasDespesas++;
     }
     if(d.formaPagamento === "Transferencia" && d.caixaId) {
       problemasDespesas++;
@@ -6708,9 +6755,10 @@ function executarAuditoriaIntegridade() {
         `Sinal: ${sinal} Db | Valor total: ${total} Db.`,e);
     }
     if(!e.uid || !audData(e.data)) {
-      problemasEnc++;
-      audAdicionar("ALERTA","Encomendas",ref,"Rastro incompleto",
-        "Encomenda sem UID e/ou data de criação.",e);
+      const nv = audRegistrarHistorico("ALERTA","Encomendas",ref,"Rastro incompleto",
+        "Encomenda sem UID e/ou data de criação.",e,
+        "Encomenda histórica anterior à trilha completa de auditoria; campos antigos podem estar ausentes.");
+      if(nv !== "LEGADO") problemasEnc++;
     }
     if(["CONCLUIDO","CONCLUÍDO","ENTREGUE"].includes(estado) &&
        !audData(e.dataConclusao || e.dataEntrega)) {
@@ -6753,14 +6801,16 @@ function executarAuditoriaIntegridade() {
         `Gravada: ${audNum(t.margemDb)} Db | Calculada: ${esperadoMargem} Db.`,t);
     }
     if(t.formaSTP === "Dinheiro" && !t.caixaId) {
-      problemasTrans++;
-      audAdicionar("CRITICO","Transferências",ref,"Operação em dinheiro sem caixa",
-        "Transferência comercial em dinheiro deveria estar ligada a um turno.",t);
+      const nv = audRegistrarHistorico("CRITICO","Transferências",ref,"Operação em dinheiro sem caixa",
+        "Transferência nova em dinheiro deveria estar ligada a um turno.",t,
+        "Transferência histórica anterior ao vínculo obrigatório com caixa/turno.");
+      if(nv !== "LEGADO") problemasTrans++;
     }
     if(!t.uid || !audData(t.data)) {
-      problemasTrans++;
-      audAdicionar("CRITICO","Transferências",ref,"Rastro de auditoria incompleto",
-        "Transferência sem UID e/ou data válida.",t);
+      const nv = audRegistrarHistorico("CRITICO","Transferências",ref,"Rastro de auditoria incompleto",
+        "Transferência nova sem UID e/ou data válida.",t,
+        "Transferência histórica anterior à trilha de auditoria atual; campos antigos podem estar ausentes.");
+      if(nv !== "LEGADO") problemasTrans++;
     }
   });
   audResumoModulo("Transferências","Integridade das transferências",problemasTrans,
@@ -6779,9 +6829,10 @@ function executarAuditoriaIntegridade() {
     const vd = audNum(m.valorDestino);
 
     if(!m.uid || !audData(m.data)) {
-      problemasTes++;
-      audAdicionar("CRITICO","Tesouraria",ref,"Rastro de auditoria incompleto",
-        "Movimento sem UID e/ou data válida.",m);
+      const nv = audRegistrarHistorico("CRITICO","Tesouraria",ref,"Rastro de auditoria incompleto",
+        "Movimento novo sem UID e/ou data válida.",m,
+        "Movimento histórico anterior à trilha de auditoria atual; campos antigos podem estar ausentes.");
+      if(nv !== "LEGADO") problemasTes++;
     }
     if(!m.origem || !m.destino || m.origem === m.destino) {
       problemasTes++;
@@ -6838,15 +6889,23 @@ function executarAuditoriaIntegridade() {
     if(!tiposCap.includes(m.tipo)) return;
     const ref = audRef("TES",m.id);
     if(m.natureza !== "capital_financiamento") {
-      problemasCapital++;
-      audAdicionar("ALERTA","Capital",ref,"Natureza financeira ausente",
-        "Movimento de capital antigo sem natureza=capital_financiamento.",m);
+      const nv = audRegistrarHistorico("ALERTA","Capital",ref,"Natureza financeira ausente",
+        "Movimento de capital sem natureza=capital_financiamento.",m,
+        "Movimento histórico de capital anterior ao campo natureza=capital_financiamento.");
+      if(nv !== "LEGADO") problemasCapital++;
     }
   });
   audResumoModulo("Capital","Separação capital/lucro",problemasCapital,
     "Aportes, empréstimos, retiradas e amortizações permanecem separados do resultado operacional.");
 
   renderizarAuditoria();
+  const agoraAud = new Date();
+  const ultima = document.getElementById("audUltimaExecucao");
+  if(ultima) ultima.innerText = "Última execução: " + agoraAud.toLocaleString("pt-PT");
+  if(btnAud) {
+    btnAud.innerText = "✅ Auditoria concluída";
+    setTimeout(() => { btnAud.disabled = false; btnAud.innerText = "🔎 Reexecutar Auditoria"; }, 900);
+  }
 }
 
 function renderizarAuditoria() {
@@ -6862,6 +6921,7 @@ function renderizarAuditoria() {
   const total = resultadosAuditoria61.length;
   const ok = resultadosAuditoria61.filter(r=>r.nivel==="OK").length;
   const alertas = resultadosAuditoria61.filter(r=>r.nivel==="ALERTA").length;
+  const legado = resultadosAuditoria61.filter(r=>r.nivel==="LEGADO").length;
   const criticos = resultadosAuditoria61.filter(r=>r.nivel==="CRITICO").length;
 
   const set = (id,txt) => {
@@ -6871,6 +6931,7 @@ function renderizarAuditoria() {
   set("audKpiTotal", total);
   set("audKpiOk", ok);
   set("audKpiAlertas", alertas);
+  set("audKpiLegado", legado);
   set("audKpiCriticos", criticos);
 
   const box = document.getElementById("audEstadoGeral");
@@ -6883,24 +6944,25 @@ function renderizarAuditoria() {
       box.style.background = "#fef2f2";
       titulo.innerText = "🔴 Integridade: EXISTEM PONTOS CRÍTICOS";
       titulo.style.color = "#991b1b";
-      texto.innerText = `${criticos} problema(s) crítico(s) devem ser resolvidos antes do GO LIVE. Há também ${alertas} alerta(s).`;
+      texto.innerText = `${criticos} problema(s) crítico(s) atuais devem ser resolvidos antes do GO LIVE. Há também ${alertas} alerta(s) e ${legado} registro(s) legado preservado(s).`;
     } else if(alertas > 0) {
       box.style.borderLeftColor = "#d97706";
       box.style.background = "#fffbeb";
       titulo.innerText = "🟠 Integridade: SEM CRÍTICOS, MAS HÁ ALERTAS";
       titulo.style.color = "#92400e";
-      texto.innerText = `${alertas} alerta(s) para revisão. Alertas antigos podem não impedir o GO LIVE depois de conferidos.`;
+      texto.innerText = `${alertas} alerta(s) atuais para revisão. Existem também ${legado} registro(s) legado/pré-GO-LIVE que não bloqueiam a homologação.`;
     } else {
       box.style.borderLeftColor = "#10b981";
       box.style.background = "#f0fdf4";
       titulo.innerText = "🟢 Integridade Financeira OK";
       titulo.style.color = "#166534";
-      texto.innerText = "Nenhuma inconsistência crítica ou alerta foi encontrada nos dados atualmente carregados.";
+      texto.innerText = legado > 0 ? `Nenhuma inconsistência atual encontrada. ${legado} registro(s) legado/pré-GO-LIVE permanecem preservados no histórico.` : "Nenhuma inconsistência crítica ou alerta foi encontrada nos dados atualmente carregados.";
     }
   }
 
   const cores = {
     OK:["#dcfce7","#166534","🟢 OK"],
+    LEGADO:["#e0e7ff","#3730a3","🔵 LEGADO"],
     ALERTA:["#fef3c7","#92400e","🟠 ALERTA"],
     CRITICO:["#fee2e2","#991b1b","🔴 CRÍTICO"]
   };
