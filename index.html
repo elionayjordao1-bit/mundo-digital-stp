@@ -394,6 +394,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   <!-- NAVEGAÇÃO PRINCIPAL -->
   <nav class="main-nav">
     <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas</button>
+    <button class="nav-btn hidden" id="btnPageFinanceiro" onclick="navegarPara('paginaFinanceiro')">📈 Financeiro</button>
     <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Gestão de Caixa</button>
     <button class="nav-btn hidden" id="btnPageTransferencias" onclick="navegarPara('paginaTransferencias')">💱 Transferências</button>
     <button class="nav-btn hidden" id="btnPageEncomendas" onclick="navegarPara('paginaEncomendas')">🚚 Encomendas</button>
@@ -468,7 +469,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
     <div class="card hidden" id="cardRelatorio">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-        <h3 style="margin: 0; border: none;">📊 Dashboard Executivo & Financeiro</h3>
+        <h3 style="margin: 0; border: none;">📊 Resumo Operacional & Comercial</h3>
         
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; width: 100%;">
           <label style="font-size: 12px; font-weight: 600;">Filtrar de:</label>
@@ -703,6 +704,240 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
   </div> <!-- FIM PAGINA PRINCIPAL -->
 
+
+
+  <!-- PÁGINA: FINANCEIRO CONSOLIDADO — FASE 5.4 -->
+  <div id="paginaFinanceiro" class="hidden">
+
+    <div class="card" style="border-top:4px solid #2563eb;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h3 style="color:#1d4ed8;margin-bottom:6px;">📈 Financeiro Consolidado — Fase 5.4</h3>
+          <p style="margin:0;color:#64748b;font-size:13px;line-height:1.6;">
+            Visão gerencial da empresa: resultado do período, posição financeira, encomendas,
+            transferências e despesas. Movimentos internos de Tesouraria não são tratados como receita nem despesa.
+          </p>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:9px 12px;border-radius:8px;font-size:12px;color:#1e40af;font-weight:700;">
+          🔒 Somente leitura / gestão
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h3 style="margin:0;border:none;">📅 Período de Análise</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="date" id="finDataInicio" style="width:auto;min-height:38px;padding:5px 8px;">
+          <input type="date" id="finDataFim" style="width:auto;min-height:38px;padding:5px 8px;">
+          <button onclick="finAplicarPeriodo()" class="btn-success" style="min-height:38px;padding:5px 10px;">Aplicar</button>
+          <button onclick="finPeriodoHoje()" class="btn-secondary" style="min-height:38px;padding:5px 10px;">Hoje</button>
+          <button onclick="finPeriodoMesAtual()" class="btn-secondary" style="min-height:38px;padding:5px 10px;">Mês Atual</button>
+        </div>
+      </div>
+      <div id="finPeriodoLabel" style="margin-top:10px;color:#64748b;font-size:12px;font-weight:700;"></div>
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="card" style="border-left:4px solid #10b981;">
+      <h3 style="color:#047857;">💹 Resultado do Período</h3>
+      <div class="kpi-grid">
+        <div class="kpi-card blue">
+          <span class="kpi-title">Vendas de Produtos</span>
+          <span id="finKpiVendas" class="kpi-value">0 Db</span>
+          <span id="finKpiVendasSub" class="kpi-sub">0 vendas</span>
+        </div>
+        <div class="kpi-card green">
+          <span class="kpi-title">Lucro dos Produtos</span>
+          <span id="finKpiLucroProdutos" class="kpi-value">0 Db</span>
+          <span id="finKpiLucroProdutosSub" class="kpi-sub">Lucro bruto realizado</span>
+        </div>
+        <div class="kpi-card teal">
+          <span class="kpi-title">Lucro de Encomendas</span>
+          <span id="finKpiLucroEncomendas" class="kpi-value">0 Db</span>
+          <span id="finKpiLucroEncomendasSub" class="kpi-sub">Concluídas no período</span>
+        </div>
+        <div class="kpi-card purple">
+          <span class="kpi-title">Margem Transferências</span>
+          <span id="finKpiMargemTransferencias" class="kpi-value">0 Db</span>
+          <span class="kpi-sub">Somente margem comercial</span>
+        </div>
+        <div class="kpi-card red">
+          <span class="kpi-title">Despesas Operacionais</span>
+          <span id="finKpiDespesas" class="kpi-value">0 Db</span>
+          <span id="finKpiDespesasSub" class="kpi-sub">Custos do período</span>
+        </div>
+        <div class="kpi-card green" style="border-left-width:6px;">
+          <span class="kpi-title">Lucro Líquido Real</span>
+          <span id="finKpiLucroLiquido" class="kpi-value" style="font-size:22px;">0 Db</span>
+          <span id="finKpiMargemLiquida" class="kpi-sub">Margem líquida: 0%</span>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:12px;font-size:13px;color:#475569;line-height:1.7;">
+        <b>Fórmula:</b> Lucro Produtos + Lucro Encomendas + Margem Transferências − Despesas Operacionais.
+        <br><b>Não entram como lucro:</b> suprimentos, sangrias, saldos iniciais e transferências internas de Tesouraria.
+      </div>
+    </div>
+
+    <!-- POSIÇÃO FINANCEIRA -->
+    <div class="card" style="border-left:4px solid #0f766e;">
+      <h3 style="color:#0f766e;">💰 Posição Financeira Atual</h3>
+      <div class="kpi-grid">
+        <div class="kpi-card green">
+          <span class="kpi-title">🏪 Caixa Loja</span>
+          <span id="finPosCaixa" class="kpi-value">0 Db</span>
+          <span class="kpi-sub">Turno atualmente aberto</span>
+        </div>
+        <div class="kpi-card blue">
+          <span class="kpi-title">👤 Responsável / Reserva</span>
+          <span id="finPosResponsavel" class="kpi-value">0 Db</span>
+          <span class="kpi-sub">Dinheiro guardado</span>
+        </div>
+        <div class="kpi-card purple">
+          <span class="kpi-title">🏦 Banco STP / DobraPay</span>
+          <span id="finPosBanco" class="kpi-value">0 Db</span>
+          <span class="kpi-sub">Saldo em dobras</span>
+        </div>
+        <div class="kpi-card orange">
+          <span class="kpi-title">🇵🇹 Portugal / EUR</span>
+          <span id="finPosPortugal" class="kpi-value">0,00 €</span>
+          <span class="kpi-sub">Saldo da empresa em euros</span>
+        </div>
+        <div class="kpi-card teal">
+          <span class="kpi-title">Total Disponível STN</span>
+          <span id="finPosTotalStn" class="kpi-value">0 Db</span>
+          <span class="kpi-sub">Caixa + Responsável + Banco STP</span>
+        </div>
+        <div class="kpi-card orange">
+          <span class="kpi-title">Equivalente Indicativo</span>
+          <span id="finPosEquivalente" class="kpi-value">0 Db</span>
+          <span id="finPosEquivalenteSub" class="kpi-sub">STN + EUR × 26,00</span>
+        </div>
+      </div>
+      <p style="margin:0;color:#64748b;font-size:12px;">
+        O equivalente em Db é apenas informativo. Os saldos originais em EUR e STN permanecem separados.
+      </p>
+    </div>
+
+    <!-- OPERAÇÕES -->
+    <div class="dash-columns">
+      <div class="card" style="margin:0;border-left:4px solid #0d9488;">
+        <h3 style="color:#0f766e;">🚚 Encomendas</h3>
+        <div class="kpi-grid">
+          <div class="kpi-card teal">
+            <span class="kpi-title">Em Trânsito</span>
+            <span id="finEncAtivas" class="kpi-value">0</span>
+          </div>
+          <div class="kpi-card blue">
+            <span class="kpi-title">A Receber</span>
+            <span id="finEncAReceber" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card orange">
+            <span class="kpi-title">Custos Chegada</span>
+            <span id="finEncCustos" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card green">
+            <span class="kpi-title">Vendas Concluídas</span>
+            <span id="finEncReceita" class="kpi-value">0 Db</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin:0;border-left:4px solid #8b5cf6;">
+        <h3 style="color:#7c3aed;">💱 Transferências</h3>
+        <div class="kpi-grid">
+          <div class="kpi-card blue">
+            <span class="kpi-title">PT → STP</span>
+            <span id="finTransPTSTP" class="kpi-value">0,00 €</span>
+          </div>
+          <div class="kpi-card teal">
+            <span class="kpi-title">STP → PT</span>
+            <span id="finTransSTPPT" class="kpi-value">0,00 €</span>
+          </div>
+          <div class="kpi-card purple">
+            <span class="kpi-title">Margem do Período</span>
+            <span id="finTransMargem" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card orange">
+            <span class="kpi-title">Operações</span>
+            <span id="finTransQtd" class="kpi-value">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-columns">
+      <div class="card" style="margin:0;border-left:4px solid #ef4444;">
+        <h3 style="color:#b91c1c;">💸 Despesas</h3>
+        <div class="kpi-grid">
+          <div class="kpi-card red">
+            <span class="kpi-title">Total</span>
+            <span id="finDespTotal" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card orange">
+            <span class="kpi-title">Dinheiro</span>
+            <span id="finDespDinheiro" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card blue">
+            <span class="kpi-title">Transferência</span>
+            <span id="finDespTransferencia" class="kpi-value">0 Db</span>
+          </div>
+          <div class="kpi-card purple">
+            <span class="kpi-title">Maior Categoria</span>
+            <span id="finDespCategoria" class="kpi-value" style="font-size:14px;">-</span>
+            <span id="finDespCategoriaValor" class="kpi-sub">0 Db</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin:0;border-left:4px solid #f59e0b;">
+        <h3 style="color:#b45309;">📦 Património Operacional</h3>
+        <div class="kpi-grid">
+          <div class="kpi-card orange">
+            <span class="kpi-title">Estoque a Custo</span>
+            <span id="finEstoqueCusto" class="kpi-value">0 Db</span>
+            <span id="finEstoqueQtd" class="kpi-sub">0 unidades</span>
+          </div>
+          <div class="kpi-card blue">
+            <span class="kpi-title">Estoque a Venda</span>
+            <span id="finEstoqueVenda" class="kpi-value">0 Db</span>
+            <span class="kpi-sub">Potencial bruto de venda</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESEMPENHO -->
+    <div class="dash-columns">
+      <div class="card" style="margin:0;">
+        <h3>🏆 Top 5 Produtos — Período</h3>
+        <div class="table-responsive">
+          <table style="min-width:100%;">
+            <thead><tr><th style="text-align:left;">Produto</th><th>Qtd</th><th>Faturamento</th><th>Lucro</th></tr></thead>
+            <tbody id="finTopProdutos"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" style="margin:0;">
+        <h3>👤 Desempenho da Equipa — Período</h3>
+        <div class="table-responsive">
+          <table style="min-width:100%;">
+            <thead><tr><th style="text-align:left;">Vendedor</th><th>Vendas</th><th>Faturamento</th></tr></thead>
+            <tbody id="finEquipe"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:4px solid #64748b;">
+      <h3 style="color:#334155;">🧭 Leitura Gerencial</h3>
+      <div id="finAlertas" style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#475569;">
+        <div>Os indicadores serão calculados automaticamente.</div>
+      </div>
+    </div>
+
+  </div>
 
   <!-- PÁGINA: GESTÃO DE CAIXA & TURNO -->
   <div id="paginaCaixa" class="hidden">
@@ -1645,6 +1880,7 @@ function resetarInterface() {
   document.getElementById("btnPageEncomendas")?.classList.add("hidden");
   document.getElementById("btnPageDespesas")?.classList.add("hidden");
   document.getElementById("btnPageTesouraria")?.classList.add("hidden");
+  document.getElementById("btnPageFinanceiro")?.classList.add("hidden");
   document.getElementById("paginaEncomendas")?.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
@@ -1710,6 +1946,7 @@ auth.onAuthStateChanged(u => {
         btnPageEncomendas.classList.remove("hidden");
         btnPageDespesas.classList.remove("hidden");
         btnPageTesouraria.classList.remove("hidden");
+        btnPageFinanceiro.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnToggleFunc.classList.remove("hidden");
@@ -3687,6 +3924,7 @@ function navegarPara(paginaId) {
   ["btnPageMain","btnPageCaixa","btnPageArmazem"].forEach(id => document.getElementById(id)?.classList.remove("active"));
   const mapa = {
     paginaPrincipal: ["paginaPrincipal","btnPageMain"],
+    paginaFinanceiro: ["paginaFinanceiro","btnPageFinanceiro"],
     paginaCaixa: ["paginaCaixa","btnPageCaixa"],
     paginaArmazemPT: ["paginaArmazemPT","btnPageArmazem"]
   };
@@ -3894,7 +4132,24 @@ const prodRef=db.collection("produtos").doc(produtoId);
       if(estoque<qtd) throw new Error(`Estoque insuficiente! Restam apenas ${estoque} unidades.`);
       transaction.update(prodRef,{estoque:estoque-qtd});
       const movRef=db.collection("movimentacoes").doc();
-      transaction.set(movRef,{produto:produtoNome,tipo:"saida",quantidade:qtd,valor:total,formaPagamento:forma,cliente,usuario:user.email,nomeUsuario:usuarioNome||"Funcionário",uid:user.uid,role:usuarioRole,data:new Date(),...(caixaId?{caixaId}: {})});
+      transaction.set(movRef,{
+        produto:produtoNome,
+        produtoId,
+        tipo:"saida",
+        quantidade:qtd,
+        valor:total,
+        precoUnitarioVenda:precoUnit,
+        custoUnitarioVenda:Number(p.compra)||0,
+        custoTotalVenda:(Number(p.compra)||0)*qtd,
+        formaPagamento:forma,
+        cliente,
+        usuario:user.email,
+        nomeUsuario:usuarioNome||"Funcionário",
+        uid:user.uid,
+        role:usuarioRole,
+        data:new Date(),
+        ...(caixaId?{caixaId}: {})
+      });
     });
     const recibo={data:new Date().toLocaleString('pt-PT'),cliente,vendedor:usuarioNome||"Funcionário",item:produtoNome,qtd,precoUnit,total,pagamento:forma,troco};
     fecharModalVenda();
@@ -5403,6 +5658,370 @@ function limparFiltrosTesouraria() {
 });
 
 
+
+/* =========================================================================
+   FASE 5.4 — FINANCEIRO CONSOLIDADO
+   Somente leitura. Não cria documentos financeiros.
+   ========================================================================= */
+
+let finInicio = null;
+let finFim = null;
+
+function usuarioPodeFinanceiro() {
+  return usuarioRole === "admin";
+}
+
+function finNumero(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function finMoedaDb(v) {
+  return finNumero(v).toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
+}
+
+function finMoedaEur(v) {
+  return finNumero(v).toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2}) + " €";
+}
+
+function finData(v) {
+  if(!v) return null;
+  if(v.toDate && typeof v.toDate === "function") return v.toDate();
+  const d = v instanceof Date ? v : new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function finNoPeriodo(v) {
+  const d = finData(v);
+  if(!d) return false;
+  return (!finInicio || d >= finInicio) && (!finFim || d <= finFim);
+}
+
+function finPeriodoMesAtual() {
+  const agora = new Date();
+  finInicio = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0, 0);
+  finFim = new Date(agora.getFullYear(), agora.getMonth()+1, 0, 23, 59, 59, 999);
+  const ini = document.getElementById("finDataInicio");
+  const fim = document.getElementById("finDataFim");
+  if(ini) ini.value = `${finInicio.getFullYear()}-${String(finInicio.getMonth()+1).padStart(2,"0")}-01`;
+  if(fim) fim.value = `${finFim.getFullYear()}-${String(finFim.getMonth()+1).padStart(2,"0")}-${String(finFim.getDate()).padStart(2,"0")}`;
+  processarFinanceiro();
+}
+
+function finPeriodoHoje() {
+  const agora = new Date();
+  finInicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 0, 0, 0, 0);
+  finFim = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 23, 59, 59, 999);
+  const iso = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,"0")}-${String(agora.getDate()).padStart(2,"0")}`;
+  if(document.getElementById("finDataInicio")) finDataInicio.value = iso;
+  if(document.getElementById("finDataFim")) finDataFim.value = iso;
+  processarFinanceiro();
+}
+
+function finAplicarPeriodo() {
+  const i = document.getElementById("finDataInicio")?.value || "";
+  const f = document.getElementById("finDataFim")?.value || "";
+  if(!i || !f) return alert("Selecione a data inicial e a data final.");
+  const di = new Date(i+"T00:00:00");
+  const df = new Date(f+"T23:59:59.999");
+  if(di > df) return alert("A data inicial não pode ser posterior à data final.");
+  finInicio = di;
+  finFim = df;
+  processarFinanceiro();
+}
+
+function finSaldoCaixaAtual() {
+  if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") return 0;
+  try {
+    const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+    return finNumero(r.esperado);
+  } catch(e) {
+    return 0;
+  }
+}
+
+function finCustoVenda(m) {
+  const qtd = finNumero(m.quantidade) || 1;
+  if(Number.isFinite(Number(m.custoTotalVenda))) {
+    return {custo: finNumero(m.custoTotalVenda), estimado:false};
+  }
+  if(Number.isFinite(Number(m.custoUnitarioVenda))) {
+    return {custo: finNumero(m.custoUnitarioVenda)*qtd, estimado:false};
+  }
+
+  // Compatibilidade com vendas antigas: usa custo atual apenas como estimativa.
+  const prod = todosProdutos.find(p =>
+    (m.produtoId && p.id === m.produtoId) ||
+    (!m.produtoId && String(p.nome||"") === String(m.produto||""))
+  );
+  return {
+    custo: prod ? finNumero(prod.compra)*qtd : 0,
+    estimado:true
+  };
+}
+
+function processarFinanceiro() {
+  if(!usuarioPodeFinanceiro()) return;
+  const pagina = document.getElementById("paginaFinanceiro");
+  if(!pagina) return;
+
+  if(!finInicio || !finFim) {
+    const agora = new Date();
+    finInicio = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0, 0);
+    finFim = new Date(agora.getFullYear(), agora.getMonth()+1, 0, 23, 59, 59, 999);
+  }
+
+  const label = document.getElementById("finPeriodoLabel");
+  if(label) label.innerText =
+    `Período: ${finInicio.toLocaleDateString("pt-PT")} até ${finFim.toLocaleDateString("pt-PT")}`;
+
+  // -------------------- VENDAS REAIS --------------------
+  let vendas = 0, qtdVendas = 0, lucroProdutos = 0, vendasCustoEstimado = 0;
+  const prods = {};
+  const equipe = {};
+
+  (todasMovimentacoes || []).forEach(m => {
+    if(!ehMovimentoVendaReal(m) || !finNoPeriodo(m.data)) return;
+
+    const val = finNumero(m.valor);
+    const qtd = finNumero(m.quantidade) || 1;
+    const custoInfo = finCustoVenda(m);
+    const lucro = val - custoInfo.custo;
+
+    vendas += val;
+    qtdVendas++;
+    lucroProdutos += lucro;
+    if(custoInfo.estimado) vendasCustoEstimado++;
+
+    const nomeProd = m.produto || "Produto";
+    if(!prods[nomeProd]) prods[nomeProd] = {qtd:0, fat:0, lucro:0};
+    prods[nomeProd].qtd += qtd;
+    prods[nomeProd].fat += val;
+    prods[nomeProd].lucro += lucro;
+
+    const vendedor = String(m.nomeUsuario || m.usuario || "Outro");
+    if(!equipe[vendedor]) equipe[vendedor] = {qtd:0, fat:0};
+    equipe[vendedor].qtd++;
+    equipe[vendedor].fat += val;
+  });
+
+  // -------------------- ENCOMENDAS --------------------
+  let encAtivas = 0, encAReceber = 0;
+  let lucroEncomendas = 0, receitaEncConcluidas = 0, custosEncChegada = 0, qtdEncConcluidas = 0;
+
+  (todasEncomendas || []).forEach(enc => {
+    const estado = String(enc.estado || "").toUpperCase();
+    const total = finNumero(enc.valorTotal);
+    const sinal = finNumero(enc.sinalPago);
+
+    if(estado === "EM_TRANSITO" || estado === "AGUARDANDO" || estado === "PENDENTE") {
+      encAtivas++;
+      encAReceber += Math.max(0, total - sinal);
+    }
+
+    if(estado === "CONCLUIDO" || estado === "CONCLUÍDO" || estado === "ENTREGUE") {
+      // Resultado reconhecido na conclusão/entrega.
+      const dataResultado = enc.dataConclusao || enc.dataEntrega || enc.data;
+      if(finNoPeriodo(dataResultado)) {
+        const compra = finNumero(enc.custoCompra);
+        const chegada = finNumero(enc.custosChegada);
+        const lucro = Number.isFinite(Number(enc.lucroReal))
+          ? finNumero(enc.lucroReal)
+          : total - compra - chegada;
+
+        lucroEncomendas += lucro;
+        receitaEncConcluidas += total;
+        custosEncChegada += chegada;
+        qtdEncConcluidas++;
+      }
+    }
+  });
+
+  // -------------------- TRANSFERÊNCIAS COMERCIAIS --------------------
+  let margemTrans = 0, eurPTSTP = 0, eurSTPPT = 0, qtdTrans = 0;
+  (todasTransferencias || []).forEach(t => {
+    if(!finNoPeriodo(t.data)) return;
+    qtdTrans++;
+    margemTrans += finNumero(t.margemDb);
+    const eur = finNumero(t.qtdEur);
+    if(t.direcao === "PT_STP") eurPTSTP += eur;
+    if(t.direcao === "STP_PT") eurSTPPT += eur;
+  });
+
+  // Continuidade para margens antigas de câmbio que ainda existam.
+  (todasMovimentacoes || []).forEach(m => {
+    if(m.tipo === "cambio_comissao" && finNoPeriodo(m.data)) {
+      margemTrans += finNumero(m.valor);
+    }
+  });
+
+  // -------------------- DESPESAS OPERACIONAIS --------------------
+  let despesas = 0, despDin = 0, despTrans = 0;
+  const despCategorias = {};
+  (todasDespesas || []).forEach(d => {
+    if(!finNoPeriodo(d.data)) return;
+    const v = finNumero(d.valor);
+    despesas += v;
+    if(d.formaPagamento === "Dinheiro") despDin += v;
+    else if(d.formaPagamento === "Transferencia") despTrans += v;
+    const cat = d.categoria || "Outros";
+    despCategorias[cat] = (despCategorias[cat] || 0) + v;
+  });
+  const maiorCat = Object.entries(despCategorias).sort((a,b)=>b[1]-a[1])[0] || ["-",0];
+
+  // -------------------- RESULTADO --------------------
+  const lucroLiquido = lucroProdutos + lucroEncomendas + margemTrans - despesas;
+  const receitaComercial = vendas + receitaEncConcluidas;
+  const margemLiquidaPct = receitaComercial > 0 ? (lucroLiquido / receitaComercial) * 100 : 0;
+
+  // -------------------- POSIÇÃO FINANCEIRA --------------------
+  const caixa = finSaldoCaixaAtual();
+  const responsavel = finNumero(contasTesouraria?.responsavel_stp);
+  const banco = finNumero(contasTesouraria?.banco_stp);
+  const portugal = finNumero(contasTesouraria?.portugal_eur);
+  const totalStn = caixa + responsavel + banco;
+  const taxaRefPatrimonial = 26.00;
+  const equivalenteDb = totalStn + portugal * taxaRefPatrimonial;
+
+  // -------------------- ESTOQUE --------------------
+  let estoqueCusto = 0, estoqueVenda = 0, estoqueQtd = 0;
+  (todosProdutos || []).forEach(p => {
+    const q = finNumero(p.estoque);
+    estoqueQtd += q;
+    estoqueCusto += q * finNumero(p.compra);
+    estoqueVenda += q * finNumero(p.venda);
+  });
+
+  // -------------------- PREENCHER KPIs --------------------
+  const set = (id, txt) => {
+    const el = document.getElementById(id);
+    if(el) el.innerText = txt;
+  };
+
+  set("finKpiVendas", finMoedaDb(vendas));
+  set("finKpiVendasSub", `${qtdVendas} venda${qtdVendas===1?"":"s"} no período`);
+  set("finKpiLucroProdutos", finMoedaDb(lucroProdutos));
+  set("finKpiLucroProdutosSub",
+      vendasCustoEstimado > 0
+        ? `${vendasCustoEstimado} venda(s) antiga(s) com custo estimado`
+        : "Custos preservados nas vendas novas");
+  set("finKpiLucroEncomendas", finMoedaDb(lucroEncomendas));
+  set("finKpiLucroEncomendasSub", `${qtdEncConcluidas} concluída(s) no período`);
+  set("finKpiMargemTransferencias", finMoedaDb(margemTrans));
+  set("finKpiDespesas", finMoedaDb(despesas));
+  set("finKpiDespesasSub", `${Object.keys(despCategorias).length} categoria(s)`);
+  set("finKpiLucroLiquido", finMoedaDb(lucroLiquido));
+  set("finKpiMargemLiquida", `Margem líquida: ${margemLiquidaPct.toLocaleString("pt-PT",{maximumFractionDigits:1})}%`);
+
+  set("finPosCaixa", finMoedaDb(caixa));
+  set("finPosResponsavel", finMoedaDb(responsavel));
+  set("finPosBanco", finMoedaDb(banco));
+  set("finPosPortugal", finMoedaEur(portugal));
+  set("finPosTotalStn", finMoedaDb(totalStn));
+  set("finPosEquivalente", finMoedaDb(equivalenteDb));
+  set("finPosEquivalenteSub", `Referência: ${taxaRefPatrimonial.toFixed(2)} Db/€`);
+
+  set("finEncAtivas", String(encAtivas));
+  set("finEncAReceber", finMoedaDb(encAReceber));
+  set("finEncCustos", finMoedaDb(custosEncChegada));
+  set("finEncReceita", finMoedaDb(receitaEncConcluidas));
+
+  set("finTransPTSTP", finMoedaEur(eurPTSTP));
+  set("finTransSTPPT", finMoedaEur(eurSTPPT));
+  set("finTransMargem", finMoedaDb(margemTrans));
+  set("finTransQtd", String(qtdTrans));
+
+  set("finDespTotal", finMoedaDb(despesas));
+  set("finDespDinheiro", finMoedaDb(despDin));
+  set("finDespTransferencia", finMoedaDb(despTrans));
+  set("finDespCategoria", maiorCat[0]);
+  set("finDespCategoriaValor", finMoedaDb(maiorCat[1]));
+
+  set("finEstoqueCusto", finMoedaDb(estoqueCusto));
+  set("finEstoqueVenda", finMoedaDb(estoqueVenda));
+  set("finEstoqueQtd", `${estoqueQtd.toLocaleString("pt-PT")} unidade(s)`);
+
+  // -------------------- TABELAS --------------------
+  const topProdutos = Object.entries(prods)
+    .sort((a,b)=>b[1].fat-a[1].fat)
+    .slice(0,5);
+
+  const tbP = document.getElementById("finTopProdutos");
+  if(tbP) {
+    tbP.innerHTML = topProdutos.map(([nome,d]) => `<tr>
+      <td style="text-align:left;"><b>${nome}</b></td>
+      <td>${d.qtd.toLocaleString("pt-PT")}</td>
+      <td style="font-weight:bold;color:#2563eb;">${finMoedaDb(d.fat)}</td>
+      <td style="font-weight:bold;color:${d.lucro>=0?"#059669":"#dc2626"};">${finMoedaDb(d.lucro)}</td>
+    </tr>`).join("") || '<tr><td colspan="4" style="color:#94a3b8;">Sem vendas no período.</td></tr>';
+  }
+
+  const eq = Object.entries(equipe).sort((a,b)=>b[1].fat-a[1].fat);
+  const tbE = document.getElementById("finEquipe");
+  if(tbE) {
+    tbE.innerHTML = eq.map(([nome,d]) => `<tr>
+      <td style="text-align:left;"><b>${nome}</b></td>
+      <td>${d.qtd}</td>
+      <td style="font-weight:bold;color:#059669;">${finMoedaDb(d.fat)}</td>
+    </tr>`).join("") || '<tr><td colspan="3" style="color:#94a3b8;">Sem vendas no período.</td></tr>';
+  }
+
+  // -------------------- LEITURA GERENCIAL --------------------
+  const alertas = [];
+  if(lucroLiquido < 0) {
+    alertas.push(`🔴 <b>Resultado negativo:</b> o período está em ${finMoedaDb(lucroLiquido)}.`);
+  } else {
+    alertas.push(`🟢 <b>Resultado positivo:</b> lucro líquido de ${finMoedaDb(lucroLiquido)}.`);
+  }
+
+  if(receitaComercial > 0) {
+    const pctDesp = (despesas / receitaComercial) * 100;
+    alertas.push(`📌 Despesas operacionais equivalem a <b>${pctDesp.toLocaleString("pt-PT",{maximumFractionDigits:1})}%</b> da receita comercial realizada.`);
+  }
+
+  if(totalStn > 0 && responsavel / totalStn >= 0.70) {
+    alertas.push(`🟠 <b>Concentração de caixa:</b> ${((responsavel/totalStn)*100).toLocaleString("pt-PT",{maximumFractionDigits:0})}% do dinheiro em STN está com a Responsável/Reserva.`);
+  }
+
+  if(encAReceber > 0) {
+    alertas.push(`🚚 Há <b>${finMoedaDb(encAReceber)}</b> ainda a receber de encomendas em trânsito.`);
+  }
+
+  if(margemTrans < 0) {
+    alertas.push(`⚠️ A margem de transferências do período está negativa em <b>${finMoedaDb(margemTrans)}</b>.`);
+  }
+
+  if(vendasCustoEstimado > 0) {
+    alertas.push(`ℹ️ <b>Histórico antigo:</b> ${vendasCustoEstimado} venda(s) não possuem snapshot de custo. Para elas, o lucro é uma estimativa baseada no custo atual do produto. Vendas novas passam a guardar o custo no momento da venda.`);
+  }
+
+  const box = document.getElementById("finAlertas");
+  if(box) box.innerHTML = alertas.map(a => `<div style="background:#f8fafc;border:1px solid #e2e8f0;padding:9px 11px;border-radius:8px;">${a}</div>`).join("");
+}
+
+/* Mantém o Dashboard operacional existente e atualiza também o Financeiro. */
+const _processarDashboardFase53 = processarDashboard;
+processarDashboard = function() {
+  _processarDashboardFase53();
+  processarFinanceiro();
+};
+
+/* Listener da Tesouraria passa a atualizar também a posição financeira consolidada. */
+function iniciarListenerTesouraria() {
+  if(listenerTesouraria) listenerTesouraria();
+  if(!usuarioPodeTesouraria()) return;
+
+  listenerTesouraria = db.collection("tesouraria_movimentos").orderBy("data","desc").onSnapshot(s => {
+    movimentosTesouraria = [];
+    s.forEach(d => movimentosTesouraria.push({id:d.id, ...d.data()}));
+    recalcularSaldosTesouraria();
+    renderizarTesouraria();
+    processarFinanceiro();
+  }, e => console.warn("Tesouraria:", e));
+}
+
+
+
 /* Navegação final da Fase 4: adiciona a página de Transferências sem remover as páginas da Fase 3. */
 function navegarPara(paginaId) {
   if(paginaId === "paginaTransferencias" && !usuarioPodeTransferencias()) {
@@ -5421,13 +6040,17 @@ function navegarPara(paginaId) {
     alert("Acesso restrito: o módulo Tesouraria é exclusivo do Administrador.");
     return;
   }
+  if(paginaId === "paginaFinanceiro" && !usuarioPodeFinanceiro()) {
+    alert("Acesso restrito: o módulo Financeiro é exclusivo do Administrador.");
+    return;
+  }
   if(paginaId === "paginaArmazemPT" && !usuarioPodeArmazemPT()) {
     alert("Acesso restrito: o Armazém Portugal é exclusivo do Administrador e do Estoque.");
     return;
   }
 
-  const paginas = ["paginaPrincipal","paginaCaixa","paginaTransferencias","paginaEncomendas","paginaDespesas","paginaTesouraria","paginaArmazemPT"];
-  const botoes = ["btnPageMain","btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageDespesas","btnPageTesouraria","btnPageArmazem"];
+  const paginas = ["paginaPrincipal","paginaFinanceiro","paginaCaixa","paginaTransferencias","paginaEncomendas","paginaDespesas","paginaTesouraria","paginaArmazemPT"];
+  const botoes = ["btnPageMain","btnPageFinanceiro","btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageDespesas","btnPageTesouraria","btnPageArmazem"];
 
   paginas.forEach(id => document.getElementById(id)?.classList.add("hidden"));
   botoes.forEach(id => document.getElementById(id)?.classList.remove("active"));
@@ -5447,6 +6070,11 @@ function navegarPara(paginaId) {
   document.getElementById(par[0])?.classList.remove("hidden");
   document.getElementById(par[1])?.classList.add("active");
 
+  if(paginaId === "paginaFinanceiro") {
+    iniciarListenerTesouraria();
+    if(!finInicio || !finFim) finPeriodoMesAtual();
+    else processarFinanceiro();
+  }
   if(paginaId === "paginaTransferencias") {
     atualizarTransferenciaForm();
     renderizarTransferencias();
