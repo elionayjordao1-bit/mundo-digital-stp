@@ -395,6 +395,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   <nav class="main-nav">
     <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas</button>
     <button class="nav-btn hidden" id="btnPageFinanceiro" onclick="navegarPara('paginaFinanceiro')">📈 Financeiro</button>
+    <button class="nav-btn hidden" id="btnPageAuditoria" onclick="navegarPara('paginaAuditoria')">🛡️ Auditoria</button>
     <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Gestão de Caixa</button>
     <button class="nav-btn hidden" id="btnPageTransferencias" onclick="navegarPara('paginaTransferencias')">💱 Transferências</button>
     <button class="nav-btn hidden" id="btnPageEncomendas" onclick="navegarPara('paginaEncomendas')">🚚 Encomendas</button>
@@ -965,6 +966,104 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <h3 style="color:#334155;">🧭 Leitura Gerencial</h3>
       <div id="finAlertas" style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#475569;">
         <div>Os indicadores serão calculados automaticamente.</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- PÁGINA: AUDITORIA & INTEGRIDADE — FASE 6.1 -->
+  <div id="paginaAuditoria" class="hidden">
+
+    <div class="card" style="border-top:4px solid #334155;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h3 style="color:#0f172a;margin-bottom:6px;">🛡️ Auditoria & Integridade Financeira — Fase 6.1</h3>
+          <p style="margin:0;color:#64748b;font-size:13px;line-height:1.6;">
+            Verificação administrativa somente leitura. Esta página não altera nem corrige dados automaticamente.
+            Ela identifica inconsistências antes da entrada oficial em produção.
+          </p>
+        </div>
+        <button onclick="executarAuditoriaIntegridade()" class="btn-success">🔎 Reexecutar Auditoria</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card blue">
+        <span class="kpi-title">Verificações</span>
+        <span id="audKpiTotal" class="kpi-value">0</span>
+        <span class="kpi-sub">Regras analisadas</span>
+      </div>
+      <div class="kpi-card green">
+        <span class="kpi-title">OK</span>
+        <span id="audKpiOk" class="kpi-value">0</span>
+        <span class="kpi-sub">Sem inconsistência</span>
+      </div>
+      <div class="kpi-card orange">
+        <span class="kpi-title">Alertas</span>
+        <span id="audKpiAlertas" class="kpi-value">0</span>
+        <span class="kpi-sub" style="color:#d97706;">Requer revisão</span>
+      </div>
+      <div class="kpi-card red">
+        <span class="kpi-title">Críticos</span>
+        <span id="audKpiCriticos" class="kpi-value">0</span>
+        <span class="kpi-sub" style="color:#dc2626;">Bloqueia homologação</span>
+      </div>
+    </div>
+
+    <div id="audEstadoGeral" class="card" style="border-left:6px solid #64748b;">
+      <h3 id="audEstadoTitulo" style="margin-bottom:6px;">⚪ Auditoria ainda não executada</h3>
+      <p id="audEstadoTexto" style="margin:0;color:#64748b;font-size:13px;">
+        Clique em “Reexecutar Auditoria”.
+      </p>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h3 style="margin:0;border:none;">📋 Resultado das Verificações</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select id="audFiltroNivel" onchange="renderizarAuditoria()" style="width:auto;min-width:150px;">
+            <option value="">Todos os níveis</option>
+            <option value="CRITICO">🔴 Críticos</option>
+            <option value="ALERTA">🟠 Alertas</option>
+            <option value="OK">🟢 OK</option>
+          </select>
+          <select id="audFiltroModulo" onchange="renderizarAuditoria()" style="width:auto;min-width:170px;">
+            <option value="">Todos os módulos</option>
+            <option value="Vendas">Vendas</option>
+            <option value="Caixa">Caixa</option>
+            <option value="Despesas">Despesas</option>
+            <option value="Encomendas">Encomendas</option>
+            <option value="Transferências">Transferências</option>
+            <option value="Tesouraria">Tesouraria</option>
+            <option value="Capital">Capital / Dívidas</option>
+            <option value="Estoque">Estoque</option>
+          </select>
+          <button onclick="limparFiltrosAuditoria()" class="btn-secondary">Limpar Filtros</button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table style="min-width:1100px;">
+          <thead>
+            <tr>
+              <th>Nível</th><th>Módulo</th><th>Referência</th><th>Verificação</th>
+              <th>Detalhe</th><th>Responsável</th><th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="audListaResultados"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="background:#f8fafc;border-left:4px solid #2563eb;">
+      <h3 style="color:#1d4ed8;">ℹ️ Como interpretar</h3>
+      <div style="font-size:13px;color:#475569;line-height:1.8;">
+        <b>🟢 OK:</b> regra verificada e coerente.<br>
+        <b>🟠 ALERTA:</b> normalmente dado antigo, incompleto ou situação que merece conferência; não altera dados automaticamente.<br>
+        <b>🔴 CRÍTICO:</b> inconsistência financeira/operacional que deve ser resolvida antes do GO LIVE.<br><br>
+        Registros antigos sem snapshot de custo podem aparecer como alerta. Isso não significa que a venda esteja errada:
+        significa apenas que o lucro histórico é estimado usando o custo atual do produto.
       </div>
     </div>
 
@@ -1985,6 +2084,7 @@ function resetarInterface() {
   document.getElementById("btnPageDespesas")?.classList.add("hidden");
   document.getElementById("btnPageTesouraria")?.classList.add("hidden");
   document.getElementById("btnPageFinanceiro")?.classList.add("hidden");
+  document.getElementById("btnPageAuditoria")?.classList.add("hidden");
   document.getElementById("paginaEncomendas")?.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
@@ -2051,6 +2151,7 @@ auth.onAuthStateChanged(u => {
         btnPageDespesas.classList.remove("hidden");
         btnPageTesouraria.classList.remove("hidden");
         btnPageFinanceiro.classList.remove("hidden");
+        btnPageAuditoria.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnToggleFunc.classList.remove("hidden");
@@ -4029,6 +4130,7 @@ function navegarPara(paginaId) {
   const mapa = {
     paginaPrincipal: ["paginaPrincipal","btnPageMain"],
     paginaFinanceiro: ["paginaFinanceiro","btnPageFinanceiro"],
+    paginaAuditoria: ["paginaAuditoria","btnPageAuditoria"],
     paginaCaixa: ["paginaCaixa","btnPageCaixa"],
     paginaArmazemPT: ["paginaArmazemPT","btnPageArmazem"]
   };
@@ -6374,6 +6476,459 @@ function iniciarListenerTesouraria() {
 
 
 
+
+/* =========================================================================
+   FASE 6.1 — AUDITORIA & INTEGRIDADE FINANCEIRA
+   Somente leitura: não cria, edita nem apaga documentos.
+   ========================================================================= */
+
+let resultadosAuditoria61 = [];
+
+function usuarioPodeAuditoria61() {
+  return usuarioRole === "admin";
+}
+
+function audData(v) {
+  if(!v) return null;
+  if(v.toDate && typeof v.toDate === "function") return v.toDate();
+  const d = v instanceof Date ? v : new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function audDataTxt(v) {
+  const d = audData(v);
+  return d ? d.toLocaleString("pt-PT") : "-";
+}
+
+function audNum(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function audRef(prefixo, id) {
+  return id ? `${prefixo} #${String(id).substring(0,8).toUpperCase()}` : prefixo;
+}
+
+function audAdicionar(nivel, modulo, referencia, regra, detalhe, obj=null) {
+  resultadosAuditoria61.push({
+    nivel, modulo, referencia, regra, detalhe,
+    responsavel: obj ? (obj.nomeUsuario || obj.usuario || obj.cliente || "-") : "-",
+    data: obj ? audDataTxt(obj.data || obj.dataAbertura || obj.dataConclusao) : "-"
+  });
+}
+
+function audResumoModulo(modulo, verificacao, qtdProblemas, detalheOk) {
+  if(qtdProblemas === 0) {
+    audAdicionar("OK", modulo, "Resumo", verificacao, detalheOk);
+  }
+}
+
+function executarAuditoriaIntegridade() {
+  if(!usuarioPodeAuditoria61()) return alert("Acesso restrito: Auditoria é exclusiva do Administrador.");
+
+  resultadosAuditoria61 = [];
+
+  // =========================================================
+  // ESTOQUE
+  // =========================================================
+  let problemasEstoque = 0;
+  (todosProdutos || []).forEach(p => {
+    const ref = audRef("PROD", p.id);
+    const est = Number(p.estoque);
+    if(!String(p.nome || "").trim()) {
+      problemasEstoque++;
+      audAdicionar("CRITICO","Estoque",ref,"Produto sem nome","O produto não possui nome identificável.",p);
+    }
+    if(!Number.isFinite(est)) {
+      problemasEstoque++;
+      audAdicionar("CRITICO","Estoque",ref,"Estoque inválido","Quantidade de estoque não é numérica.",p);
+    } else if(est < 0) {
+      problemasEstoque++;
+      audAdicionar("CRITICO","Estoque",ref,"Estoque negativo",`Estoque atual: ${est}.`,p);
+    }
+    if(audNum(p.venda) < 0 || audNum(p.compra) < 0) {
+      problemasEstoque++;
+      audAdicionar("CRITICO","Estoque",ref,"Preço negativo","Preço de compra/venda não pode ser negativo.",p);
+    }
+  });
+  audResumoModulo("Estoque","Integridade dos produtos",problemasEstoque,
+    `${(todosProdutos||[]).length} produto(s) verificado(s), sem estoque ou preço negativo.`);
+
+  // =========================================================
+  // VENDAS / MOVIMENTAÇÕES
+  // =========================================================
+  let problemasVendas = 0;
+  let vendasReais = 0;
+  let vendasSemSnapshot = 0;
+
+  (todasMovimentacoes || []).forEach(m => {
+    if(!ehMovimentoVendaReal(m)) return;
+    vendasReais++;
+    const ref = audRef("MOV", m.id);
+
+    if(!m.uid || !audData(m.data)) {
+      problemasVendas++;
+      audAdicionar("CRITICO","Vendas",ref,"Rastro de auditoria incompleto",
+        "Venda sem UID do responsável e/ou data válida.",m);
+    }
+    if(audNum(m.quantidade) <= 0 || audNum(m.valor) <= 0) {
+      problemasVendas++;
+      audAdicionar("CRITICO","Vendas",ref,"Quantidade/valor inválido",
+        `Quantidade: ${m.quantidade ?? "-"} | Valor: ${m.valor ?? "-"}.`,m);
+    }
+
+    const forma = String(m.formaPagamento || "");
+    const vendaEmDinheiro = forma.includes("Dinheiro") ||
+      (!forma.includes("Transferencia") && !forma.includes("Cartao") && !forma.includes("Cartão"));
+    if(vendaEmDinheiro && !m.caixaId) {
+      problemasVendas++;
+      audAdicionar("ALERTA","Vendas",ref,"Venda em dinheiro sem caixaId",
+        "Pode ser um registro antigo anterior ao controle obrigatório de caixa.",m);
+    }
+
+    if(!Number.isFinite(Number(m.custoTotalVenda)) && !Number.isFinite(Number(m.custoUnitarioVenda))) {
+      vendasSemSnapshot++;
+      audAdicionar("ALERTA","Vendas",ref,"Venda antiga sem snapshot de custo",
+        "O lucro histórico desta venda é estimado usando o custo atual do produto.",m);
+    }
+  });
+
+  if(vendasReais === 0) {
+    audAdicionar("OK","Vendas","Resumo","Vendas reais","Nenhuma venda real carregada para verificar.");
+  } else if(problemasVendas === 0 && vendasSemSnapshot === 0) {
+    audAdicionar("OK","Vendas","Resumo","Integridade das vendas",
+      `${vendasReais} venda(s) com UID, data, valores e custo preservado.`);
+  } else if(problemasVendas === 0) {
+    audAdicionar("OK","Vendas","Resumo","Estrutura operacional das vendas",
+      `${vendasReais} venda(s) sem inconsistência operacional crítica.`);
+  }
+
+  // =========================================================
+  // CAIXA / TURNOS
+  // =========================================================
+  let problemasCaixa = 0;
+  const caixas = (todosCaixasAuditoria || []);
+  const abertosPorUid = {};
+
+  caixas.forEach(c => {
+    const ref = audRef("CAIXA", c.id);
+    const estado = String(c.estado || "");
+    if(!c.uid || !audData(c.dataAbertura)) {
+      problemasCaixa++;
+      audAdicionar("CRITICO","Caixa",ref,"Abertura sem rastro completo",
+        "Turno sem UID e/ou data de abertura válida.",c);
+    }
+    if(!["aberto","fechado"].includes(estado)) {
+      problemasCaixa++;
+      audAdicionar("ALERTA","Caixa",ref,"Estado de turno desconhecido",`Estado: ${estado || "(vazio)"}.`,c);
+    }
+    if(estado === "aberto" && c.uid) {
+      abertosPorUid[c.uid] = (abertosPorUid[c.uid] || 0) + 1;
+    }
+    if(estado === "fechado" && !audData(c.dataFechamento)) {
+      problemasCaixa++;
+      audAdicionar("ALERTA","Caixa",ref,"Turno fechado sem dataFechamento",
+        "Registro fechado sem data de encerramento identificável.",c);
+    }
+  });
+
+  Object.entries(abertosPorUid).forEach(([uid,qtd]) => {
+    if(qtd > 1) {
+      problemasCaixa++;
+      audAdicionar("CRITICO","Caixa",`UID ${uid.substring(0,8)}`,"Mais de um caixa aberto",
+        `${qtd} turnos abertos simultaneamente para o mesmo utilizador.`);
+    }
+  });
+
+  const tiposFisicos = new Set([
+    "transferencia_entrada","transferencia_saida","despesa_caixa",
+    "suprimento_caixa","sangria_caixa"
+  ]);
+  (todasMovimentacoes || []).forEach(m => {
+    const forma = String(m.formaPagamento || "");
+    const fisico = tiposFisicos.has(m.tipo) ||
+      (m.tipo === "saida" && forma.includes("Dinheiro") && !ehTransferenciaLegacy(m));
+    if(fisico && !m.caixaId) {
+      problemasCaixa++;
+      audAdicionar("ALERTA","Caixa",audRef("MOV",m.id),"Movimento físico sem caixaId",
+        `${m.tipo || "movimento"} — ${m.produto || m.formaPagamento || "sem descrição"}.`,m);
+    }
+  });
+
+  audResumoModulo("Caixa","Integridade dos turnos e movimentos físicos",problemasCaixa,
+    `${caixas.length} turno(s) e movimentos físicos verificados sem inconsistência.`);
+
+  // =========================================================
+  // DESPESAS
+  // =========================================================
+  let problemasDespesas = 0;
+  (todasDespesas || []).forEach(d => {
+    const ref = audRef("DESP",d.id);
+    if(audNum(d.valor) <= 0) {
+      problemasDespesas++;
+      audAdicionar("CRITICO","Despesas",ref,"Valor de despesa inválido",
+        `Valor: ${d.valor ?? "-"}.`,d);
+    }
+    if(!d.uid || !audData(d.data)) {
+      problemasDespesas++;
+      audAdicionar("CRITICO","Despesas",ref,"Rastro de auditoria incompleto",
+        "Despesa sem UID e/ou data válida.",d);
+    }
+    if(d.formaPagamento === "Dinheiro" && !d.caixaId) {
+      problemasDespesas++;
+      audAdicionar("CRITICO","Despesas",ref,"Despesa em dinheiro sem caixa",
+        "Despesa física deveria estar vinculada ao turno.",d);
+    }
+    if(d.formaPagamento === "Transferencia" && d.caixaId) {
+      problemasDespesas++;
+      audAdicionar("ALERTA","Despesas",ref,"Transferência vinculada ao caixa",
+        "Pagamento por transferência não deveria movimentar a gaveta física.",d);
+    }
+  });
+  audResumoModulo("Despesas","Integridade das despesas",problemasDespesas,
+    `${(todasDespesas||[]).length} despesa(s) verificada(s) sem inconsistência.`);
+
+  // =========================================================
+  // ENCOMENDAS
+  // =========================================================
+  let problemasEnc = 0;
+  (todasEncomendas || []).forEach(e => {
+    const ref = audRef("ENC",e.id);
+    const total = audNum(e.valorTotal);
+    const sinal = audNum(e.sinalPago);
+    const estado = String(e.estado || "").toUpperCase();
+
+    if(total <= 0) {
+      problemasEnc++;
+      audAdicionar("CRITICO","Encomendas",ref,"Valor total inválido",`Valor total: ${e.valorTotal ?? "-"}.`,e);
+    }
+    if(sinal < 0 || sinal > total) {
+      problemasEnc++;
+      audAdicionar("CRITICO","Encomendas",ref,"Sinal incoerente",
+        `Sinal: ${sinal} Db | Valor total: ${total} Db.`,e);
+    }
+    if(!e.uid || !audData(e.data)) {
+      problemasEnc++;
+      audAdicionar("ALERTA","Encomendas",ref,"Rastro incompleto",
+        "Encomenda sem UID e/ou data de criação.",e);
+    }
+    if(["CONCLUIDO","CONCLUÍDO","ENTREGUE"].includes(estado) &&
+       !audData(e.dataConclusao || e.dataEntrega)) {
+      problemasEnc++;
+      audAdicionar("ALERTA","Encomendas",ref,"Concluída sem data de conclusão",
+        "O resultado por período pode depender da data original.",e);
+    }
+  });
+  audResumoModulo("Encomendas","Integridade das encomendas",problemasEnc,
+    `${(todasEncomendas||[]).length} encomenda(s) verificada(s) sem inconsistência.`);
+
+  // =========================================================
+  // TRANSFERÊNCIAS
+  // =========================================================
+  let problemasTrans = 0;
+  (todasTransferencias || []).forEach(t => {
+    const ref = audRef("TRANS",t.id);
+    const eur = audNum(t.qtdEur);
+    const taxaRef = audNum(t.taxaReferencia);
+    const taxa = audNum(t.taxaAplicada);
+    const totalDb = audNum(t.totalDb);
+    const esperadoTotal = Math.round(eur * taxa);
+    const esperadoMargem = t.direcao === "PT_STP"
+      ? Math.round((eur * taxaRef) - esperadoTotal)
+      : Math.round(esperadoTotal - (eur * taxaRef));
+
+    if(eur <= 0 || taxaRef <= 0 || taxa <= 0 || totalDb <= 0) {
+      problemasTrans++;
+      audAdicionar("CRITICO","Transferências",ref,"Valores/taxas inválidos",
+        `EUR=${eur}, Ref=${taxaRef}, Aplicada=${taxa}, TotalDb=${totalDb}.`,t);
+    }
+    if(Math.abs(totalDb - esperadoTotal) > 1) {
+      problemasTrans++;
+      audAdicionar("CRITICO","Transferências",ref,"Conversão matemática divergente",
+        `Gravado: ${totalDb} Db | Esperado: ${esperadoTotal} Db.`,t);
+    }
+    if(Math.abs(audNum(t.margemDb) - esperadoMargem) > 1) {
+      problemasTrans++;
+      audAdicionar("ALERTA","Transferências",ref,"Margem divergente",
+        `Gravada: ${audNum(t.margemDb)} Db | Calculada: ${esperadoMargem} Db.`,t);
+    }
+    if(t.formaSTP === "Dinheiro" && !t.caixaId) {
+      problemasTrans++;
+      audAdicionar("CRITICO","Transferências",ref,"Operação em dinheiro sem caixa",
+        "Transferência comercial em dinheiro deveria estar ligada a um turno.",t);
+    }
+    if(!t.uid || !audData(t.data)) {
+      problemasTrans++;
+      audAdicionar("CRITICO","Transferências",ref,"Rastro de auditoria incompleto",
+        "Transferência sem UID e/ou data válida.",t);
+    }
+  });
+  audResumoModulo("Transferências","Integridade das transferências",problemasTrans,
+    `${(todasTransferencias||[]).length} transferência(s) verificada(s) com valores e taxas coerentes.`);
+
+  // =========================================================
+  // TESOURARIA
+  // =========================================================
+  let problemasTes = 0;
+  const contasValidas = new Set(["caixa_stp","responsavel_stp","banco_stp","portugal_eur"]);
+  const tiposExternos = new Set(["saldo_inicial","externo_socio","externo_banco","cliente_externo"]);
+
+  (movimentosTesouraria || []).forEach(m => {
+    const ref = audRef("TES",m.id);
+    const vo = audNum(m.valorOrigem);
+    const vd = audNum(m.valorDestino);
+
+    if(!m.uid || !audData(m.data)) {
+      problemasTes++;
+      audAdicionar("CRITICO","Tesouraria",ref,"Rastro de auditoria incompleto",
+        "Movimento sem UID e/ou data válida.",m);
+    }
+    if(!m.origem || !m.destino || m.origem === m.destino) {
+      problemasTes++;
+      audAdicionar("CRITICO","Tesouraria",ref,"Origem/destino inválidos",
+        `Origem: ${m.origem || "-"} | Destino: ${m.destino || "-"}.`,m);
+    }
+    if(vo < 0 || vd < 0) {
+      problemasTes++;
+      audAdicionar("CRITICO","Tesouraria",ref,"Valor negativo",
+        `Valor origem: ${vo} | Valor destino: ${vd}.`,m);
+    }
+    const origemConhecida = contasValidas.has(m.origem) || tiposExternos.has(m.origem);
+    const destinoConhecido = contasValidas.has(m.destino) || tiposExternos.has(m.destino);
+    if(!origemConhecida || !destinoConhecido) {
+      problemasTes++;
+      audAdicionar("ALERTA","Tesouraria",ref,"Conta/origem não reconhecida",
+        `Origem: ${m.origem || "-"} | Destino: ${m.destino || "-"}.`,m);
+    }
+    if(m.moedaOrigem !== m.moedaDestino) {
+      if(audNum(m.taxaAplicada) <= 0 || audNum(m.taxaReferencia) <= 0) {
+        problemasTes++;
+        audAdicionar("CRITICO","Tesouraria",ref,"Conversão sem taxas válidas",
+          "Movimento entre moedas diferentes precisa de taxa aplicada e referência.",m);
+      }
+    }
+  });
+
+  const saldoResp = audNum(contasTesouraria?.responsavel_stp);
+  const saldoBanco = audNum(contasTesouraria?.banco_stp);
+  const saldoEur = audNum(contasTesouraria?.portugal_eur);
+  if(saldoResp < -0.01 || saldoBanco < -0.01 || saldoEur < -0.01) {
+    problemasTes++;
+    audAdicionar("CRITICO","Tesouraria","Saldos atuais","Conta de Tesouraria negativa",
+      `Responsável: ${saldoResp} Db | Banco STP: ${saldoBanco} Db | Portugal: ${saldoEur} €.`);
+  }
+  audResumoModulo("Tesouraria","Integridade da Tesouraria",problemasTes,
+    `${(movimentosTesouraria||[]).length} movimento(s) verificado(s); saldos não negativos.`);
+
+  // =========================================================
+  // CAPITAL / FINANCIAMENTOS
+  // =========================================================
+  let problemasCapital = 0;
+  const pos = calcularPosicaoCapitalTesouraria();
+  if(pos.dividaSocioStn < -0.01 || pos.dividaSocioEur < -0.01 ||
+     pos.dividaBancoStn < -0.01 || pos.dividaBancoEur < -0.01) {
+    problemasCapital++;
+    audAdicionar("CRITICO","Capital","Dívidas","Dívida negativa",
+      "Uma amortização ultrapassou o principal da dívida.");
+  }
+
+  (movimentosTesouraria || []).forEach(m => {
+    const tiposCap = ["aporte_socio","emprestimo_socio","emprestimo_banco",
+                      "retirada_socio","amortizacao_socio","amortizacao_banco"];
+    if(!tiposCap.includes(m.tipo)) return;
+    const ref = audRef("TES",m.id);
+    if(m.natureza !== "capital_financiamento") {
+      problemasCapital++;
+      audAdicionar("ALERTA","Capital",ref,"Natureza financeira ausente",
+        "Movimento de capital antigo sem natureza=capital_financiamento.",m);
+    }
+  });
+  audResumoModulo("Capital","Separação capital/lucro",problemasCapital,
+    "Aportes, empréstimos, retiradas e amortizações permanecem separados do resultado operacional.");
+
+  renderizarAuditoria();
+}
+
+function renderizarAuditoria() {
+  const tbody = document.getElementById("audListaResultados");
+  if(!tbody) return;
+
+  const nivel = document.getElementById("audFiltroNivel")?.value || "";
+  const modulo = document.getElementById("audFiltroModulo")?.value || "";
+  let lista = resultadosAuditoria61.filter(r =>
+    (!nivel || r.nivel === nivel) && (!modulo || r.modulo === modulo)
+  );
+
+  const total = resultadosAuditoria61.length;
+  const ok = resultadosAuditoria61.filter(r=>r.nivel==="OK").length;
+  const alertas = resultadosAuditoria61.filter(r=>r.nivel==="ALERTA").length;
+  const criticos = resultadosAuditoria61.filter(r=>r.nivel==="CRITICO").length;
+
+  const set = (id,txt) => {
+    const el = document.getElementById(id);
+    if(el) el.innerText = txt;
+  };
+  set("audKpiTotal", total);
+  set("audKpiOk", ok);
+  set("audKpiAlertas", alertas);
+  set("audKpiCriticos", criticos);
+
+  const box = document.getElementById("audEstadoGeral");
+  const titulo = document.getElementById("audEstadoTitulo");
+  const texto = document.getElementById("audEstadoTexto");
+
+  if(box && titulo && texto) {
+    if(criticos > 0) {
+      box.style.borderLeftColor = "#dc2626";
+      box.style.background = "#fef2f2";
+      titulo.innerText = "🔴 Integridade: EXISTEM PONTOS CRÍTICOS";
+      titulo.style.color = "#991b1b";
+      texto.innerText = `${criticos} problema(s) crítico(s) devem ser resolvidos antes do GO LIVE. Há também ${alertas} alerta(s).`;
+    } else if(alertas > 0) {
+      box.style.borderLeftColor = "#d97706";
+      box.style.background = "#fffbeb";
+      titulo.innerText = "🟠 Integridade: SEM CRÍTICOS, MAS HÁ ALERTAS";
+      titulo.style.color = "#92400e";
+      texto.innerText = `${alertas} alerta(s) para revisão. Alertas antigos podem não impedir o GO LIVE depois de conferidos.`;
+    } else {
+      box.style.borderLeftColor = "#10b981";
+      box.style.background = "#f0fdf4";
+      titulo.innerText = "🟢 Integridade Financeira OK";
+      titulo.style.color = "#166534";
+      texto.innerText = "Nenhuma inconsistência crítica ou alerta foi encontrada nos dados atualmente carregados.";
+    }
+  }
+
+  const cores = {
+    OK:["#dcfce7","#166534","🟢 OK"],
+    ALERTA:["#fef3c7","#92400e","🟠 ALERTA"],
+    CRITICO:["#fee2e2","#991b1b","🔴 CRÍTICO"]
+  };
+
+  tbody.innerHTML = lista.map(r => {
+    const c = cores[r.nivel] || ["#f1f5f9","#475569",r.nivel];
+    return `<tr>
+      <td><span style="display:inline-block;padding:4px 8px;border-radius:12px;background:${c[0]};color:${c[1]};font-size:11px;font-weight:bold;">${c[2]}</span></td>
+      <td><b>${r.modulo}</b></td>
+      <td style="font-family:monospace;font-size:11px;">${r.referencia}</td>
+      <td>${r.regra}</td>
+      <td style="text-align:left;max-width:360px;">${r.detalhe}</td>
+      <td>${r.responsavel}</td>
+      <td><small>${r.data}</small></td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="7" style="color:#94a3b8;">Nenhum resultado para os filtros selecionados.</td></tr>';
+}
+
+function limparFiltrosAuditoria() {
+  const n = document.getElementById("audFiltroNivel");
+  const m = document.getElementById("audFiltroModulo");
+  if(n) n.value = "";
+  if(m) m.value = "";
+  renderizarAuditoria();
+}
+
+
+
 /* Navegação final da Fase 4: adiciona a página de Transferências sem remover as páginas da Fase 3. */
 function navegarPara(paginaId) {
   if(paginaId === "paginaTransferencias" && !usuarioPodeTransferencias()) {
@@ -6396,13 +6951,17 @@ function navegarPara(paginaId) {
     alert("Acesso restrito: o módulo Financeiro é exclusivo do Administrador.");
     return;
   }
+  if(paginaId === "paginaAuditoria" && !usuarioPodeAuditoria61()) {
+    alert("Acesso restrito: Auditoria é exclusiva do Administrador.");
+    return;
+  }
   if(paginaId === "paginaArmazemPT" && !usuarioPodeArmazemPT()) {
     alert("Acesso restrito: o Armazém Portugal é exclusivo do Administrador e do Estoque.");
     return;
   }
 
-  const paginas = ["paginaPrincipal","paginaFinanceiro","paginaCaixa","paginaTransferencias","paginaEncomendas","paginaDespesas","paginaTesouraria","paginaArmazemPT"];
-  const botoes = ["btnPageMain","btnPageFinanceiro","btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageDespesas","btnPageTesouraria","btnPageArmazem"];
+  const paginas = ["paginaPrincipal","paginaFinanceiro","paginaAuditoria","paginaCaixa","paginaTransferencias","paginaEncomendas","paginaDespesas","paginaTesouraria","paginaArmazemPT"];
+  const botoes = ["btnPageMain","btnPageFinanceiro","btnPageAuditoria","btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageDespesas","btnPageTesouraria","btnPageArmazem"];
 
   paginas.forEach(id => document.getElementById(id)?.classList.add("hidden"));
   botoes.forEach(id => document.getElementById(id)?.classList.remove("active"));
@@ -6427,6 +6986,10 @@ function navegarPara(paginaId) {
     iniciarListenerTesouraria();
     if(!finInicio || !finFim) finPeriodoMesAtual();
     else processarFinanceiro();
+  }
+  if(paginaId === "paginaAuditoria") {
+    iniciarListenerTesouraria();
+    executarAuditoriaIntegridade();
   }
   if(paginaId === "paginaTransferencias") {
     atualizarTransferenciaForm();
