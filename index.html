@@ -624,23 +624,6 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
-    <!-- DESPESAS OPERACIONAIS -->
-    <div class="card hidden" id="cardDespesas">
-      <h3>💸 Registo de Despesas Operacionais</h3>
-      <div class="form-grid">
-        <input id="despDescricao" placeholder="Descrição (ex: Renda da Loja, Luz, Net)">
-        <input id="despValor" type="number" placeholder="Valor (Db)">
-        <select id="despCategoria">
-          <option value="Renda">Renda / Aluguer</option>
-          <option value="Energia/Agua">Energia / Água</option>
-          <option value="Salarios">Salários / Comissões</option>
-          <option value="Transporte">Transporte / Logística</option>
-          <option value="Outros">Outras Despesas</option>
-        </select>
-        <button onclick="salvarDespesa()" class="btn-success">Registar Despesa</button>
-      </div>
-    </div>
-
     <!-- NOVO / EDITAR PRODUTO (FASE 3: SUPORTE A CÓDIGO DE BARRAS) -->
     <div class="card hidden" id="cardNovoProduto">
       <h3 id="tituloFormProduto">📦 Novo Produto</h3>
@@ -975,7 +958,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
             <option value="Transferencia">Transferência</option>
           </select>
           <button onclick="renderizarDespesasFase52()" class="btn-secondary" style="min-height:38px;padding:5px 10px;">Filtrar</button>
-          <button onclick="limparFiltrosDespesasFase52()" class="btn-secondary" style="min-height:38px;padding:5px 10px;">Limpar</button>
+          <button onclick="limparFiltrosDespesasFase52()" class="btn-secondary" style="min-height:38px;padding:5px 10px;">Limpar Filtros</button>
         </div>
       </div>
 
@@ -1538,7 +1521,6 @@ function navegarPara(paginaId) {
 
 function resetarInterface() {
   cardRelatorio.classList.add("hidden");
-  cardDespesas.classList.add("hidden");
   cardCompras.classList.add("hidden");
   cardCambio.classList.add("hidden");
   cardEncomendas.classList.add("hidden");
@@ -1605,7 +1587,6 @@ auth.onAuthStateChanged(u => {
 
       if(usuarioRole === "admin") {
         cardRelatorio.classList.remove("hidden");
-        cardDespesas.classList.remove("hidden");
         cardCompras.classList.remove("hidden");
         btnPageTransferencias.classList.remove("hidden");
         btnPageEncomendas.classList.remove("hidden");
