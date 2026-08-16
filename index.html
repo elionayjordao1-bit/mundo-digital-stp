@@ -1910,6 +1910,45 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
+
+<!-- FASE 6.2 — MODAL ESTORNO SEGURO DE VENDA -->
+<div id="modalEstornoVenda" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h3 style="margin-top:0;color:#991b1b;border-bottom:2px solid #fee2e2;padding-bottom:8px;">
+      ↩️ Estornar Venda
+    </h3>
+
+    <div id="estornoResumoVenda"
+         style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.6;">
+      Venda não selecionada.
+    </div>
+
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#9a3412;line-height:1.6;">
+      <b>Importante:</b> o registo original não será apagado nem editado.
+      O sistema criará um movimento inverso, devolverá o produto ao estoque e manterá a trilha completa de auditoria.
+    </div>
+
+    <label style="font-size:12px;font-weight:700;">Motivo do estorno *</label>
+    <textarea id="estornoMotivo"
+              placeholder="Ex.: valor registado incorretamente; venda feita por engano..."
+              style="width:100%;min-height:90px;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin:5px 0 12px;"></textarea>
+
+    <div id="estornoAvisoCaixa"
+         style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#1e40af;line-height:1.6;">
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button id="btnConfirmarEstornoVenda" onclick="confirmarEstornoVenda()" class="btn-danger"
+              style="flex:1;min-width:170px;">
+        ↩️ Confirmar Estorno
+      </button>
+      <button onclick="fecharModalEstornoVenda()" class="btn-secondary" style="min-width:100px;">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- COMPROVATIVO / RECIBO -->
 <div id="areaImpressaoRecibo">
   <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
@@ -3304,6 +3343,40 @@ function processarDashboard() {
         contagemVendedores[vdedor].qtd++;
         contagemVendedores[vdedor].val += val;
       }
+    }
+  });
+
+
+  // FASE 6.2: estorno é movimento inverso no período em que foi realizado.
+  todasMovimentacoes.forEach(m => {
+    if(m.tipo !== "estorno_venda") return;
+    const dt = m.data ? obterDataSegura(m.data) : null;
+    const val = Number(m.valor) || 0;
+    const q = Number(m.quantidade) || 1;
+    if(!dt) return;
+
+    if(dt.toISOString().split('T')[0] === hojeStr) {
+      totalVendasHoje -= val;
+    }
+
+    if(dt >= dataInicio && dt <= dataFim) {
+      totalVendasPeriodo -= val;
+
+      const custo = Number.isFinite(Number(m.custoTotalVenda))
+        ? Number(m.custoTotalVenda)
+        : ((Number(m.custoUnitarioVenda)||0) * q);
+      lucroVendasPeriodo -= (val - custo);
+
+      const fPag = m.formaPagamento || "Dinheiro";
+      if(fPag.includes("Dinheiro") || fPag.includes("Sinal") || fPag.includes("Quitação")) pagDin -= val;
+      else if(fPag.includes("Transfer")) pagTrans -= val;
+      else if(fPag.includes("Cart")) pagCar -= val;
+      else pagDin -= val;
+
+      const nome = m.produto || "Produto";
+      if(!contagemProdutos[nome]) contagemProdutos[nome] = {qtd:0,val:0};
+      contagemProdutos[nome].qtd -= q;
+      contagemProdutos[nome].val -= val;
     }
   });
 
@@ -4818,19 +4891,27 @@ function ehMovimentoVendaReal(m) {
   return m.tipo === "saida" && !ehTransferenciaLegacy(m) && m.origem !== "encomenda";
 }
 
-/* Reclassificação visual do histórico: transferências não aparecem como VENDA. */
+/* Reclassificação visual do histórico — Fase 6.2 inclui ESTORNO seguro. */
 function renderizarHistorico(listaMovs) {
   let html = "";
 
   listaMovs.forEach(m => {
     const dt = m.data ? obterDataSegura(m.data).toLocaleString('pt-PT') : '-';
-    const prod = todosProdutos.find(p => p.nome === m.produto);
+    const prod = todosProdutos.find(p => p.id === m.produtoId || p.nome === m.produto);
     const foto = prod?.foto ? `<img src="${prod.foto}" class="img-thumb">` : '📜';
 
     let badge = '<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">ENTRADA</span>';
     let cor = "#2563eb";
 
-    if(m.origem === "encomenda") {
+    const estornoDaVenda = m.tipo === "saida" ? obterEstornoDaVenda(m.id) : null;
+
+    if(m.tipo === "estorno_venda") {
+      badge = '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">↩️ ESTORNO</span>';
+      cor = "#dc2626";
+    } else if(estornoDaVenda) {
+      badge = '<span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;text-decoration:line-through;">VENDA ESTORNADA</span>';
+      cor = "#64748b";
+    } else if(m.origem === "encomenda") {
       const custo = m.tipo === "despesa_caixa";
       badge = custo
         ? '<span style="background:#fff7ed;color:#c2410c;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">CUSTO ENCOMENDA</span>'
@@ -4856,25 +4937,227 @@ function renderizarHistorico(listaMovs) {
       cor = "#7c3aed";
     }
 
-    const botaoRecibo = (m.tipo === "saida" && !ehTransferenciaLegacy(m))
-      ? `<button class="btn-secondary btn-acao" onclick="emitirReciboHistorico('${m.id}')" title="Ver, imprimir ou guardar este recibo em PDF">🧾 Recibo</button>`
-      : '<span style="color:#94a3b8;font-size:11px;">—</span>';
+    let acao = '<span style="color:#94a3b8;font-size:11px;">—</span>';
+    if(m.tipo === "saida" && !ehTransferenciaLegacy(m) && m.origem !== "encomenda") {
+      const recibo = `<button class="btn-secondary btn-acao" onclick="emitirReciboHistorico('${m.id}')" title="Ver, imprimir ou guardar este recibo em PDF">🧾 Recibo</button>`;
+      let estorno = "";
+      if(usuarioRole === "admin") {
+        estorno = estornoDaVenda
+          ? `<span style="display:inline-block;margin-left:5px;color:#991b1b;font-size:11px;font-weight:bold;">↩️ Estornada</span>`
+          : `<button class="btn-danger btn-acao" onclick="abrirModalEstornoVenda('${m.id}')" title="Estornar esta venda sem apagar o histórico">↩️ Estornar</button>`;
+      }
+      acao = `<div class="acoes-cell">${recibo}${estorno}</div>`;
+    } else if(m.tipo === "estorno_venda") {
+      acao = `<span style="font-size:11px;color:#991b1b;" title="${String(m.motivoEstorno||"").replace(/"/g,'&quot;')}">Original: ${String(m.operacaoOriginalId||"-").substring(0,8)}</span>`;
+    }
 
-    html += `<tr>
+    html += `<tr style="${estornoDaVenda ? 'opacity:.72;' : ''}">
       <td>${foto}</td>
-      <td><b>${m.produto || '-'}</b></td>
+      <td><b>${m.produto || '-'}</b>${m.tipo==="estorno_venda" ? `<br><small style="color:#991b1b;">Motivo: ${m.motivoEstorno||"-"}</small>` : ""}</td>
       <td>${badge}</td>
       <td><b>${m.quantidade || 0}</b></td>
       <td><small>${m.formaPagamento || 'Geral'}</small></td>
-      <td style="font-weight:bold;color:${cor};">${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</td>
-      <td><small>${m.usuario || '-'}</small></td>
+      <td style="font-weight:bold;color:${cor};">${m.tipo==="estorno_venda" ? "-" : ""}${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</td>
+      <td><small>${m.nomeUsuario || m.usuario || '-'}</small></td>
       <td><small>${dt}</small></td>
-      <td>${botaoRecibo}</td>
+      <td>${acao}</td>
     </tr>`;
   });
 
   historico.innerHTML = html || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma movimentação registada.</td></tr>';
 }
+
+
+/* =========================================================================
+   FASE 6.2 — ESTORNO E CORREÇÃO SEGURA
+   - O documento original permanece imutável.
+   - O estorno é um novo documento em "movimentacoes".
+   - ID determinístico impede estorno duplo.
+   - Admin apenas.
+   ========================================================================= */
+
+let vendaSelecionadaParaEstorno = null;
+
+function obterEstornoDaVenda(movId) {
+  return (todasMovimentacoes || []).find(m =>
+    m.tipo === "estorno_venda" && m.operacaoOriginalId === movId
+  ) || null;
+}
+
+function vendaJaEstornada(movId) {
+  return !!obterEstornoDaVenda(movId);
+}
+
+function formaVendaEhDinheiro(m) {
+  const f = String(m?.formaPagamento || "");
+  return f.includes("Dinheiro") ||
+    (!f.includes("Transferencia") && !f.includes("Transferência") &&
+     !f.includes("Cartao") && !f.includes("Cartão"));
+}
+
+function abrirModalEstornoVenda(movId) {
+  if(usuarioRole !== "admin") return alert("Apenas o Administrador pode estornar vendas.");
+
+  const m = (todasMovimentacoes || []).find(x => x.id === movId);
+  if(!m || !ehMovimentoVendaReal(m)) return alert("Venda válida não encontrada.");
+  if(vendaJaEstornada(movId)) return alert("Esta venda já foi estornada e não pode ser estornada novamente.");
+  if(!m.produtoId) {
+    return alert("Esta venda é um registo antigo sem produtoId. Por segurança, o estorno automático só é permitido para vendas da arquitetura atual.");
+  }
+
+  vendaSelecionadaParaEstorno = m;
+  document.getElementById("estornoMotivo").value = "";
+
+  const qtd = Number(m.quantidade)||1;
+  const total = Number(m.valor)||0;
+  const dt = m.data ? obterDataMovimentacaoParaRecibo(m.data).toLocaleString("pt-PT") : "-";
+  document.getElementById("estornoResumoVenda").innerHTML =
+    `<b>${m.produto || "Produto"}</b><br>` +
+    `Quantidade: <b>${qtd}</b><br>` +
+    `Valor original: <b>${total.toLocaleString("pt-PT")} Db</b><br>` +
+    `Pagamento: <b>${m.formaPagamento || "-"}</b><br>` +
+    `Cliente: <b>${m.cliente || "Consumidor Final"}</b><br>` +
+    `Venda original: <span style="font-family:monospace">${m.id}</span><br>` +
+    `Data: ${dt}`;
+
+  const aviso = document.getElementById("estornoAvisoCaixa");
+  if(formaVendaEhDinheiro(m)) {
+    aviso.innerHTML =
+      `💵 <b>Venda em dinheiro:</b> o reembolso sairá do <b>caixa atualmente aberto</b>. ` +
+      `É obrigatório ter saldo físico suficiente. O turno antigo não será alterado.`;
+  } else {
+    aviso.innerHTML =
+      `🏦 <b>Venda sem numerário:</b> o estorno não movimentará a gaveta física. ` +
+      `A devolução ao cliente deve ser feita pela mesma via externa (transferência/cartão).`;
+  }
+
+  document.getElementById("modalEstornoVenda").classList.remove("hidden");
+}
+
+function fecharModalEstornoVenda() {
+  document.getElementById("modalEstornoVenda")?.classList.add("hidden");
+  vendaSelecionadaParaEstorno = null;
+}
+
+async function confirmarEstornoVenda() {
+  if(usuarioRole !== "admin") return alert("Apenas o Administrador pode estornar vendas.");
+  if(!navigator.onLine) return alert("O estorno exige ligação à internet.");
+  if(!vendaSelecionadaParaEstorno) return alert("Nenhuma venda selecionada.");
+
+  const original = vendaSelecionadaParaEstorno;
+  const motivo = String(document.getElementById("estornoMotivo")?.value || "").trim();
+  const btn = document.getElementById("btnConfirmarEstornoVenda");
+  const user = auth.currentUser;
+
+  if(!user) return alert("Sessão expirada.");
+  if(motivo.length < 5) return alert("Informe um motivo claro para o estorno (mínimo de 5 caracteres).");
+  if(vendaJaEstornada(original.id)) return alert("Esta venda já foi estornada.");
+
+  const qtd = Number(original.quantidade)||1;
+  const total = Number(original.valor)||0;
+  const pagamentoDinheiro = formaVendaEhDinheiro(original);
+  let caixaEstornoId = null;
+
+  if(pagamentoDinheiro) {
+    if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") {
+      return alert("Esta venda foi paga em dinheiro.\n\nAbra um Caixa/Turno para devolver o dinheiro ao cliente antes de confirmar o estorno.");
+    }
+
+    const resumo = await obterResumoCaixaAtualFirestore();
+    if(!resumo || resumo.esperado < total) {
+      const disponivel = resumo ? resumo.esperado : 0;
+      return alert(
+        `Saldo físico insuficiente para o reembolso.\n\n` +
+        `Disponível no caixa: ${disponivel.toLocaleString("pt-PT")} Db\n` +
+        `Reembolso: ${total.toLocaleString("pt-PT")} Db\n\n` +
+        `Registe um suprimento real de caixa antes de fazer o estorno.`
+      );
+    }
+    caixaEstornoId = caixaAtualObj.id;
+  }
+
+  if(!confirm(
+    `CONFIRMAR ESTORNO?\n\n` +
+    `${original.produto || "Produto"}\n` +
+    `Quantidade a devolver ao estoque: ${qtd}\n` +
+    `Valor a reverter: ${total.toLocaleString("pt-PT")} Db\n\n` +
+    `Motivo: ${motivo}\n\n` +
+    `O histórico original será preservado.`
+  )) return;
+
+  btn.disabled = true;
+
+  try {
+    const originalRef = db.collection("movimentacoes").doc(original.id);
+    const estornoRef = db.collection("movimentacoes").doc(`estorno_${original.id}`);
+    const produtoRef = db.collection("produtos").doc(original.produtoId);
+    const agora = new Date();
+
+    await db.runTransaction(async tx => {
+      const origDoc = await tx.get(originalRef);
+      const estDoc = await tx.get(estornoRef);
+      const prodDoc = await tx.get(produtoRef);
+
+      if(!origDoc.exists) throw new Error("A venda original já não existe.");
+      if(estDoc.exists) throw new Error("Esta venda já foi estornada.");
+      if(!prodDoc.exists) throw new Error("O produto original já não existe no estoque.");
+
+      const orig = origDoc.data();
+      if(orig.tipo !== "saida") throw new Error("A operação original não é uma venda.");
+      if(orig.produtoId !== original.produtoId) throw new Error("Produto da venda original divergente.");
+
+      if(pagamentoDinheiro) {
+        const caixaRef = db.collection("caixas").doc(caixaEstornoId);
+        const caixaDoc = await tx.get(caixaRef);
+        if(!caixaDoc.exists || caixaDoc.data().estado !== "aberto") {
+          throw new Error("O caixa deixou de estar aberto.");
+        }
+      }
+
+      const pData = prodDoc.data();
+      const estoqueAtual = Number(pData.estoque)||0;
+      tx.update(produtoRef, { estoque: estoqueAtual + qtd });
+
+      tx.set(estornoRef, {
+        produto: orig.produto || original.produto || "Produto",
+        produtoId: orig.produtoId,
+        tipo: "estorno_venda",
+        quantidade: qtd,
+        valor: total,
+        precoUnitarioVenda: Number(orig.precoUnitarioVenda) || (qtd ? total/qtd : total),
+        custoUnitarioVenda: Number(orig.custoUnitarioVenda)||0,
+        custoTotalVenda: Number(orig.custoTotalVenda)||0,
+        formaPagamento: orig.formaPagamento || original.formaPagamento || "Dinheiro",
+        cliente: orig.cliente || original.cliente || "Consumidor Final",
+        operacaoOriginalId: original.id,
+        caixaOriginalId: orig.caixaId || null,
+        caixaId: pagamentoDinheiro ? caixaEstornoId : null,
+        motivoEstorno: motivo,
+        origem: "estorno_venda",
+        estado: "CONCLUIDO",
+        usuario: user.email,
+        nomeUsuario: usuarioNome || "Administrador",
+        uid: user.uid,
+        role: usuarioRole,
+        data: agora
+      });
+    });
+
+    fecharModalEstornoVenda();
+    alert(
+      "Venda estornada com sucesso.\n\n" +
+      "✅ Venda original preservada\n" +
+      "✅ Produto devolvido ao estoque\n" +
+      (pagamentoDinheiro ? "✅ Reembolso lançado como saída do caixa atual\n" : "✅ Sem alteração da gaveta física\n") +
+      "✅ Estorno gravado no histórico"
+    );
+  } catch(e) {
+    alert("Erro ao estornar venda: " + (e.message || e));
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 
 /* Dashboard: vendas reais e margens de transferências separados. */
 function processarDashboard() {
@@ -6265,6 +6548,28 @@ function processarFinanceiro() {
     equipe[vendedor].fat += val;
   });
 
+
+  // -------------------- ESTORNOS DE VENDAS — FASE 6.2 --------------------
+  (todasMovimentacoes || []).forEach(m => {
+    if(m.tipo !== "estorno_venda" || !finNoPeriodo(m.data)) return;
+
+    const val = finNumero(m.valor);
+    const qtd = finNumero(m.quantidade) || 1;
+    const custo = Number.isFinite(Number(m.custoTotalVenda))
+      ? finNumero(m.custoTotalVenda)
+      : finNumero(m.custoUnitarioVenda) * qtd;
+    const lucroRevertido = val - custo;
+
+    vendas -= val;
+    lucroProdutos -= lucroRevertido;
+
+    const nomeProd = m.produto || "Produto";
+    if(!prods[nomeProd]) prods[nomeProd] = {qtd:0, fat:0, lucro:0};
+    prods[nomeProd].qtd -= qtd;
+    prods[nomeProd].fat -= val;
+    prods[nomeProd].lucro -= lucroRevertido;
+  });
+
   // -------------------- ENCOMENDAS --------------------
   let encAtivas = 0, encAReceber = 0;
   let lucroEncomendas = 0, receitaEncConcluidas = 0, custosEncChegada = 0, qtdEncConcluidas = 0;
@@ -6633,6 +6938,33 @@ function executarAuditoriaIntegridade() {
         "Venda nova sem custoUnitarioVenda/custoTotalVenda; o lucro não fica historicamente congelado.",m,
         "Venda histórica anterior ao snapshot de custo; o lucro histórico continua estimado usando o custo atual do produto.");
       if(nv !== "LEGADO") vendasSemSnapshot++;
+    }
+  });
+
+
+  // FASE 6.2: integridade dos estornos de vendas.
+  const estornos = (todasMovimentacoes || []).filter(m => m.tipo === "estorno_venda");
+  const originaisEstornados = new Set();
+  estornos.forEach(e => {
+    const ref = audRef("EST", e.id);
+    if(!e.operacaoOriginalId || !e.uid || !audData(e.data) || !String(e.motivoEstorno||"").trim()) {
+      problemasVendas++;
+      audAdicionar("CRITICO","Vendas",ref,"Estorno com rastro incompleto",
+        "Estorno precisa de operação original, UID, data e motivo obrigatório.",e);
+    }
+    if(e.operacaoOriginalId) {
+      if(originaisEstornados.has(e.operacaoOriginalId)) {
+        problemasVendas++;
+        audAdicionar("CRITICO","Vendas",ref,"Estorno duplicado",
+          `A venda ${e.operacaoOriginalId} possui mais de um estorno.`,e);
+      }
+      originaisEstornados.add(e.operacaoOriginalId);
+      const originalExiste = (todasMovimentacoes || []).some(m => m.id === e.operacaoOriginalId && ehMovimentoVendaReal(m));
+      if(!originalExiste) {
+        problemasVendas++;
+        audAdicionar("CRITICO","Vendas",ref,"Venda original não localizada",
+          `O estorno aponta para ${e.operacaoOriginalId}, mas a venda original não foi encontrada.`,e);
+      }
     }
   });
 
@@ -7109,6 +7441,10 @@ function calcularResumoCaixaFisico(movs, caixaId, valorInicial) {
       return;
     }
     if(m.tipo === "despesa_caixa") {
+      if(f.includes("Dinheiro")) saidas += v;
+      return;
+    }
+    if(m.tipo === "estorno_venda") {
       if(f.includes("Dinheiro")) saidas += v;
       return;
     }
