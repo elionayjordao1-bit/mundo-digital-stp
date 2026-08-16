@@ -6968,14 +6968,26 @@ function executarAuditoriaIntegridade() {
     }
   });
 
+  // FASE 6.2: separar vendas ativas de vendas estornadas no resumo da Auditoria.
+  // A venda original continua preservada no histórico; por isso continua fazendo parte
+  // do total de registros de venda verificados, mas deixa de ser considerada "ativa".
+  const vendasEstornadasValidas = [...originaisEstornados].filter(id =>
+    (todasMovimentacoes || []).some(m => m.id === id && ehMovimentoVendaReal(m))
+  ).length;
+  const vendasAtivas = Math.max(0, vendasReais - vendasEstornadasValidas);
+
+  const resumoSituacaoVendas =
+    `${vendasReais} registro(s) de venda verificado(s): ` +
+    `${vendasAtivas} ativa(s) + ${vendasEstornadasValidas} estornada(s).`;
+
   if(vendasReais === 0) {
     audAdicionar("OK","Vendas","Resumo","Vendas reais","Nenhuma venda real carregada para verificar.");
   } else if(problemasVendas === 0 && vendasSemSnapshot === 0) {
     audAdicionar("OK","Vendas","Resumo","Integridade das vendas",
-      `${vendasReais} venda(s) com UID, data, valores e custo preservado.`);
+      `${resumoSituacaoVendas} UID, data, valores e custo preservados.`);
   } else if(problemasVendas === 0) {
     audAdicionar("OK","Vendas","Resumo","Estrutura operacional das vendas",
-      `${vendasReais} venda(s) sem inconsistência operacional crítica.`);
+      `${resumoSituacaoVendas} Sem inconsistência operacional crítica.`);
   }
 
   // =========================================================
