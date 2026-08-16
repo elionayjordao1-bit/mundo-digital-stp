@@ -815,8 +815,39 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <span id="finPosEquivalenteSub" class="kpi-sub">STN + EUR × 26,00</span>
         </div>
       </div>
+
       <p style="margin:0;color:#64748b;font-size:12px;">
         O equivalente em Db é apenas informativo. Os saldos originais em EUR e STN permanecem separados.
+      </p>
+    </div>
+
+    <div class="card" style="border-left:4px solid #7c3aed;">
+      <h3 style="color:#6d28d9;">🏛️ Capital & Financiamento da Empresa</h3>
+      <div class="kpi-grid">
+        <div class="kpi-card purple">
+          <span class="kpi-title">Capital Aportado</span>
+          <span id="finCapitalAportadoStn" class="kpi-value">0 Db</span>
+          <span id="finCapitalAportadoEur" class="kpi-sub" style="color:#7c3aed;">0,00 €</span>
+        </div>
+        <div class="kpi-card blue">
+          <span class="kpi-title">Dívida ao Sócio</span>
+          <span id="finDividaSocioStn" class="kpi-value">0 Db</span>
+          <span id="finDividaSocioEur" class="kpi-sub" style="color:#2563eb;">0,00 €</span>
+        </div>
+        <div class="kpi-card orange">
+          <span class="kpi-title">Dívida Bancária</span>
+          <span id="finDividaBancoStn" class="kpi-value">0 Db</span>
+          <span id="finDividaBancoEur" class="kpi-sub" style="color:#d97706;">0,00 €</span>
+        </div>
+        <div class="kpi-card red">
+          <span class="kpi-title">Retiradas do Proprietário</span>
+          <span id="finRetiradasStn" class="kpi-value">0 Db</span>
+          <span id="finRetiradasEur" class="kpi-sub" style="color:#dc2626;">0,00 €</span>
+        </div>
+      </div>
+      <p style="margin:0;color:#64748b;font-size:12px;line-height:1.6;">
+        Aportes e empréstimos aumentam o dinheiro disponível, mas <b>não aumentam o lucro</b>.
+        Retiradas e amortizações reduzem a Tesouraria, mas <b>não são despesas operacionais</b>.
       </p>
     </div>
 
@@ -1385,6 +1416,79 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <input id="tesSaldoInicialValor" type="number" min="0.01" step="0.01" placeholder="Valor existente">
         <input id="tesSaldoInicialObs" placeholder="Ex.: Saldo existente em 16/08/2026">
         <button onclick="registrarSaldoInicialTesouraria()" class="btn-secondary">📌 Registar Saldo Inicial</button>
+      </div>
+    </div>
+
+
+    <div class="card" style="border-left:4px solid #7c3aed;">
+      <h3 style="color:#6d28d9;">🏛️ Capital, Financiamentos & Retiradas</h3>
+      <p style="font-size:13px;color:#64748b;line-height:1.6;">
+        Use esta área quando entrar dinheiro novo do proprietário/sócio ou de um empréstimo,
+        ou quando houver retirada/amortização. Estes movimentos alteram a Tesouraria,
+        mas <b>não são receita nem despesa operacional</b>.
+      </p>
+
+      <div class="kpi-grid">
+        <div class="kpi-card purple">
+          <span class="kpi-title">Capital Aportado</span>
+          <span id="tesCapitalAportadoStn" class="kpi-value">0 Db</span>
+          <span id="tesCapitalAportadoEur" class="kpi-sub" style="color:#7c3aed;">0,00 €</span>
+        </div>
+        <div class="kpi-card blue">
+          <span class="kpi-title">Dívida ao Sócio</span>
+          <span id="tesDividaSocioStn" class="kpi-value">0 Db</span>
+          <span id="tesDividaSocioEur" class="kpi-sub" style="color:#2563eb;">0,00 €</span>
+        </div>
+        <div class="kpi-card orange">
+          <span class="kpi-title">Dívida Bancária</span>
+          <span id="tesDividaBancoStn" class="kpi-value">0 Db</span>
+          <span id="tesDividaBancoEur" class="kpi-sub" style="color:#d97706;">0,00 €</span>
+        </div>
+        <div class="kpi-card red">
+          <span class="kpi-title">Retiradas do Proprietário</span>
+          <span id="tesRetiradasStn" class="kpi-value">0 Db</span>
+          <span id="tesRetiradasEur" class="kpi-sub" style="color:#dc2626;">0,00 €</span>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <select id="tesCapTipo" onchange="atualizarResumoCapitalTesouraria()">
+          <option value="aporte_socio">💜 Aporte do Proprietário / Sócio</option>
+          <option value="emprestimo_socio">🤝 Empréstimo do Sócio à Empresa</option>
+          <option value="emprestimo_banco">🏦 Empréstimo Bancário</option>
+          <option value="retirada_socio">👤 Retirada do Proprietário / Sócio</option>
+          <option value="amortizacao_socio">↩️ Devolução / Amortização ao Sócio</option>
+          <option value="amortizacao_banco">🏦 Amortização de Empréstimo Bancário</option>
+        </select>
+
+        <select id="tesCapConta" onchange="atualizarResumoCapitalTesouraria()">
+          <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+          <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+          <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
+          <option value="caixa_stp">🏪 Caixa Loja (Db)</option>
+        </select>
+
+        <input id="tesCapValor" type="number" min="0.01" step="0.01"
+               placeholder="Valor" oninput="atualizarResumoCapitalTesouraria()">
+
+        <input id="tesCapContraparte" placeholder="Nome / Banco / Referência (opcional)">
+
+        <input id="tesCapObservacao" placeholder="Observação / motivo (opcional)">
+
+        <button onclick="registrarCapitalFinanciamento()" class="btn-success"
+                style="grid-column:1/-1;background:#7c3aed;">
+          🏛️ Registar Movimento de Capital / Financiamento
+        </button>
+      </div>
+
+      <div id="tesCapResumo"
+           style="margin-top:12px;padding:12px;border-radius:8px;background:#faf5ff;border:1px solid #e9d5ff;color:#5b21b6;font-size:13px;line-height:1.6;">
+        Selecione o tipo de operação, a conta e informe o valor.
+      </div>
+
+      <div style="margin-top:10px;font-size:12px;color:#64748b;line-height:1.6;">
+        <b>Importante:</b> amortização reduz apenas o principal da dívida.
+        Juros e encargos bancários devem ser registados em <b>Despesas Operacionais</b>.
       </div>
     </div>
 
@@ -5436,6 +5540,248 @@ async function registrarSaldoInicialTesouraria() {
   }
 }
 
+
+function ehContaTesourariaInterna(id) {
+  return ["caixa_stp","responsavel_stp","banco_stp","portugal_eur"].includes(id);
+}
+
+function rotuloTipoTesouraria(tipo) {
+  return ({
+    saldo_inicial: "SALDO INICIAL",
+    transferencia_cliente: "TRANSF. CLIENTE",
+    aporte_socio: "APORTE SÓCIO",
+    emprestimo_socio: "EMPRÉSTIMO SÓCIO",
+    emprestimo_banco: "EMPRÉSTIMO BANCO",
+    retirada_socio: "RETIRADA SÓCIO",
+    amortizacao_socio: "AMORTIZAÇÃO SÓCIO",
+    amortizacao_banco: "AMORTIZAÇÃO BANCO"
+  })[tipo] || "MOV. INTERNO";
+}
+
+function nomeParteTesouraria(id) {
+  const especiais = {
+    saldo_inicial: "Saldo Inicial",
+    cliente_externo: "Cliente / Exterior",
+    externo_socio: "Proprietário / Sócio",
+    externo_banco: "Banco / Financiador"
+  };
+  return especiais[id] || nomeContaTes(id);
+}
+
+function calcularPosicaoCapitalTesouraria() {
+  const p = {
+    aporteStn:0, aporteEur:0,
+    dividaSocioStn:0, dividaSocioEur:0,
+    dividaBancoStn:0, dividaBancoEur:0,
+    retiradasStn:0, retiradasEur:0
+  };
+
+  (movimentosTesouraria || []).forEach(m => {
+    const tipo = String(m.tipo || "");
+    const moeda = String(m.moedaDestino || m.moedaOrigem || "STN");
+    const entrada = Number(m.valorDestino)||0;
+    const saida = Number(m.valorOrigem)||0;
+
+    const add = (stnKey, eurKey, valor) => {
+      if(moeda === "EUR") p[eurKey] += valor;
+      else p[stnKey] += valor;
+    };
+
+    if(tipo === "aporte_socio") add("aporteStn","aporteEur",entrada);
+    if(tipo === "emprestimo_socio") add("dividaSocioStn","dividaSocioEur",entrada);
+    if(tipo === "emprestimo_banco") add("dividaBancoStn","dividaBancoEur",entrada);
+    if(tipo === "retirada_socio") add("retiradasStn","retiradasEur",saida);
+
+    if(tipo === "amortizacao_socio") {
+      if(moeda === "EUR") p.dividaSocioEur -= saida;
+      else p.dividaSocioStn -= saida;
+    }
+    if(tipo === "amortizacao_banco") {
+      if(moeda === "EUR") p.dividaBancoEur -= saida;
+      else p.dividaBancoStn -= saida;
+    }
+  });
+
+  p.dividaSocioStn = Math.max(0,p.dividaSocioStn);
+  p.dividaSocioEur = Math.max(0,p.dividaSocioEur);
+  p.dividaBancoStn = Math.max(0,p.dividaBancoStn);
+  p.dividaBancoEur = Math.max(0,p.dividaBancoEur);
+  return p;
+}
+
+function atualizarKpisCapitalTesouraria() {
+  const p = calcularPosicaoCapitalTesouraria();
+  const set = (id, txt) => {
+    const el = document.getElementById(id);
+    if(el) el.innerText = txt;
+  };
+
+  set("tesCapitalAportadoStn", p.aporteStn.toLocaleString("pt-PT",{maximumFractionDigits:2})+" Db");
+  set("tesCapitalAportadoEur", p.aporteEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})+" €");
+  set("tesDividaSocioStn", p.dividaSocioStn.toLocaleString("pt-PT",{maximumFractionDigits:2})+" Db");
+  set("tesDividaSocioEur", p.dividaSocioEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})+" €");
+  set("tesDividaBancoStn", p.dividaBancoStn.toLocaleString("pt-PT",{maximumFractionDigits:2})+" Db");
+  set("tesDividaBancoEur", p.dividaBancoEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})+" €");
+  set("tesRetiradasStn", p.retiradasStn.toLocaleString("pt-PT",{maximumFractionDigits:2})+" Db");
+  set("tesRetiradasEur", p.retiradasEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})+" €");
+
+  set("finCapitalAportadoStn", p.aporteStn.toLocaleString("pt-PT",{maximumFractionDigits:2})+" Db");
+  set("finCapitalAportadoEur", p.aporteEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})+" €");
+  set("finDividaSocioStn", p.dividaSocioStn.toLocaleString("pt-PT",{maximumFractionDigits:2})+" Db");
+  set("finDividaSocioEur", p.dividaSocioEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})+" €");
+  set("finDividaBancoStn", p.dividaBancoStn.toLocaleString("pt-PT",{maximumFractionDigits:2})+" Db");
+  set("finDividaBancoEur", p.dividaBancoEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})+" €");
+  set("finRetiradasStn", p.retiradasStn.toLocaleString("pt-PT",{maximumFractionDigits:2})+" Db");
+  set("finRetiradasEur", p.retiradasEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})+" €");
+}
+
+function atualizarResumoCapitalTesouraria() {
+  const tipo = document.getElementById("tesCapTipo")?.value || "";
+  const conta = document.getElementById("tesCapConta")?.value || "";
+  const valor = Number(document.getElementById("tesCapValor")?.value)||0;
+  const box = document.getElementById("tesCapResumo");
+  if(!box) return;
+
+  const moeda = moedaContaTes(conta);
+  const sigla = moeda === "EUR" ? "€" : "Db";
+  const vtxt = valor.toLocaleString("pt-PT",{maximumFractionDigits:2});
+
+  const textos = {
+    aporte_socio: `A empresa receberá ${vtxt} ${sigla} como capital do proprietário. Não será contabilizado como lucro.`,
+    emprestimo_socio: `A empresa receberá ${vtxt} ${sigla}, criando uma dívida de igual valor ao proprietário/sócio.`,
+    emprestimo_banco: `A empresa receberá ${vtxt} ${sigla}, criando uma dívida bancária de igual valor.`,
+    retirada_socio: `Serão retirados ${vtxt} ${sigla} da empresa para o proprietário. Não será despesa operacional.`,
+    amortizacao_socio: `Serão pagos ${vtxt} ${sigla} ao sócio, reduzindo o principal da dívida ao sócio.`,
+    amortizacao_banco: `Serão pagos ${vtxt} ${sigla} ao banco, reduzindo o principal da dívida bancária.`
+  };
+  box.innerText = textos[tipo] || "Informe os dados da operação.";
+}
+
+async function registrarCapitalFinanciamento() {
+  if(!usuarioPodeTesouraria()) return alert("Acesso restrito: apenas o Administrador pode registar capital e financiamentos.");
+  if(!navigator.onLine) return alert("É necessária ligação à internet.");
+
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const tipo = document.getElementById("tesCapTipo").value;
+  const conta = document.getElementById("tesCapConta").value;
+  const valor = Number(document.getElementById("tesCapValor").value)||0;
+  const contraparte = document.getElementById("tesCapContraparte").value.trim();
+  const observacao = document.getElementById("tesCapObservacao").value.trim();
+
+  if(valor <= 0) return alert("Informe um valor válido.");
+
+  const moeda = moedaContaTes(conta);
+  const entrada = ["aporte_socio","emprestimo_socio","emprestimo_banco"].includes(tipo);
+  const saida = ["retirada_socio","amortizacao_socio","amortizacao_banco"].includes(tipo);
+
+  if(conta === "caixa_stp" && (!caixaAtualObj || caixaAtualObj.estado !== "aberto")) {
+    return alert("Para movimentar diretamente o Caixa Loja, abra primeiro o Caixa/Turno.");
+  }
+
+  if(saida) {
+    const saldo = saldoContaTes(conta);
+    if(saldo < valor) {
+      return alert(
+        `Saldo insuficiente em ${nomeContaTes(conta)}.\n\n`+
+        `Disponível: ${saldo.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${moeda==="EUR"?"€":"Db"}\n`+
+        `Necessário: ${valor.toLocaleString("pt-PT",{maximumFractionDigits:2})}`
+      );
+    }
+  }
+
+  const pos = calcularPosicaoCapitalTesouraria();
+  if(tipo === "amortizacao_socio") {
+    const divida = moeda === "EUR" ? pos.dividaSocioEur : pos.dividaSocioStn;
+    if(valor > divida) {
+      return alert(`A amortização não pode ultrapassar a dívida ao sócio em aberto (${divida.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${moeda==="EUR"?"€":"Db"}).`);
+    }
+  }
+  if(tipo === "amortizacao_banco") {
+    const divida = moeda === "EUR" ? pos.dividaBancoEur : pos.dividaBancoStn;
+    if(valor > divida) {
+      return alert(`A amortização não pode ultrapassar a dívida bancária em aberto (${divida.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${moeda==="EUR"?"€":"Db"}).`);
+    }
+  }
+
+  const origem = entrada
+    ? (tipo === "emprestimo_banco" ? "externo_banco" : "externo_socio")
+    : conta;
+
+  const destino = entrada
+    ? conta
+    : (tipo === "amortizacao_banco" ? "externo_banco" : "externo_socio");
+
+  const valorOrigem = entrada ? 0 : valor;
+  const valorDestino = entrada ? valor : 0;
+
+  if(!confirm(
+    `Confirmar operação?\n\n`+
+    `${rotuloTipoTesouraria(tipo)}\n`+
+    `Conta: ${nomeContaTes(conta)}\n`+
+    `Valor: ${valor.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${moeda==="EUR"?"€":"Db"}\n\n`+
+    `Este movimento NÃO será contabilizado como receita ou despesa operacional.`
+  )) return;
+
+  const movRef = db.collection("tesouraria_movimentos").doc();
+  const agora = new Date();
+
+  try {
+    await db.runTransaction(async tx => {
+      tx.set(movRef,{
+        tipo,
+        natureza:"capital_financiamento",
+        origem,
+        destino,
+        moedaOrigem:moeda,
+        moedaDestino:moeda,
+        valorOrigem,
+        valorDestino,
+        taxaReferencia:null,
+        taxaAplicada:null,
+        margemDb:0,
+        contraparte,
+        observacao,
+        usuario:user.email,
+        nomeUsuario:usuarioNome||"",
+        uid:user.uid,
+        role:usuarioRole,
+        data:agora
+      });
+
+      if(conta === "caixa_stp") {
+        const movCaixaRef = db.collection("movimentacoes").doc();
+        tx.set(movCaixaRef,{
+          produto:`${rotuloTipoTesouraria(tipo)} — ${contraparte || "Tesouraria"}`,
+          tipo: entrada ? "suprimento_caixa" : "sangria_caixa",
+          quantidade:1,
+          valor,
+          formaPagamento: entrada ? "Dinheiro - Capital/Financiamento" : "Dinheiro - Retirada/Amortização",
+          origemTesouraria:origem,
+          destinoTesouraria:destino,
+          tesourariaMovId:movRef.id,
+          usuario:user.email,
+          nomeUsuario:usuarioNome||"",
+          uid:user.uid,
+          role:usuarioRole,
+          data:agora,
+          caixaId:caixaAtualObj.id
+        });
+      }
+    });
+
+    document.getElementById("tesCapValor").value="";
+    document.getElementById("tesCapContraparte").value="";
+    document.getElementById("tesCapObservacao").value="";
+    atualizarResumoCapitalTesouraria();
+    alert("Movimento de capital/financiamento registado com sucesso.");
+  } catch(e) {
+    alert("Erro ao registar operação: "+(e.message||e));
+  }
+}
+
+
 function iniciarListenerTesouraria() {
   if(listenerTesouraria) listenerTesouraria();
   if(!usuarioPodeTesouraria()) return;
@@ -5453,14 +5799,16 @@ function recalcularSaldosTesouraria() {
   movimentosTesouraria.slice().reverse().forEach(m => {
     const vo = Number(m.valorOrigem)||0;
     const vd = Number(m.valorDestino)||0;
-    if(m.origem && m.origem !== "caixa_stp" && m.origem !== "saldo_inicial" && m.origem !== "cliente_externo") {
+
+    if(ehContaTesourariaInterna(m.origem) && m.origem !== "caixa_stp") {
       saldos[m.origem] = (saldos[m.origem]||0) - vo;
     }
-    if(m.destino && m.destino !== "caixa_stp" && m.destino !== "cliente_externo") {
+    if(ehContaTesourariaInterna(m.destino) && m.destino !== "caixa_stp") {
       saldos[m.destino] = (saldos[m.destino]||0) + vd;
     }
   });
   contasTesouraria = saldos;
+  atualizarKpisCapitalTesouraria();
 }
 
 function atualizarResumoMovTesouraria() {
@@ -5607,6 +5955,7 @@ async function registrarMovimentoTesouraria() {
 function renderizarTesouraria() {
   const tbody = document.getElementById("listaTesouraria");
   if(!tbody) return;
+  atualizarKpisCapitalTesouraria();
 
   if(document.getElementById("tesKpiCaixa")) tesKpiCaixa.innerText = saldoContaTes("caixa_stp").toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
   if(document.getElementById("tesKpiResponsavel")) tesKpiResponsavel.innerText = saldoContaTes("responsavel_stp").toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
@@ -5628,9 +5977,9 @@ function renderizarTesouraria() {
     const dt = obterDataSegura(m.data).toLocaleString("pt-PT");
     return `<tr>
       <td><small>${dt}</small></td>
-      <td>${m.tipo === "saldo_inicial" ? "SALDO INICIAL" : (m.tipo === "transferencia_cliente" ? "TRANSF. CLIENTE" : "MOV. INTERNO")}</td>
-      <td>${m.origem === "saldo_inicial" ? "Saldo Inicial" : (m.origem === "cliente_externo" ? "Cliente/Exterior" : nomeContaTes(m.origem))}</td>
-      <td>${m.destino === "cliente_externo" ? "Cliente/Exterior" : nomeContaTes(m.destino)}</td>
+      <td>${rotuloTipoTesouraria(m.tipo)}</td>
+      <td>${nomeParteTesouraria(m.origem)}</td>
+      <td>${nomeParteTesouraria(m.destino)}</td>
       <td>${m.moedaOrigem} → ${m.moedaDestino}</td>
       <td>${(Number(m.valorOrigem)||0).toLocaleString("pt-PT",{maximumFractionDigits:2})} ${m.moedaOrigem==="EUR"?"€":"Db"}</td>
       <td>${(Number(m.valorDestino)||0).toLocaleString("pt-PT",{maximumFractionDigits:2})} ${m.moedaDestino==="EUR"?"€":"Db"}</td>
@@ -5882,6 +6231,9 @@ function processarFinanceiro() {
   const totalStn = caixa + responsavel + banco;
   const taxaRefPatrimonial = 26.00;
   const equivalenteDb = totalStn + portugal * taxaRefPatrimonial;
+
+  // Capital e financiamento não entram no lucro; aparecem separadamente.
+  atualizarKpisCapitalTesouraria();
 
   // -------------------- ESTOQUE --------------------
   let estoqueCusto = 0, estoqueVenda = 0, estoqueQtd = 0;
