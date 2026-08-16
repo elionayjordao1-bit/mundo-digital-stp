@@ -795,6 +795,11 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <span id="finPosResponsavel" class="kpi-value">0 Db</span>
           <span class="kpi-sub">Dinheiro guardado</span>
         </div>
+        <div class="kpi-card orange">
+          <span class="kpi-title">🧾 Prestação Pendente</span>
+          <span id="finPosPrestacaoPendente" class="kpi-value">0 Db</span>
+          <span class="kpi-sub">Turnos fechados ainda não entregues</span>
+        </div>
         <div class="kpi-card purple">
           <span class="kpi-title">🏦 Banco STP / DobraPay</span>
           <span id="finPosBanco" class="kpi-value">0 Db</span>
@@ -1146,6 +1151,42 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </div>
     </div>
 
+    <!-- FASE 6.3 — PRESTAÇÃO DE CONTAS DOS TURNOS FECHADOS -->
+    <div class="card hidden" id="cardPrestacaoContasTurnos" style="border-left:4px solid #2563eb;">
+      <h3 style="color:#1d4ed8;">🧾 Prestação de Contas — Turnos Fechados</h3>
+      <p style="font-size:13px;color:#64748b;margin-top:-8px;line-height:1.6;">
+        Depois do fecho, o dinheiro contado permanece associado ao turno até ser entregue à
+        <b>Responsável / Reserva</b>. A entrega pode ser total ou parcial e não é receita nem despesa.
+      </p>
+      <div class="kpi-grid" style="margin-bottom:12px;">
+        <div class="kpi-card orange">
+          <span class="kpi-title">Total Pendente</span>
+          <span id="prestKpiTotalPendente" class="kpi-value">0 Db</span>
+        </div>
+        <div class="kpi-card blue">
+          <span class="kpi-title">Turnos Pendentes</span>
+          <span id="prestKpiTurnosPendentes" class="kpi-value">0</span>
+        </div>
+        <div class="kpi-card green">
+          <span class="kpi-title">Turnos Prestados</span>
+          <span id="prestKpiTurnosPrestados" class="kpi-value">0</span>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>Turno</th><th>Funcionário</th><th>Fecho</th><th>Contado</th>
+              <th>Já Entregue</th><th>Pendente</th><th>Estado</th><th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="listaPrestacaoContasTurnos">
+            <tr><td colspan="8" style="color:#94a3b8;">A carregar turnos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- AUDITORIA DE CAIXAS (EXCLUSIVO ADMIN) -->
     <div class="card hidden" id="cardAuditoriaCaixas">
       <h3>📜 Auditoria de Caixas & Turnos (Administração)</h3>
@@ -1157,7 +1198,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <thead>
             <tr>
               <th>Turno</th><th>Funcionário</th><th>Função</th><th>Abertura</th><th>Fechamento</th>
-              <th>V. Inicial</th><th>Din. Esperado</th><th>Din. Contado</th><th>Diferença</th><th>Estado</th><th>Auditoria</th>
+              <th>V. Inicial</th><th>Din. Esperado</th><th>Din. Contado</th><th>Diferença</th><th>Estado</th><th>Prestação</th><th>Auditoria</th>
             </tr>
           </thead>
           <tbody id="listaCaixasAuditoria"></tbody>
@@ -6644,7 +6685,8 @@ function processarFinanceiro() {
   const responsavel = finNumero(contasTesouraria?.responsavel_stp);
   const banco = finNumero(contasTesouraria?.banco_stp);
   const portugal = finNumero(contasTesouraria?.portugal_eur);
-  const totalStn = caixa + responsavel + banco;
+  const prestacaoPendente = calcularTotalPrestacaoPendente63();
+  const totalStn = caixa + prestacaoPendente + responsavel + banco;
   const taxaRefPatrimonial = 26.00;
   const equivalenteDb = totalStn + portugal * taxaRefPatrimonial;
 
@@ -6683,6 +6725,7 @@ function processarFinanceiro() {
 
   set("finPosCaixa", finMoedaDb(caixa));
   set("finPosResponsavel", finMoedaDb(responsavel));
+  set("finPosPrestacaoPendente", finMoedaDb(prestacaoPendente));
   set("finPosBanco", finMoedaDb(banco));
   set("finPosPortugal", finMoedaEur(portugal));
   set("finPosTotalStn", finMoedaDb(totalStn));
@@ -7687,6 +7730,377 @@ function calcularDiferencaFechamento() {
 }
 
 
+
+
+/* =========================================================================
+   FASE 6.3 — FECHO DIÁRIO + PRESTAÇÃO DE CONTAS
+   - O fecho grava o valor físico contado e cria a obrigação de prestação.
+   - A prestação é confirmada pelo ADMIN e credita Responsável / Reserva.
+   - Pode haver prestação parcial, sem ultrapassar o valor pendente.
+   - Turnos anteriores à Fase 6.3 não são transformados retroativamente em dívida.
+   ========================================================================= */
+
+let prestacaoTurnoSelecionado63 = null;
+
+function turnoSujeitoPrestacao63(c) {
+  return !!c && c.estado === "fechado" && c.prestacaoObrigatoria === true;
+}
+
+function valorPrestadoTurno63(c) {
+  return Math.max(0, Number(c?.valorPrestado) || 0);
+}
+
+function valorPendenteTurno63(c) {
+  if(!turnoSujeitoPrestacao63(c)) return 0;
+  const contado = Math.max(0, Number(c.dinheiroContado) || 0);
+  return Math.max(0, contado - valorPrestadoTurno63(c));
+}
+
+function estadoPrestacaoTurno63(c) {
+  if(!turnoSujeitoPrestacao63(c)) return "N/A";
+  const contado = Math.max(0, Number(c.dinheiroContado) || 0);
+  const prestado = valorPrestadoTurno63(c);
+  if(contado <= 0 || prestado >= contado - 0.0001) return "PRESTADA";
+  if(prestado > 0) return "PARCIAL";
+  return "PENDENTE";
+}
+
+function calcularTotalPrestacaoPendente63() {
+  return (todosCaixasAuditoria || []).reduce((s,c) => s + valorPendenteTurno63(c), 0);
+}
+
+function badgePrestacao63(c) {
+  const st = estadoPrestacaoTurno63(c);
+  if(st === "PRESTADA") return '<span class="status-caixa-aberto" style="background:#dcfce7;color:#15803d;">✅ PRESTADA</span>';
+  if(st === "PARCIAL") return '<span class="badge-em-transito">🟠 PARCIAL</span>';
+  if(st === "PENDENTE") return '<span class="status-caixa-fechado" style="background:#fef3c7;color:#92400e;">🧾 PENDENTE</span>';
+  return '<span style="color:#94a3b8;font-size:11px;">LEGADO / N.A.</span>';
+}
+
+function renderizarPrestacoesTurnos63() {
+  const card = document.getElementById("cardPrestacaoContasTurnos");
+  const tbody = document.getElementById("listaPrestacaoContasTurnos");
+  if(!card || !tbody) return;
+
+  if(usuarioRole !== "admin") {
+    card.classList.add("hidden");
+    return;
+  }
+  card.classList.remove("hidden");
+
+  const sujeitos = (todosCaixasAuditoria || [])
+    .filter(turnoSujeitoPrestacao63)
+    .sort((a,b) => {
+      const da = a.dataFechamento?.toDate ? a.dataFechamento.toDate() : new Date(0);
+      const dbb = b.dataFechamento?.toDate ? b.dataFechamento.toDate() : new Date(0);
+      return dbb - da;
+    });
+
+  const pendentes = sujeitos.filter(c => valorPendenteTurno63(c) > 0.0001);
+  const prestados = sujeitos.filter(c => valorPendenteTurno63(c) <= 0.0001);
+  const totalPendente = pendentes.reduce((s,c) => s + valorPendenteTurno63(c), 0);
+
+  const setTxt = (id,v) => { const e=document.getElementById(id); if(e) e.innerText=v; };
+  setTxt("prestKpiTotalPendente", totalPendente.toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db");
+  setTxt("prestKpiTurnosPendentes", String(pendentes.length));
+  setTxt("prestKpiTurnosPrestados", String(prestados.length));
+
+  if(!sujeitos.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="color:#94a3b8;">Nenhum turno da Fase 6.3 fechado ainda.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = sujeitos.map(c => {
+    const contado = Math.max(0,Number(c.dinheiroContado)||0);
+    const prestado = valorPrestadoTurno63(c);
+    const pendente = valorPendenteTurno63(c);
+    const dt = c.dataFechamento?.toDate ? c.dataFechamento.toDate().toLocaleString("pt-PT") : "-";
+    const acao = pendente > 0.0001
+      ? `<button class="btn-success btn-acao" onclick="abrirModalPrestacaoContas('${c.id}')">💵 Registar Entrega</button>`
+      : '<span style="color:#15803d;font-weight:700;">Concluída</span>';
+    return `<tr>
+      <td><b>#${String(c.id||"").substring(0,6).toUpperCase()}</b></td>
+      <td>${c.usuario || "-"}</td>
+      <td><small>${dt}</small></td>
+      <td><b>${contado.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db</b></td>
+      <td>${prestado.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db</td>
+      <td><b>${pendente.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db</b></td>
+      <td>${badgePrestacao63(c)}</td>
+      <td>${acao}</td>
+    </tr>`;
+  }).join("");
+}
+
+function abrirModalPrestacaoContas(caixaId) {
+  if(usuarioRole !== "admin") return alert("A prestação de contas deve ser confirmada pelo Administrador/Responsável.");
+  const c = (todosCaixasAuditoria || []).find(x => x.id === caixaId);
+  if(!c || !turnoSujeitoPrestacao63(c)) return alert("Este turno não está sujeito à prestação de contas da Fase 6.3.");
+
+  const pendente = valorPendenteTurno63(c);
+  if(pendente <= 0.0001) return alert("A prestação deste turno já está concluída.");
+
+  prestacaoTurnoSelecionado63 = c;
+  const resumo = document.getElementById("prestacaoResumoModal");
+  const valor = document.getElementById("prestacaoValorModal");
+  const obs = document.getElementById("prestacaoObsModal");
+
+  if(resumo) resumo.innerHTML =
+    `<b>Turno:</b> #${c.id.substring(0,8).toUpperCase()}<br>` +
+    `<b>Funcionário:</b> ${c.usuario || "-"}<br>` +
+    `<b>Dinheiro contado no fecho:</b> ${(Number(c.dinheiroContado)||0).toLocaleString("pt-PT")} Db<br>` +
+    `<b>Já entregue:</b> ${valorPrestadoTurno63(c).toLocaleString("pt-PT")} Db<br>` +
+    `<b>Pendente:</b> <span style="color:#b45309;font-weight:800;">${pendente.toLocaleString("pt-PT")} Db</span>`;
+
+  if(valor) {
+    valor.value = String(pendente);
+    valor.max = String(pendente);
+  }
+  if(obs) obs.value = "";
+  document.getElementById("modalPrestacaoContas")?.classList.remove("hidden");
+}
+
+function fecharModalPrestacaoContas() {
+  prestacaoTurnoSelecionado63 = null;
+  document.getElementById("modalPrestacaoContas")?.classList.add("hidden");
+}
+
+async function confirmarPrestacaoContas() {
+  if(usuarioRole !== "admin") return alert("Acesso restrito ao Administrador/Responsável.");
+  if(!navigator.onLine) return alert("A prestação de contas exige ligação à internet.");
+  const user = auth.currentUser;
+  if(!user || !prestacaoTurnoSelecionado63) return alert("Turno não selecionado.");
+
+  const valor = Number(document.getElementById("prestacaoValorModal")?.value) || 0;
+  const obs = document.getElementById("prestacaoObsModal")?.value.trim() || "";
+  if(valor <= 0) return alert("Informe um valor entregue maior que zero.");
+
+  const caixaId = prestacaoTurnoSelecionado63.id;
+  const caixaRef = db.collection("caixas").doc(caixaId);
+  const movTesRef = db.collection("tesouraria_movimentos").doc();
+  const agora = new Date();
+  const btn = document.getElementById("btnConfirmarPrestacao");
+  if(btn) btn.disabled = true;
+
+  try {
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(caixaRef);
+      if(!snap.exists) throw new Error("Turno não encontrado.");
+      const c = snap.data();
+      if(c.estado !== "fechado" || c.prestacaoObrigatoria !== true) {
+        throw new Error("Este turno não está disponível para prestação.");
+      }
+
+      const contado = Math.max(0, Number(c.dinheiroContado) || 0);
+      const jaPrestado = Math.max(0, Number(c.valorPrestado) || 0);
+      const pendente = Math.max(0, contado - jaPrestado);
+      if(pendente <= 0.0001) throw new Error("Este turno já foi totalmente prestado.");
+      if(valor > pendente + 0.0001) {
+        throw new Error(`O valor informado excede o pendente (${pendente.toLocaleString("pt-PT")} Db).`);
+      }
+
+      const novoPrestado = jaPrestado + valor;
+      const novoPendente = Math.max(0, contado - novoPrestado);
+      const novoEstado = novoPendente <= 0.0001 ? "PRESTADA" : "PARCIAL";
+
+      tx.update(caixaRef, {
+        valorPrestado: novoPrestado,
+        valorPrestacaoPendente: novoPendente,
+        estadoPrestacao: novoEstado,
+        ultimaPrestacaoData: agora,
+        ultimaPrestacaoUid: user.uid,
+        ultimaPrestacaoUsuario: user.email
+      });
+
+      tx.set(movTesRef, {
+        tipo: "prestacao_contas",
+        origem: "prestacao_turno",
+        destino: "responsavel_stp",
+        moedaOrigem: "STN",
+        moedaDestino: "STN",
+        valorOrigem: valor,
+        valorDestino: valor,
+        taxaReferencia: null,
+        taxaAplicada: null,
+        margemDb: 0,
+        turnoId: caixaId,
+        funcionarioTurnoUid: c.uid || null,
+        funcionarioTurno: c.usuario || "",
+        observacao: obs || `Prestação de contas do turno #${caixaId.substring(0,8).toUpperCase()}`,
+        usuario: user.email,
+        nomeUsuario: usuarioNome || "",
+        uid: user.uid,
+        role: usuarioRole,
+        data: agora
+      });
+    });
+
+    fecharModalPrestacaoContas();
+    alert("Prestação de contas registada. O valor foi transferido para Responsável / Reserva sem gerar receita nem despesa.");
+  } catch(e) {
+    alert("Erro ao registar prestação: " + (e.message || e));
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}
+
+/* Rótulos da Tesouraria para a nova operação. */
+function rotuloTipoTesouraria(tipo) {
+  return ({
+    saldo_inicial: "SALDO INICIAL",
+    transferencia_cliente: "TRANSF. CLIENTE",
+    aporte_socio: "APORTE SÓCIO",
+    emprestimo_socio: "EMPRÉSTIMO SÓCIO",
+    emprestimo_banco: "EMPRÉSTIMO BANCO",
+    retirada_socio: "RETIRADA SÓCIO",
+    amortizacao_socio: "AMORTIZAÇÃO SÓCIO",
+    amortizacao_banco: "AMORTIZAÇÃO BANCO",
+    prestacao_contas: "PRESTAÇÃO CONTAS"
+  })[tipo] || "MOV. INTERNO";
+}
+
+function nomeParteTesouraria(id) {
+  const especiais = {
+    saldo_inicial: "Saldo Inicial",
+    cliente_externo: "Cliente / Exterior",
+    externo_socio: "Proprietário / Sócio",
+    externo_banco: "Banco / Financiador",
+    prestacao_turno: "Turno / Prestação de Contas"
+  };
+  return especiais[id] || nomeContaTes(id);
+}
+
+/* Fecho 6.3: mantém toda a matemática física já homologada na 6.2 e acrescenta
+   somente os campos de prestação. */
+async function confirmarFechamentoCaixa() {
+  if(!navigator.onLine) return alert("O fechamento de caixa exige conexão com a internet.");
+  if(!caixaAtualObj) return;
+
+  const btn = document.getElementById("btnConfirmarFecharCaixa");
+  if(btn) btn.disabled = true;
+
+  const contado = Number(document.getElementById("modalDinheiroContado")?.value);
+  if(document.getElementById("modalDinheiroContado")?.value === "" || isNaN(contado) || contado < 0) {
+    if(btn) btn.disabled = false;
+    return alert("Digite o valor contado fisicamente.");
+  }
+
+  const obs = document.getElementById("modalObservacaoFechamento")?.value.trim() || "";
+  const user = auth.currentUser;
+
+  try {
+    await db.runTransaction(async transaction => {
+      const caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
+      const caixaDoc = await transaction.get(caixaRef);
+      if(!caixaDoc.exists) throw new Error("Caixa não encontrado.");
+      const c = caixaDoc.data();
+      if(c.estado !== "aberto") throw new Error("Este caixa já está fechado.");
+
+      const movSnap = await db.collection("movimentacoes").where("caixaId","==",caixaAtualObj.id).get();
+      const movs = [];
+      movSnap.forEach(d => movs.push(d.data()));
+      const r = calcularResumoCaixaFisico(movs, caixaAtualObj.id, c.valorInicial);
+
+      transaction.update(caixaRef, {
+        estado: "fechado",
+        dinheiroEsperado: r.esperado,
+        dinheiroContado: contado,
+        diferenca: contado - r.esperado,
+        totalEntradasDinheiro: r.entradas,
+        totalSaidasDinheiro: r.saidas,
+        observacaoFechamento: obs,
+        fechadoPorUid: user.uid,
+        fechadoPorUsuario: user.email,
+        dataFechamento: new Date(),
+
+        // FASE 6.3
+        prestacaoObrigatoria: true,
+        valorPrestado: 0,
+        valorPrestacaoPendente: contado,
+        estadoPrestacao: contado > 0 ? "PENDENTE" : "PRESTADA"
+      });
+    });
+
+    fecharModalFecharCaixa();
+    alert(
+      contado > 0
+        ? `Caixa fechado com sucesso.\n\nPrestação pendente: ${contado.toLocaleString("pt-PT")} Db.\nO Administrador/Responsável deve confirmar a entrega na Gestão de Caixa.`
+        : "Caixa fechado com sucesso. Não há numerário pendente de prestação."
+    );
+  } catch(e) {
+    alert("Erro ao fechar caixa: " + (e.message || e));
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}
+
+/* Auditoria de turnos: acrescenta estado da prestação e alimenta o painel 6.3. */
+function carregarAuditoriaCaixasAdmin() {
+  if(listenerCaixasAuditoria) listenerCaixasAuditoria();
+  if(usuarioRole !== "admin") return;
+
+  listenerCaixasAuditoria = db.collection("caixas").orderBy("dataAbertura", "desc").onSnapshot(s => {
+    todosCaixasAuditoria = [];
+    let htmlBuffer = "";
+
+    s.forEach(d => {
+      const c = {id:d.id, ...d.data()};
+      todosCaixasAuditoria.push(c);
+
+      const dtAberto = c.dataAbertura?.toDate ? c.dataAbertura.toDate().toLocaleString("pt-PT") : "-";
+      const dtFechado = c.dataFechamento?.toDate ? c.dataFechamento.toDate().toLocaleString("pt-PT") : "EM ABERTO";
+      const stBadge = c.estado === "aberto"
+        ? '<span class="status-caixa-aberto">ABERTO</span>'
+        : '<span class="status-caixa-fechado">FECHADO</span>';
+
+      let difTxt = "-";
+      if(c.estado === "fechado") {
+        const dif = Number(c.diferenca) || 0;
+        if(Math.abs(dif) < 0.0001) difTxt = '<span class="dif-certo">0 Db</span>';
+        else if(dif < 0) difTxt = `<span class="dif-quebra">${dif.toLocaleString("pt-PT")} Db</span>`;
+        else difTxt = `<span class="dif-sobra">+${dif.toLocaleString("pt-PT")} Db</span>`;
+      }
+
+      htmlBuffer += `<tr>
+        <td><b>Turno #${c.id.substring(0,5).toUpperCase()}</b></td>
+        <td><b>${c.usuario || "-"}</b></td>
+        <td><small>${String(c.role || "venda1").toUpperCase()}</small></td>
+        <td><small>${dtAberto}</small></td>
+        <td><small>${dtFechado}</small></td>
+        <td>${(Number(c.valorInicial)||0).toLocaleString("pt-PT")} Db</td>
+        <td>${c.dinheiroEsperado !== undefined ? Number(c.dinheiroEsperado).toLocaleString("pt-PT") + " Db" : "-"}</td>
+        <td>${c.dinheiroContado !== undefined ? Number(c.dinheiroContado).toLocaleString("pt-PT") + " Db" : "-"}</td>
+        <td>${difTxt}</td>
+        <td>${stBadge}</td>
+        <td>${c.estado === "fechado" ? badgePrestacao63(c) : "-"}</td>
+        <td><button class="btn-secondary btn-acao" onclick="abrirAuditoriaDetalhadaModal('${c.id}')">🔍 Ver Auditoria</button></td>
+      </tr>`;
+    });
+
+    const lista = document.getElementById("listaCaixasAuditoria");
+    if(lista) lista.innerHTML = htmlBuffer || '<tr><td colspan="12" style="color:#94a3b8;">Nenhum registo de caixa encontrado.</td></tr>';
+
+    renderizarPrestacoesTurnos63();
+    if(typeof processarFinanceiro === "function") processarFinanceiro();
+  }, e => console.warn("Auditoria de caixas:", e));
+}
+
 </script>
+
+<!-- FASE 6.3 — MODAL PRESTAÇÃO DE CONTAS -->
+<div id="modalPrestacaoContas" class="modal-overlay hidden no-print">
+  <div class="modal-content">
+    <h3 style="color:#1d4ed8;">🧾 Registar Prestação de Contas</h3>
+    <div id="prestacaoResumoModal" style="background:#eff6ff;border:1px solid #bfdbfe;padding:12px;border-radius:9px;margin-bottom:12px;font-size:13px;line-height:1.7;"></div>
+    <label style="font-size:12px;font-weight:700;">Valor entregue à Responsável / Reserva (Db)</label>
+    <input id="prestacaoValorModal" type="number" min="0.01" step="0.01" placeholder="Valor entregue">
+    <label style="font-size:12px;font-weight:700;margin-top:10px;display:block;">Observação / referência</label>
+    <input id="prestacaoObsModal" placeholder="Ex.: Entrega de numerário do turno">
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+      <button id="btnConfirmarPrestacao" onclick="confirmarPrestacaoContas()" class="btn-success" style="flex:1;">✅ Confirmar Entrega</button>
+      <button onclick="fecharModalPrestacaoContas()" class="btn-secondary" style="flex:1;">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
