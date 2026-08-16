@@ -389,6 +389,17 @@ tr:nth-child(even) { background-color: #f8fafc; }
   <p id="erro" style="color: #ef4444; font-size: 13px; margin-top: 15px; margin-bottom: 0;"></p>
 </div>
 
+<!-- FASE 6.4.1 — PORTA DE SESSÃO SEGURA
+     Nunca mostra a aplicação antes de validar UID, status e role no Firestore. -->
+<div id="authGate64" class="card hidden no-print"
+     style="max-width:420px;margin:30px auto;text-align:center;border-top:4px solid #2563eb;">
+  <div style="font-size:28px;margin-bottom:8px;">🔐</div>
+  <h3 style="margin:0 0 6px;color:#1e3a8a;">A validar acesso...</h3>
+  <p style="margin:0;color:#64748b;font-size:13px;">
+    A confirmar estado da conta e permissões.
+  </p>
+</div>
+
 <div id="app" class="hidden no-print">
 
   <!-- NAVEGAÇÃO PRINCIPAL -->
@@ -2135,11 +2146,62 @@ function adicionarOperacaoFilaLocal(tipo, payload) {
   salvarFilaLocalSinc(fila);
 }
 
+function mostrarGateAutenticacao64(mostrar, texto) {
+  const gate = document.getElementById("authGate64");
+  if(!gate) return;
+  gate.classList.toggle("hidden", !mostrar);
+  if(texto) {
+    const p = gate.querySelector("p");
+    if(p) p.innerText = texto;
+  }
+}
+
+function limparEstadoVisualSessao64() {
+  // Impede qualquer rasto visual da conta anterior.
+  usuarioRole = null;
+  usuarioNome = "";
+  caixaAtualObj = null;
+
+  try { resetarInterface(); } catch(e) {}
+
+  // Fecha todas as páginas e força a próxima sessão a começar no Dashboard.
+  const paginas = [
+    "paginaPrincipal","paginaFinanceiro","paginaAuditoria","paginaCaixa",
+    "paginaTransferencias","paginaEncomendas","paginaDespesas",
+    "paginaTesouraria","paginaArmazemPT"
+  ];
+  const botoes = [
+    "btnPageMain","btnPageFinanceiro","btnPageAuditoria","btnPageCaixa",
+    "btnPageTransferencias","btnPageEncomendas","btnPageDespesas",
+    "btnPageTesouraria","btnPageArmazem"
+  ];
+
+  paginas.forEach(id => document.getElementById(id)?.classList.add("hidden"));
+  botoes.forEach(id => document.getElementById(id)?.classList.remove("active"));
+
+  // Limpa identidade visual da conta anterior.
+  if(userEmailSpan) userEmailSpan.innerText = "";
+  if(userRoleSpan) userRoleSpan.innerText = "";
+
+  app?.classList.add("hidden");
+  userInfoHeader?.classList.add("hidden");
+}
+
 function login(){
-  let erroCampo = document.getElementById("erro");
+  const erroCampo = document.getElementById("erro");
   if(erroCampo) erroCampo.innerText = "";
+
+  // Enquanto autentica, não existe interface operacional visível.
+  limparEstadoVisualSessao64();
+  loginBox.classList.add("hidden");
+  mostrarGateAutenticacao64(true, "A autenticar e validar permissões...");
+
   auth.signInWithEmailAndPassword(email.value, senha.value)
-    .catch(e => { if(erroCampo) erroCampo.innerText = e.message; });
+    .catch(e => {
+      mostrarGateAutenticacao64(false);
+      loginBox.classList.remove("hidden");
+      if(erroCampo) erroCampo.innerText = e.message;
+    });
 }
 
 function navegarPara(paginaId) {
@@ -2186,94 +2248,148 @@ function resetarInterface() {
   cardAuditoriaCaixas.classList.add("hidden");
 }
 
-function logout(){
-  if(listenerProdutos) listenerProdutos();
-  if(listenerMovimentacoes) listenerMovimentacoes();
-  if(listenerFuncionarios) listenerFuncionarios();
-  if(listenerDespesas) listenerDespesas();
-  if(listenerEncomendas) listenerEncomendas();
-  if(listenerTransferencias) listenerTransferencias();
-  if(listenerArmazemPT) listenerArmazemPT();
-  if(listenerLotesPT) listenerLotesPT();
-  if(listenerCaixaAtual) listenerCaixaAtual();
-  if(listenerCaixasAuditoria) listenerCaixasAuditoria();
+function desligarListenersSessao64() {
+  const listeners = [
+    "listenerProdutos","listenerMovimentacoes","listenerFuncionarios","listenerDespesas",
+    "listenerEncomendas","listenerTransferencias","listenerArmazemPT","listenerLotesPT",
+    "listenerCaixaAtual","listenerCaixasAuditoria","listenerTesouraria"
+  ];
 
-  usuarioRole = null;
-  usuarioNome = "";
-  caixaAtualObj = null;
-  resetarInterface();
-  app.classList.add("hidden");
-  userInfoHeader.classList.add("hidden");
-  loginBox.classList.remove("hidden");
-  auth.signOut();
+  listeners.forEach(nome => {
+    try {
+      const fn = window[nome];
+      if(typeof fn === "function") fn();
+      window[nome] = null;
+    } catch(e) {}
+  });
+}
+
+function logout(){
+  desligarListenersSessao64();
+  limparEstadoVisualSessao64();
+  mostrarGateAutenticacao64(true, "A terminar a sessão...");
+
+  auth.signOut().finally(() => {
+    mostrarGateAutenticacao64(false);
+    if(email) email.value = "";
+    if(senha) senha.value = "";
+    loginBox.classList.remove("hidden");
+  });
 }
 
 function toggleFuncionarios() { cardFuncionarios.classList.toggle("hidden"); }
 function toggleAlertasEstoque() { cardAlertaEstoque.classList.toggle("hidden"); }
 
-auth.onAuthStateChanged(u => {
+auth.onAuthStateChanged(async u => {
   atualizarStatusConexao();
-  if(u){
-    loginBox.classList.add("hidden");
-    app.classList.remove("hidden");
-    userInfoHeader.classList.remove("hidden");
-    userEmailSpan.innerText = u.email;
 
-    db.collection("usuarios").doc(u.uid).get().then(doc => {
-      let dados = doc.data() || {};
-      
-      if(dados.status === "desativado") {
-        alert("Esta conta está desativada. Entre em contacto com o Administrador.");
-        logout();
-        return;
-      }
-
-      usuarioRole = dados.role || "venda1";
-      usuarioNome = String(dados.nome || "").trim();
-      userRoleSpan.innerText = usuarioRole;
-      setTimeout(aplicarSegurancaInterface64, 0);
-
-      if(usuarioRole === "admin") {
-        cardRelatorio.classList.remove("hidden");
-        cardCompras.classList.remove("hidden");
-        btnPageTransferencias.classList.remove("hidden");
-        btnPageEncomendas.classList.remove("hidden");
-        btnPageDespesas.classList.remove("hidden");
-        btnPageTesouraria.classList.remove("hidden");
-        btnPageFinanceiro.classList.remove("hidden");
-        btnPageAuditoria.classList.remove("hidden");
-        cardNovoProduto.classList.remove("hidden");
-        cardHistorico.classList.remove("hidden");
-        btnToggleFunc.classList.remove("hidden");
-        btnExportarEstoque.classList.remove("hidden");
-        btnExportarHistorico.classList.remove("hidden");
-        cardAuditoriaCaixas.classList.remove("hidden");
-        encCustoCompra.classList.remove("hidden");
-      } else if(usuarioRole === "estoque") {
-        cardCompras.classList.remove("hidden");
-        cardNovoProduto.classList.remove("hidden");
-        cardHistorico.classList.remove("hidden");
-        btnExportarEstoque.classList.remove("hidden");
-        cardAuditoriaCaixas.classList.add("hidden");
-        encCustoCompra.classList.add("hidden");
-      } else {
-        btnPageTransferencias.classList.remove("hidden");
-        btnPageEncomendas.classList.remove("hidden");
-        cardAuditoriaCaixas.classList.add("hidden");
-        encCustoCompra.classList.add("hidden");
-      }
-
-      cardEstoque.classList.remove("hidden");
-      carregar();
-    }).catch(err => {
-      if(!navigator.onLine) {
-        alert("Você está em modo Offline. Algumas funções de gestão serão restritas até a conexão retornar.");
-      }
-    });
-  } else {
-    app.classList.add("hidden");
-    userInfoHeader.classList.add("hidden");
+  // SEM SESSÃO: somente ecrã de login.
+  if(!u) {
+    desligarListenersSessao64();
+    limparEstadoVisualSessao64();
+    mostrarGateAutenticacao64(false);
     loginBox.classList.remove("hidden");
+    return;
+  }
+
+  // COM SESSÃO, MAS AINDA NÃO VALIDADA:
+  // interface continua 100% escondida.
+  limparEstadoVisualSessao64();
+  loginBox.classList.add("hidden");
+  mostrarGateAutenticacao64(true, "A confirmar estado da conta e permissões...");
+
+  try {
+    const doc = await db.collection("usuarios").doc(u.uid).get();
+    if(!doc.exists) {
+      throw new Error("Perfil de utilizador não encontrado.");
+    }
+
+    const dados = doc.data() || {};
+
+    // Conta bloqueada/inativa: nunca chega a ver a aplicação.
+    if(dados.status === "desativado") {
+      const erroCampo = document.getElementById("erro");
+      await auth.signOut();
+      mostrarGateAutenticacao64(false);
+      loginBox.classList.remove("hidden");
+      if(erroCampo) {
+        erroCampo.innerText = "Esta conta está desativada. Entre em contacto com o Administrador.";
+      }
+      return;
+    }
+
+    usuarioRole = String(dados.role || "venda1").toLowerCase();
+    usuarioNome = String(dados.nome || "").trim();
+
+    userEmailSpan.innerText = u.email || "";
+    userRoleSpan.innerText = usuarioRole;
+
+    // Aplica permissões ANTES de revelar qualquer pixel da aplicação.
+    aplicarSegurancaInterface64();
+
+    if(usuarioRole === "admin") {
+      cardRelatorio.classList.remove("hidden");
+      cardCompras.classList.remove("hidden");
+      btnPageTransferencias.classList.remove("hidden");
+      btnPageEncomendas.classList.remove("hidden");
+      btnPageDespesas.classList.remove("hidden");
+      btnPageTesouraria.classList.remove("hidden");
+      btnPageFinanceiro.classList.remove("hidden");
+      btnPageAuditoria.classList.remove("hidden");
+      cardNovoProduto.classList.remove("hidden");
+      cardHistorico.classList.remove("hidden");
+      btnToggleFunc.classList.remove("hidden");
+      btnExportarEstoque.classList.remove("hidden");
+      btnExportarHistorico.classList.remove("hidden");
+      cardAuditoriaCaixas.classList.remove("hidden");
+      encCustoCompra.classList.remove("hidden");
+    } else if(usuarioRole === "estoque") {
+      cardCompras.classList.remove("hidden");
+      cardNovoProduto.classList.remove("hidden");
+      cardHistorico.classList.remove("hidden");
+      btnExportarEstoque.classList.remove("hidden");
+      cardAuditoriaCaixas.classList.add("hidden");
+      encCustoCompra.classList.add("hidden");
+    } else {
+      btnPageTransferencias.classList.remove("hidden");
+      btnPageEncomendas.classList.remove("hidden");
+      cardAuditoriaCaixas.classList.add("hidden");
+      encCustoCompra.classList.add("hidden");
+    }
+
+    cardEstoque.classList.remove("hidden");
+
+    // Toda nova sessão começa SEMPRE no Dashboard.
+    // Isso elimina o rasto da última página do utilizador anterior.
+    navegarPara("paginaPrincipal");
+
+    // Só agora carrega dados e revela a interface já autorizada.
+    carregar();
+
+    mostrarGateAutenticacao64(false);
+    userInfoHeader.classList.remove("hidden");
+    app.classList.remove("hidden");
+
+  } catch(err) {
+    console.error("Falha ao validar sessão:", err);
+
+    // Se online, trata como falha real e não revela a aplicação.
+    if(navigator.onLine) {
+      const erroCampo = document.getElementById("erro");
+      await auth.signOut().catch(()=>{});
+      limparEstadoVisualSessao64();
+      mostrarGateAutenticacao64(false);
+      loginBox.classList.remove("hidden");
+      if(erroCampo) erroCampo.innerText = "Não foi possível validar esta conta. Tente novamente.";
+    } else {
+      // Segurança > conveniência: não reutiliza permissões antigas offline.
+      const erroCampo = document.getElementById("erro");
+      await auth.signOut().catch(()=>{});
+      limparEstadoVisualSessao64();
+      mostrarGateAutenticacao64(false);
+      loginBox.classList.remove("hidden");
+      if(erroCampo) erroCampo.innerText = "Sem ligação: não foi possível validar as permissões desta conta.";
+    }
   }
 });
 
@@ -4640,18 +4756,8 @@ async function confirmarRecebimentoLoteST(){
 function darEntradaLoteNoStockSTP(loteId){ abrirModalRecebimentoLoteST(loteId); }
 
 
-// Esconde o Armazém Portugal para VENDA1/VENDA2 também no menu.
-auth.onAuthStateChanged(function(u){
-  if(!u) return;
-  db.collection("usuarios").doc(u.uid).get().then(function(doc){
-    const role=String((doc.data()||{}).role||"venda1").toLowerCase();
-    const btn=document.getElementById("btnPageArmazem");
-    const permitido=(role==="admin"||role==="estoque");
-    btn?.classList.toggle("hidden",!permitido);
-    if(!permitido && document.getElementById("paginaArmazemPT") && !document.getElementById("paginaArmazemPT").classList.contains("hidden")) navegarPara("paginaPrincipal");
-  }).catch(()=>{});
-});
-
+// FASE 6.4.1: listener duplicado de autenticação removido.
+// O controlo do Armazém agora é feito uma única vez por aplicarSegurancaInterface64().
 
 /* =========================================================================
    FASE 4 — MÓDULO SEPARADO DE TRANSFERÊNCIAS PT ⇄ STP
@@ -8124,6 +8230,13 @@ function aplicarSegurancaInterface64() {
     const el = document.getElementById(id);
     if(el) el.classList.toggle("hidden", !pode);
   };
+
+  // Começa sempre de um estado neutro; nunca herda visibilidade da sessão anterior.
+  [
+    "btnPageFinanceiro","btnPageAuditoria","btnPageCaixa","btnPageTransferencias",
+    "btnPageEncomendas","btnPageDespesas","btnPageTesouraria","btnPageArmazem",
+    "btnToggleFunc","cardPrestacaoContasTurnos","cardAuditoriaCaixas","blocoSangriaCaixa"
+  ].forEach(id => document.getElementById(id)?.classList.add("hidden"));
 
   // Navegação
   mostrar("btnPageFinanceiro", admin);
