@@ -398,6 +398,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <button class="nav-btn hidden" id="btnPageTransferencias" onclick="navegarPara('paginaTransferencias')">💱 Transferências</button>
     <button class="nav-btn hidden" id="btnPageEncomendas" onclick="navegarPara('paginaEncomendas')">🚚 Encomendas</button>
     <button class="nav-btn hidden" id="btnPageDespesas" onclick="navegarPara('paginaDespesas')">💸 Despesas Operacionais</button>
+    <button class="nav-btn hidden" id="btnPageTesouraria" onclick="navegarPara('paginaTesouraria')">💰 Tesouraria</button>
     <button class="nav-btn" id="btnPageArmazem" onclick="navegarPara('paginaArmazemPT')">🇵🇹 Armazém Portugal</button>
   </nav>
 
@@ -1100,6 +1101,122 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
   </div>
 
+
+  <!-- PÁGINA: TESOURARIA & POSIÇÃO FINANCEIRA — FASE 5.3 -->
+  <div id="paginaTesouraria" class="hidden">
+    <div class="card" style="border-top:4px solid #0f766e;">
+      <h3 style="color:#0f766e;">💰 Tesouraria & Posição Financeira</h3>
+      <p style="margin-top:-6px;color:#64748b;font-size:13px;">
+        Controle onde está o dinheiro da empresa. Transferências internas não são receita nem despesa.
+        Conversões entre EUR e Db guardam taxa de referência, taxa aplicada e margem cambial.
+      </p>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card green">
+        <span class="kpi-title">🏪 Caixa Loja</span>
+        <span id="tesKpiCaixa" class="kpi-value">0 Db</span>
+        <span class="kpi-sub">Saldo físico operacional</span>
+      </div>
+      <div class="kpi-card blue">
+        <span class="kpi-title">👤 Responsável / Reserva</span>
+        <span id="tesKpiResponsavel" class="kpi-value">0 Db</span>
+        <span class="kpi-sub">Dinheiro guardado fora da gaveta</span>
+      </div>
+      <div class="kpi-card purple">
+        <span class="kpi-title">🏦 Banco STP / DobraPay</span>
+        <span id="tesKpiBancoStp" class="kpi-value">0 Db</span>
+        <span class="kpi-sub">Saldo financeiro em dobras</span>
+      </div>
+      <div class="kpi-card orange">
+        <span class="kpi-title">🇵🇹 Portugal / EUR</span>
+        <span id="tesKpiPortugalEur" class="kpi-value">0,00 €</span>
+        <span class="kpi-sub">Saldo da empresa em euros</span>
+      </div>
+    </div>
+
+    <div class="card" style="border-left:4px solid #64748b;">
+      <h3 style="color:#475569;">📌 Saldo Inicial / Abertura da Tesouraria</h3>
+      <p style="font-size:13px;color:#64748b;">
+        Use apenas para informar dinheiro que a empresa já possuía antes deste módulo.
+        Não é receita nem despesa e fica registado na auditoria.
+      </p>
+      <div class="form-grid">
+        <select id="tesSaldoInicialConta">
+          <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+          <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+          <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
+        </select>
+        <input id="tesSaldoInicialValor" type="number" min="0.01" step="0.01" placeholder="Valor existente">
+        <input id="tesSaldoInicialObs" placeholder="Ex.: Saldo existente em 16/08/2026">
+        <button onclick="registrarSaldoInicialTesouraria()" class="btn-secondary">📌 Registar Saldo Inicial</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="color:#0f766e;">🔄 Transferir entre Contas</h3>
+      <div class="form-grid">
+        <select id="tesOrigem" onchange="atualizarResumoMovTesouraria()">
+          <option value="caixa_stp">🏪 Caixa Loja (Db)</option>
+          <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+          <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+          <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
+        </select>
+        <select id="tesDestino" onchange="atualizarResumoMovTesouraria()">
+          <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+          <option value="caixa_stp">🏪 Caixa Loja (Db)</option>
+          <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+          <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
+        </select>
+        <input id="tesValorOrigem" type="number" min="0.01" step="0.01" placeholder="Valor de origem" oninput="atualizarResumoMovTesouraria()">
+        <input id="tesTaxaReferencia" type="number" min="0.01" step="0.01" value="26" placeholder="Taxa referência Db/€" oninput="atualizarResumoMovTesouraria()">
+        <input id="tesTaxaAplicada" type="number" min="0.01" step="0.01" value="26" placeholder="Taxa aplicada Db/€" oninput="atualizarResumoMovTesouraria()">
+        <input id="tesObservacao" placeholder="Observação / motivo">
+      </div>
+
+      <div id="tesResumoConversao" style="margin-top:12px;padding:12px;background:#f8fafc;border-radius:8px;color:#334155;">
+        Selecione origem/destino e informe os valores.
+      </div>
+
+      <button onclick="registrarMovimentoTesouraria()" class="btn-primary" style="width:100%;margin-top:12px;padding:12px;">
+        🔄 Registar Movimento de Tesouraria
+      </button>
+    </div>
+
+    <div class="card">
+      <h3 style="color:#0f766e;">📜 Histórico da Tesouraria</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <input type="date" id="tesDataInicio" style="width:auto;min-height:38px;padding:5px 8px;">
+        <input type="date" id="tesDataFim" style="width:auto;min-height:38px;padding:5px 8px;">
+        <button onclick="renderizarTesouraria()" class="btn-secondary">Filtrar</button>
+        <button onclick="limparFiltrosTesouraria()" class="btn-secondary">Limpar Filtros</button>
+      </div>
+      <div class="table-responsive">
+        <table style="min-width:1200px;">
+          <thead>
+            <tr>
+              <th>Data</th><th>Tipo</th><th>Origem</th><th>Destino</th><th>Moeda</th><th>Valor Origem</th>
+              <th>Valor Destino</th><th>Taxa Ref.</th><th>Taxa Aplicada</th><th>Margem</th><th>Responsável</th><th>Obs.</th>
+            </tr>
+          </thead>
+          <tbody id="listaTesouraria"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="background:#f8fafc;">
+      <h4 style="margin-top:0;">ℹ️ Regras da Tesouraria</h4>
+      <ul style="margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;">
+        <li>Transferência entre contas na mesma moeda não gera lucro nem despesa.</li>
+        <li>Conversões EUR ⇄ Db registam taxa de referência, taxa aplicada e margem cambial.</li>
+        <li>Nenhuma conta pode enviar mais dinheiro do que possui.</li>
+        <li>Movimentos ficam imutáveis para preservar a auditoria.</li>
+        <li>Para Responsável → Caixa use este módulo; ele cria automaticamente o suprimento físico no caixa.</li>
+        <li>Para Caixa → Responsável use este módulo; ele cria automaticamente a sangria física no caixa.</li>
+      </ul>
+    </div>
+  </div>
+
   <div id="paginaArmazemPT" class="hidden">
     
     <div class="card pt-step-card">
@@ -1527,6 +1644,7 @@ function resetarInterface() {
   document.getElementById("btnPageTransferencias")?.classList.add("hidden");
   document.getElementById("btnPageEncomendas")?.classList.add("hidden");
   document.getElementById("btnPageDespesas")?.classList.add("hidden");
+  document.getElementById("btnPageTesouraria")?.classList.add("hidden");
   document.getElementById("paginaEncomendas")?.classList.add("hidden");
   cardNovoProduto.classList.add("hidden");
   cardHistorico.classList.add("hidden");
@@ -1591,6 +1709,7 @@ auth.onAuthStateChanged(u => {
         btnPageTransferencias.classList.remove("hidden");
         btnPageEncomendas.classList.remove("hidden");
         btnPageDespesas.classList.remove("hidden");
+        btnPageTesouraria.classList.remove("hidden");
         cardNovoProduto.classList.remove("hidden");
         cardHistorico.classList.remove("hidden");
         btnToggleFunc.classList.remove("hidden");
@@ -2045,7 +2164,7 @@ function carregarAuditoriaCaixasAdmin() {
       `;
     });
 
-    listaCaixasAuditoria.innerHTML = htmlBuffer || '<tr><td colspan="11" style="color:#94a3b8;">Nenhum registo de caixa encontrado.</td></tr>';
+    listaCaixasAuditoria.innerHTML = htmlBuffer || '<tr><td colspan="12" style="color:#94a3b8;">Nenhum registo de caixa encontrado.</td></tr>';
   });
 }
 
@@ -4982,6 +5101,308 @@ function limparFiltrosDespesasFase52() {
 }
 
 
+
+/* =========================================================================
+   FASE 5.3 — TESOURARIA & POSIÇÃO FINANCEIRA
+   ========================================================================= */
+let movimentosTesouraria = [];
+let listenerTesouraria = null;
+let contasTesouraria = {
+  responsavel_stp: 0,
+  banco_stp: 0,
+  portugal_eur: 0
+};
+
+function usuarioPodeTesouraria() {
+  return usuarioRole === "admin";
+}
+
+function nomeContaTes(id) {
+  return ({
+    caixa_stp: "Caixa Loja",
+    responsavel_stp: "Responsável / Reserva",
+    banco_stp: "Banco STP / DobraPay",
+    portugal_eur: "Portugal / EUR"
+  })[id] || id;
+}
+
+function moedaContaTes(id) {
+  return id === "portugal_eur" ? "EUR" : "STN";
+}
+
+function saldoContaTes(id) {
+  if(id === "caixa_stp") {
+    if(!caixaAtualObj) return 0;
+    const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+    return Number(r.esperado) || 0;
+  }
+  return Number(contasTesouraria[id]) || 0;
+}
+
+
+async function registrarSaldoInicialTesouraria() {
+  if(!usuarioPodeTesouraria()) return alert("Acesso restrito.");
+  if(!navigator.onLine) return alert("É necessária ligação à internet.");
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const conta = document.getElementById("tesSaldoInicialConta").value;
+  const valor = Number(document.getElementById("tesSaldoInicialValor").value)||0;
+  const obs = document.getElementById("tesSaldoInicialObs").value.trim();
+  if(valor <= 0) return alert("Informe um valor válido.");
+
+  const moeda = moedaContaTes(conta);
+  if(!confirm(`Registar saldo inicial?\n\n${nomeContaTes(conta)}\n${valor.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${moeda==="EUR"?"€":"Db"}\n\nIsto não será tratado como receita.`)) return;
+
+  try {
+    await db.collection("tesouraria_movimentos").add({
+      tipo: "saldo_inicial",
+      origem: "saldo_inicial",
+      destino: conta,
+      moedaOrigem: moeda,
+      moedaDestino: moeda,
+      valorOrigem: 0,
+      valorDestino: valor,
+      taxaReferencia: null,
+      taxaAplicada: null,
+      margemDb: 0,
+      observacao: obs || "Saldo inicial da tesouraria",
+      usuario: user.email,
+      nomeUsuario: usuarioNome || "",
+      uid: user.uid,
+      role: usuarioRole,
+      data: new Date()
+    });
+    document.getElementById("tesSaldoInicialValor").value = "";
+    document.getElementById("tesSaldoInicialObs").value = "";
+    alert("Saldo inicial registado.");
+  } catch(e) {
+    alert("Erro ao registar saldo inicial: " + (e.message || e));
+  }
+}
+
+function iniciarListenerTesouraria() {
+  if(listenerTesouraria) listenerTesouraria();
+  if(!usuarioPodeTesouraria()) return;
+
+  listenerTesouraria = db.collection("tesouraria_movimentos").orderBy("data","desc").onSnapshot(s => {
+    movimentosTesouraria = [];
+    s.forEach(d => movimentosTesouraria.push({id:d.id, ...d.data()}));
+    recalcularSaldosTesouraria();
+    renderizarTesouraria();
+  }, e => console.warn("Tesouraria:", e));
+}
+
+function recalcularSaldosTesouraria() {
+  const saldos = {responsavel_stp:0,banco_stp:0,portugal_eur:0};
+  movimentosTesouraria.slice().reverse().forEach(m => {
+    const vo = Number(m.valorOrigem)||0;
+    const vd = Number(m.valorDestino)||0;
+    if(m.origem && m.origem !== "caixa_stp" && m.origem !== "saldo_inicial" && m.origem !== "cliente_externo") {
+      saldos[m.origem] = (saldos[m.origem]||0) - vo;
+    }
+    if(m.destino && m.destino !== "caixa_stp" && m.destino !== "cliente_externo") {
+      saldos[m.destino] = (saldos[m.destino]||0) + vd;
+    }
+  });
+  contasTesouraria = saldos;
+}
+
+function atualizarResumoMovTesouraria() {
+  const origem = document.getElementById("tesOrigem")?.value;
+  const destino = document.getElementById("tesDestino")?.value;
+  const valor = Number(document.getElementById("tesValorOrigem")?.value)||0;
+  const ref = Number(document.getElementById("tesTaxaReferencia")?.value)||0;
+  const aplicada = Number(document.getElementById("tesTaxaAplicada")?.value)||0;
+  const box = document.getElementById("tesResumoConversao");
+  if(!box) return;
+
+  if(!origem || !destino || origem===destino || valor<=0) {
+    box.innerText = "Selecione contas diferentes e informe o valor.";
+    return;
+  }
+
+  const mo = moedaContaTes(origem), md = moedaContaTes(destino);
+  if(mo === md) {
+    box.innerText = `${valor.toLocaleString("pt-PT")} ${mo==="EUR"?"€":"Db"} serão movidos de ${nomeContaTes(origem)} para ${nomeContaTes(destino)}. Sem lucro ou despesa.`;
+    return;
+  }
+
+  if(ref<=0 || aplicada<=0) {
+    box.innerText = "Para EUR ⇄ Db, informe taxa de referência e taxa aplicada.";
+    return;
+  }
+
+  let destinoValor=0, margem=0;
+  if(mo==="EUR" && md==="STN") {
+    destinoValor = valor * aplicada;
+    margem = valor * (ref - aplicada);
+  } else if(mo==="STN" && md==="EUR") {
+    destinoValor = valor / aplicada;
+    margem = (valor / aplicada) * (aplicada - ref);
+  }
+
+  box.innerText = `Destino: ${destinoValor.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${md==="EUR"?"€":"Db"} | Margem estimada: ${margem.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db`;
+}
+
+async function registrarMovimentoTesouraria() {
+  if(!usuarioPodeTesouraria()) return alert("Acesso restrito: Tesouraria é exclusiva do Administrador.");
+  if(!navigator.onLine) return alert("É necessária ligação à internet.");
+
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const origem = tesOrigem.value;
+  const destino = tesDestino.value;
+  const valorOrigem = Number(tesValorOrigem.value)||0;
+  const ref = Number(tesTaxaReferencia.value)||0;
+  const aplicada = Number(tesTaxaAplicada.value)||0;
+  const observacao = tesObservacao.value.trim();
+
+  if(origem===destino) return alert("Origem e destino devem ser diferentes.");
+  if(valorOrigem<=0) return alert("Informe um valor válido.");
+
+  if((origem === "caixa_stp" || destino === "caixa_stp") && (!caixaAtualObj || caixaAtualObj.estado !== "aberto")) {
+    return alert("Para movimentar o Caixa Loja, abra primeiro o Caixa/Turno.");
+  }
+
+  const saldo = saldoContaTes(origem);
+  if(saldo < valorOrigem) {
+    return alert(
+      `Saldo insuficiente em ${nomeContaTes(origem)}.\n\n` +
+      `Disponível: ${saldo.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${moedaContaTes(origem)==="EUR"?"€":"Db"}\n` +
+      `Necessário: ${valorOrigem.toLocaleString("pt-PT",{maximumFractionDigits:2})}`
+    );
+  }
+
+  const mo = moedaContaTes(origem), md = moedaContaTes(destino);
+  let valorDestino = valorOrigem, margemDb = 0;
+
+  if(mo !== md) {
+    if(ref<=0 || aplicada<=0) return alert("Informe taxa de referência e taxa aplicada.");
+    if(mo==="EUR" && md==="STN") {
+      valorDestino = valorOrigem * aplicada;
+      margemDb = valorOrigem * (ref - aplicada);
+    } else if(mo==="STN" && md==="EUR") {
+      valorDestino = valorOrigem / aplicada;
+      margemDb = valorDestino * (aplicada - ref);
+    }
+  }
+
+  if(!confirm(
+    `Confirmar movimento de tesouraria?\n\n` +
+    `${nomeContaTes(origem)} → ${nomeContaTes(destino)}\n` +
+    `Origem: ${valorOrigem.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${mo==="EUR"?"€":"Db"}\n` +
+    `Destino: ${valorDestino.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${md==="EUR"?"€":"Db"}`
+  )) return;
+
+  const movRef = db.collection("tesouraria_movimentos").doc();
+  const agora = new Date();
+
+  try {
+    await db.runTransaction(async tx => {
+      tx.set(movRef, {
+        origem, destino,
+        moedaOrigem: mo,
+        moedaDestino: md,
+        valorOrigem,
+        valorDestino,
+        taxaReferencia: mo===md ? null : ref,
+        taxaAplicada: mo===md ? null : aplicada,
+        margemDb,
+        observacao,
+        usuario: user.email,
+        nomeUsuario: usuarioNome || "",
+        uid: user.uid,
+        role: usuarioRole,
+        data: agora
+      });
+
+      // Se o Caixa Loja participa, cria movimento físico correspondente.
+      if(origem === "caixa_stp" || destino === "caixa_stp") {
+        const movCaixaRef = db.collection("movimentacoes").doc();
+        const ehSaida = origem === "caixa_stp";
+        tx.set(movCaixaRef, {
+          produto: `Tesouraria: ${nomeContaTes(origem)} → ${nomeContaTes(destino)}`,
+          tipo: ehSaida ? "sangria_caixa" : "suprimento_caixa",
+          quantidade: 1,
+          valor: ehSaida ? valorOrigem : valorDestino,
+          formaPagamento: ehSaida ? "Dinheiro - Sangria Tesouraria" : "Dinheiro - Suprimento Tesouraria",
+          origemTesouraria: origem,
+          destinoTesouraria: destino,
+          tesourariaMovId: movRef.id,
+          usuario: user.email,
+          nomeUsuario: usuarioNome || "",
+          uid: user.uid,
+          role: usuarioRole,
+          data: agora,
+          caixaId: caixaAtualObj?.id || null
+        });
+      }
+    });
+
+    tesValorOrigem.value = "";
+    tesObservacao.value = "";
+    alert("Movimento de tesouraria registado com sucesso.");
+  } catch(e) {
+    alert("Erro ao registar movimento: " + (e.message || e));
+  }
+}
+
+function renderizarTesouraria() {
+  const tbody = document.getElementById("listaTesouraria");
+  if(!tbody) return;
+
+  if(document.getElementById("tesKpiCaixa")) tesKpiCaixa.innerText = saldoContaTes("caixa_stp").toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
+  if(document.getElementById("tesKpiResponsavel")) tesKpiResponsavel.innerText = saldoContaTes("responsavel_stp").toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
+  if(document.getElementById("tesKpiBancoStp")) tesKpiBancoStp.innerText = saldoContaTes("banco_stp").toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
+  if(document.getElementById("tesKpiPortugalEur")) tesKpiPortugalEur.innerText = saldoContaTes("portugal_eur").toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2}) + " €";
+
+  let lista = [...movimentosTesouraria];
+  const iniV = document.getElementById("tesDataInicio")?.value || "";
+  const fimV = document.getElementById("tesDataFim")?.value || "";
+  const ini = iniV ? new Date(iniV+"T00:00:00") : null;
+  const fim = fimV ? new Date(fimV+"T23:59:59") : null;
+
+  lista = lista.filter(m => {
+    const dt = obterDataSegura(m.data);
+    return (!ini || dt>=ini) && (!fim || dt<=fim);
+  });
+
+  tbody.innerHTML = lista.map(m => {
+    const dt = obterDataSegura(m.data).toLocaleString("pt-PT");
+    return `<tr>
+      <td><small>${dt}</small></td>
+      <td>${m.tipo === "saldo_inicial" ? "SALDO INICIAL" : (m.tipo === "transferencia_cliente" ? "TRANSF. CLIENTE" : "MOV. INTERNO")}</td>
+      <td>${m.origem === "saldo_inicial" ? "Saldo Inicial" : (m.origem === "cliente_externo" ? "Cliente/Exterior" : nomeContaTes(m.origem))}</td>
+      <td>${m.destino === "cliente_externo" ? "Cliente/Exterior" : nomeContaTes(m.destino)}</td>
+      <td>${m.moedaOrigem} → ${m.moedaDestino}</td>
+      <td>${(Number(m.valorOrigem)||0).toLocaleString("pt-PT",{maximumFractionDigits:2})} ${m.moedaOrigem==="EUR"?"€":"Db"}</td>
+      <td>${(Number(m.valorDestino)||0).toLocaleString("pt-PT",{maximumFractionDigits:2})} ${m.moedaDestino==="EUR"?"€":"Db"}</td>
+      <td>${m.taxaReferencia==null?"-":Number(m.taxaReferencia).toFixed(2)}</td>
+      <td>${m.taxaAplicada==null?"-":Number(m.taxaAplicada).toFixed(2)}</td>
+      <td style="font-weight:bold;color:${(Number(m.margemDb)||0)>=0?"#059669":"#dc2626"};">${(Number(m.margemDb)||0).toLocaleString("pt-PT",{maximumFractionDigits:2})} Db</td>
+      <td>${m.nomeUsuario || m.usuario || "-"}</td>
+      <td>${m.observacao || "-"}</td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="11" style="color:#94a3b8;">Nenhum movimento registado.</td></tr>';
+}
+
+function limparFiltrosTesouraria() {
+  tesDataInicio.value = "";
+  tesDataFim.value = "";
+  renderizarTesouraria();
+}
+
+["tesOrigem","tesDestino","tesValorOrigem","tesTaxaReferencia","tesTaxaAplicada"].forEach(id => {
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("input", atualizarResumoMovTesouraria);
+    if(el && el.tagName === "SELECT") el.addEventListener("change", atualizarResumoMovTesouraria);
+  }, 0);
+});
+
+
 /* Navegação final da Fase 4: adiciona a página de Transferências sem remover as páginas da Fase 3. */
 function navegarPara(paginaId) {
   if(paginaId === "paginaTransferencias" && !usuarioPodeTransferencias()) {
@@ -4996,13 +5417,17 @@ function navegarPara(paginaId) {
     alert("Acesso restrito: o módulo Despesas Operacionais é exclusivo do Administrador.");
     return;
   }
+  if(paginaId === "paginaTesouraria" && !usuarioPodeTesouraria()) {
+    alert("Acesso restrito: o módulo Tesouraria é exclusivo do Administrador.");
+    return;
+  }
   if(paginaId === "paginaArmazemPT" && !usuarioPodeArmazemPT()) {
     alert("Acesso restrito: o Armazém Portugal é exclusivo do Administrador e do Estoque.");
     return;
   }
 
-  const paginas = ["paginaPrincipal","paginaCaixa","paginaTransferencias","paginaEncomendas","paginaDespesas","paginaArmazemPT"];
-  const botoes = ["btnPageMain","btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageDespesas","btnPageArmazem"];
+  const paginas = ["paginaPrincipal","paginaCaixa","paginaTransferencias","paginaEncomendas","paginaDespesas","paginaTesouraria","paginaArmazemPT"];
+  const botoes = ["btnPageMain","btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageDespesas","btnPageTesouraria","btnPageArmazem"];
 
   paginas.forEach(id => document.getElementById(id)?.classList.add("hidden"));
   botoes.forEach(id => document.getElementById(id)?.classList.remove("active"));
@@ -5013,6 +5438,7 @@ function navegarPara(paginaId) {
     paginaTransferencias: ["paginaTransferencias","btnPageTransferencias"],
     paginaEncomendas: ["paginaEncomendas","btnPageEncomendas"],
     paginaDespesas: ["paginaDespesas","btnPageDespesas"],
+    paginaTesouraria: ["paginaTesouraria","btnPageTesouraria"],
     paginaArmazemPT: ["paginaArmazemPT","btnPageArmazem"]
   };
 
@@ -5032,6 +5458,11 @@ function navegarPara(paginaId) {
   if(paginaId === "paginaDespesas") {
     iniciarListenerDespesasFase52();
     renderizarDespesasFase52();
+  }
+  if(paginaId === "paginaTesouraria") {
+    iniciarListenerTesouraria();
+    atualizarResumoMovTesouraria();
+    renderizarTesouraria();
   }
 }
 
