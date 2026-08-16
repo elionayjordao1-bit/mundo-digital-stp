@@ -1140,7 +1140,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
             <button onclick="registrarSuprimentoCaixa()" class="btn-success">➕ Registar Suprimento</button>
           </div>
           <div style="height:1px;background:#e2e8f0;margin:14px 0;"></div>
-          <div class="form-grid">
+          <div class="form-grid" id="blocoSangriaCaixa">
             <input id="caixaSangriaValor" type="number" min="0.01" step="0.01" placeholder="Valor da Sangria (Db)">
             <input id="caixaSangriaMotivo" placeholder="Motivo / destino da retirada">
             <button onclick="registrarSangriaCaixa()" class="btn-warning">➖ Registar Sangria</button>
@@ -2231,6 +2231,7 @@ auth.onAuthStateChanged(u => {
       usuarioRole = dados.role || "venda1";
       usuarioNome = String(dados.nome || "").trim();
       userRoleSpan.innerText = usuarioRole;
+      setTimeout(aplicarSegurancaInterface64, 0);
 
       if(usuarioRole === "admin") {
         cardRelatorio.classList.remove("hidden");
@@ -2486,6 +2487,9 @@ function atualizarKpiCaixaAbertoLocal() {
 }
 
 function abrirCaixa() {
+  if(!(usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2")) {
+    return alert("Acesso restrito: apenas Administrador e Vendedores podem abrir Caixa/Turno.");
+  }
   if(!navigator.onLine) return alert("Erro de conexão: É necessária internet ativa para abrir o caixa de forma segura.");
 
   let u = auth.currentUser;
@@ -4286,9 +4290,13 @@ function carregar() {
     carregarDespesas();
     carregarAuditoriaCaixasAdmin();
   }
-  carregarEncomendas();
+  if(usuarioPodeEncomendasFase5()) carregarEncomendas();
+  else todasEncomendas = [];
+
   if(usuarioPodeArmazemPT()) carregarArmazemPTTresPassos();
-  carregarCaixaDoUsuario();
+
+  if(isAdmin || podeVender) carregarCaixaDoUsuario();
+  else caixaAtualObj = null;
 
   listenerProdutos = db.collection("produtos").onSnapshot(s => {
     todosProdutos = [];
@@ -4310,11 +4318,21 @@ function carregar() {
     verificarAlertaEstoqueBaixo(); renderizarTabelaEstoque(); processarDashboard();
   }, err => console.warn("Produtos: modo offline/erro", err));
 
-  listenerMovimentacoes = db.collection("movimentacoes").orderBy("data","desc").onSnapshot(s => {
+  let queryMovimentacoes64;
+  if(isAdmin || isEstoque) {
+    queryMovimentacoes64 = db.collection("movimentacoes").orderBy("data","desc");
+  } else {
+    queryMovimentacoes64 = db.collection("movimentacoes").where("uid","==",auth.currentUser.uid);
+  }
+
+  listenerMovimentacoes = queryMovimentacoes64.onSnapshot(s => {
     todasMovimentacoes = [];
     s.forEach(d => { const m = d.data(); m.id = d.id; todasMovimentacoes.push(m); });
-    renderizarHistorico(todasMovimentacoes); processarDashboard(); atualizarKpiCaixaAbertoLocal();
-  }, err => console.warn("Movimentações: modo offline/erro", err));
+    todasMovimentacoes.sort((a,b) => obterDataSegura(b.data) - obterDataSegura(a.data));
+    renderizarHistorico(todasMovimentacoes);
+    processarDashboard();
+    atualizarKpiCaixaAbertoLocal();
+  }, err => console.warn("Movimentações: acesso/erro", err));
 
   if(listenerTransferencias) listenerTransferencias();
   if(usuarioPodeTransferencias()) {
@@ -7577,6 +7595,7 @@ async function registrarSuprimentoCaixa() {
 }
 
 async function registrarSangriaCaixa() {
+  if(usuarioRole !== "admin") return alert("Acesso restrito: Sangria de Caixa é exclusiva do Administrador.");
   if(!navigator.onLine) return alert("A sangria de caixa exige ligação à internet.");
   if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") return alert("Abra primeiro o Caixa/Turno.");
   const user = auth.currentUser;
@@ -8083,6 +8102,102 @@ function carregarAuditoriaCaixasAdmin() {
     if(typeof processarFinanceiro === "function") processarFinanceiro();
   }, e => console.warn("Auditoria de caixas:", e));
 }
+
+
+
+/* =========================================================================
+   FASE 6.4 — SEGURANÇA & PERMISSÕES
+   Camada 1: Interface
+   Camada 2: Firestore Rules (entregues em ficheiro separado)
+   ========================================================================= */
+
+function usuarioPodeCaixa64() {
+  return usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2";
+}
+
+function aplicarSegurancaInterface64() {
+  const admin = usuarioRole === "admin";
+  const vendedor = usuarioRole === "venda1" || usuarioRole === "venda2";
+  const estoque = usuarioRole === "estoque";
+
+  const mostrar = (id, pode) => {
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle("hidden", !pode);
+  };
+
+  // Navegação
+  mostrar("btnPageFinanceiro", admin);
+  mostrar("btnPageAuditoria", admin);
+  mostrar("btnPageCaixa", admin || vendedor);
+  mostrar("btnPageTransferencias", admin || vendedor);
+  mostrar("btnPageEncomendas", admin || vendedor);
+  mostrar("btnPageDespesas", admin);
+  mostrar("btnPageTesouraria", admin);
+  mostrar("btnPageArmazem", admin || estoque);
+
+  // Gestão sensível
+  mostrar("btnToggleFunc", admin);
+  mostrar("cardPrestacaoContasTurnos", admin);
+  mostrar("cardAuditoriaCaixas", admin);
+  mostrar("blocoSangriaCaixa", admin);
+
+  // Estoque não deve permanecer acidentalmente em página financeira/caixa.
+  if(estoque) {
+    const paginasProibidas = [
+      "paginaFinanceiro","paginaAuditoria","paginaCaixa","paginaTransferencias",
+      "paginaEncomendas","paginaDespesas","paginaTesouraria"
+    ];
+    if(paginasProibidas.some(id => {
+      const p = document.getElementById(id);
+      return p && !p.classList.contains("hidden");
+    })) {
+      navegarPara("paginaPrincipal");
+    }
+  }
+}
+
+/* Encomendas:
+   ADMIN vê todas.
+   VENDEDOR consulta apenas as próprias, compatível com as Rules 6.4. */
+function carregarEncomendas() {
+  if(listenerEncomendas) listenerEncomendas();
+
+  if(!usuarioPodeEncomendasFase5()) {
+    todasEncomendas = [];
+    f5RenderizarLista?.();
+    return;
+  }
+
+  let q = db.collection("encomendas");
+  if(usuarioRole !== "admin") {
+    q = q.where("uid","==",auth.currentUser.uid);
+  }
+
+  listenerEncomendas = q.onSnapshot(s => {
+    todasEncomendas = [];
+    s.forEach(d => {
+      const enc = d.data();
+      enc.id = d.id;
+      todasEncomendas.push(enc);
+    });
+
+    todasEncomendas.sort((a,b) => obterDataSegura(b.data) - obterDataSegura(a.data));
+
+    // A interface oficial da Fase 5 usa esta lista.
+    if(typeof f5RenderizarLista === "function") f5RenderizarLista();
+    if(typeof f5AtualizarResumoPagina === "function") f5AtualizarResumoPagina();
+  }, err => console.warn("Encomendas: acesso/erro", err));
+}
+
+/* Guarda adicional de navegação do Caixa para impedir acesso direto pela consola/UI. */
+const navegarParaAntes64 = navegarPara;
+navegarPara = function(paginaId) {
+  if(paginaId === "paginaCaixa" && !usuarioPodeCaixa64()) {
+    alert("Acesso restrito: Gestão de Caixa é exclusiva do Administrador e dos Vendedores.");
+    return;
+  }
+  return navegarParaAntes64(paginaId);
+};
 
 </script>
 
