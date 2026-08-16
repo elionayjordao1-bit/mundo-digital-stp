@@ -1069,10 +1069,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <h3 style="color:#1d4ed8;">ℹ️ Como interpretar</h3>
       <div style="font-size:13px;color:#475569;line-height:1.8;">
         <b>🟢 OK:</b> regra verificada e coerente.<br>
-        <b>🔵 LEGADO / PRÉ-GO-LIVE:</b> registro anterior a 16/08/2026 que não possui campos criados nas fases mais recentes. O histórico é preservado e não bloqueia homologação.<br>
+        <b>🔵 LEGADO / PRÉ-GO-LIVE:</b> registro anterior a 16/08/2026 às 12:05 que não possui campos criados nas fases mais recentes. O histórico é preservado e não bloqueia homologação.<br>
         <b>🟠 ALERTA:</b> situação atual que merece conferência, mas não representa automaticamente erro financeiro.<br>
         <b>🔴 CRÍTICO:</b> inconsistência financeira/operacional atual que deve ser resolvida antes do GO LIVE.<br><br>
-        <b>Marco técnico desta auditoria:</b> 16/08/2026 às 00:00. Registros anteriores não são modificados nem apagados; apenas recebem classificação histórica quando a ausência de campos decorre das versões antigas do sistema.
+        <b>Marco técnico desta auditoria:</b> 16/08/2026 às 12:05. Registros anteriores não são modificados nem apagados; apenas recebem classificação histórica quando a ausência de campos decorre das versões antigas do sistema.
       </div>
     </div>
 
@@ -6495,7 +6495,7 @@ let resultadosAuditoria61 = [];
 
 // Marco técnico da arquitetura atual. Registros anteriores permanecem no histórico,
 // mas a ausência de campos introduzidos depois não bloqueia a homologação.
-const AUDITORIA_MARCO_GO_LIVE_61 = new Date(2026, 7, 16, 0, 0, 0); // 16/08/2026 00:00 no horário local
+const AUDITORIA_MARCO_GO_LIVE_61 = new Date(2026, 7, 16, 12, 5, 0); // 16/08/2026 12:05 no horário local
 
 function audEhLegado(obj) {
   if(!obj) return false;
@@ -6515,7 +6515,7 @@ function audRegistrarHistorico(nivelAtual, modulo, referencia, regra, detalheAtu
     referencia,
     regra,
     nivel === "LEGADO"
-      ? (detalheLegado || `Registro anterior ao marco de 16/08/2026. ${detalheAtual}`)
+      ? (detalheLegado || `Registro anterior ao marco de 16/08/2026 às 12:05. ${detalheAtual}`)
       : detalheAtual,
     obj
   );
