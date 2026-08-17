@@ -2887,20 +2887,57 @@ function classificarMovimentoAuditoriaTurno(m) {
     fundo
   });
 
+  // Estado atual da solicitação ligada ao movimento. Isso mantém compatibilidade
+  // com movimentos antigos, criados antes da trilha explícita de decisão administrativa.
+  const solicitacao = m?.solicitacaoTransferenciaId
+    ? (solicitacoesTransferencia651 || []).find(x => x.id === m.solicitacaoTransferenciaId)
+    : null;
+  const estadoSolicitacao = String(solicitacao?.estado || "");
+  const temDecisaoExplicita = m?.solicitacaoTransferenciaId
+    ? (todasMovimentacoes || []).some(x =>
+        x.solicitacaoTransferenciaId === m.solicitacaoTransferenciaId &&
+        (x.tipo === "aprovacao_transferencia_saida" || x.tipo === "aprovacao_transferencia_entrada_sem_caixa" || x.tipo === "liberacao_reserva_transferencia_entrada" || x.tipo === "rejeicao_transferencia")
+      )
+    : false;
+
   if(tipo === "suprimento_caixa")
     return retorno("SUPRIMENTO DE CAIXA", +valor, "#047857", "#dcfce7");
   if(tipo === "sangria_caixa")
     return retorno("SANGRIA DE CAIXA", -valor, "#b91c1c", "#fee2e2");
 
-  if(tipo === "reserva_transferencia_saida")
+  if(tipo === "reserva_transferencia_saida") {
+    // Em dados novos, a reserva permanece como o evento físico original e a decisão
+    // aparece em outra linha. Em dados legados, derivamos o estado para não mostrar
+    // eternamente "reservada" numa transferência já processada.
+    if(!temDecisaoExplicita && (estadoSolicitacao === "APROVADA" || estadoSolicitacao === "CONCLUIDA"))
+      return retorno("TRANSFERÊNCIA PT→STP — CONCLUÍDA (RESERVA ORIGINAL)", -valor, "#047857", "#dcfce7");
+    if(!temDecisaoExplicita && estadoSolicitacao === "REJEITADA")
+      return retorno("TRANSFERÊNCIA PT→STP — RESERVA REJEITADA", -valor, "#991b1b", "#fee2e2");
     return retorno("TRANSFERÊNCIA PT→STP — SAÍDA RESERVADA", -valor, "#b45309", "#fef3c7");
-  if(tipo === "reserva_transferencia_entrada")
+  }
+
+  if(tipo === "reserva_transferencia_entrada") {
+    if(!temDecisaoExplicita && (estadoSolicitacao === "APROVADA" || estadoSolicitacao === "CONCLUIDA"))
+      return retorno("TRANSFERÊNCIA STP→PT — ENTRADA ORIGINAL / APROVADA", +valor, "#047857", "#dcfce7");
+    if(!temDecisaoExplicita && estadoSolicitacao === "REJEITADA")
+      return retorno("TRANSFERÊNCIA STP→PT — ENTRADA REJEITADA", +valor, "#991b1b", "#fee2e2");
     return retorno("TRANSFERÊNCIA STP→PT — ENTRADA RESERVADA", +valor, "#b45309", "#fef3c7");
+  }
+
   if(tipo === "reserva_sinal_encomenda")
     return retorno("SINAL DE ENCOMENDA — PENDENTE", +valor, "#b45309", "#fef3c7");
 
+  // Decisões administrativas: sempre efeito 0 Db. O dinheiro físico já entrou/saiu
+  // no momento da reserva; a decisão não pode duplicar o efeito no caixa.
+  if(tipo === "aprovacao_transferencia_saida")
+    return retorno("TRANSFERÊNCIA PT→STP — APROVADA / CONCLUÍDA", 0, "#047857", "#dcfce7");
+  if(tipo === "aprovacao_transferencia_entrada_sem_caixa")
+    return retorno("TRANSFERÊNCIA STP→PT — APROVADA / SEM IMPACTO NO CAIXA", 0, "#047857", "#dcfce7");
+  if(tipo === "rejeicao_transferencia")
+    return retorno("TRANSFERÊNCIA — REJEITADA PELO ADMINISTRADOR", 0, "#991b1b", "#fee2e2");
+
   if(tipo === "liberacao_reserva_transferencia_entrada")
-    return retorno("TRANSFERÊNCIA APROVADA — RESERVA LIBERADA", 0, "#047857", "#dcfce7");
+    return retorno("TRANSFERÊNCIA STP→PT — APROVADA / RESERVA LIBERADA", 0, "#047857", "#dcfce7");
   if(tipo === "liberacao_reserva_sinal_encomenda")
     return retorno("SINAL DE ENCOMENDA — APROVADO / LIBERADO", 0, "#047857", "#dcfce7");
 
@@ -2983,7 +3020,10 @@ function abrirAuditoriaDetalhadaModal(caixaId) {
     htmlMovimentos += `
       <tr>
         <td>${dHora}</td>
-        <td style="text-align:left;"><b>${m.produto || '-'}</b></td>
+        <td style="text-align:left;">
+          <b>${m.produto || '-'}</b>
+          ${m.motivoRejeicao ? `<br><small style="color:#991b1b;"><b>Motivo:</b> ${m.motivoRejeicao}</small>` : ''}
+        </td>
         <td>
           <span style="display:inline-block;background:${classif.fundo};color:${classif.cor};padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap;">
             ${classif.natureza}
@@ -2993,7 +3033,10 @@ function abrirAuditoriaDetalhadaModal(caixaId) {
         <td><b>${val.toLocaleString('pt-PT')} Db</b></td>
         <td><b style="color:${efeitoCor};">${efeitoTxt}</b></td>
         <td><small>${fPag}</small></td>
-        <td><small>${m.usuario || '-'}</small></td>
+        <td style="text-align:left;">
+          <small><b>Operação:</b> ${m.usuario || '-'}</small>
+          ${m.executadoPorUsuario ? `<br><small style="color:#7c3aed;"><b>Decisão:</b> ${m.executadoPorUsuario}</small>` : ''}
+        </td>
       </tr>
     `;
   });
@@ -3046,7 +3089,7 @@ function abrirAuditoriaDetalhadaModal(caixaId) {
 
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;margin-bottom:15px;font-size:12px;color:#475569;line-height:1.6;">
       <b>Leitura do caixa:</b> Valor inicial + Entradas físicas − Saídas físicas = Dinheiro esperado.
-      Movimentos de aprovação que apenas liberam uma reserva aparecem com <b>efeito 0 Db</b>, preservando a trilha de auditoria sem duplicar dinheiro.
+      Decisões de <b>aprovação/rejeição</b> aparecem como eventos próprios com <b>efeito 0 Db</b>. A entrada, saída, reposição ou devolução física permanece em linha separada, preservando a trilha completa sem duplicar dinheiro.
     </div>
 
     ${c.observacaoFechamento ? `
@@ -3061,7 +3104,7 @@ function abrirAuditoriaDetalhadaModal(caixaId) {
         <thead>
           <tr>
             <th>Horário</th><th style="text-align:left;">Operação</th><th>Ação / Natureza</th><th>Qtd</th>
-            <th>Valor Registado</th><th>Efeito no Caixa</th><th>Forma / Detalhe</th><th>Utilizador</th>
+            <th>Valor Registado</th><th>Efeito no Caixa</th><th>Forma / Detalhe</th><th>Responsáveis</th>
           </tr>
         </thead>
         <tbody>
@@ -5243,6 +5286,15 @@ function renderizarHistorico(listaMovs) {
       ? (solicitacoesTransferencia651 || []).find(x => x.id === m.solicitacaoTransferenciaId)
       : null;
     const estadoSolicitacaoTransf = String(solicitacaoTransf?.estado || "");
+    const temDecisaoExplicitaTransf = m.solicitacaoTransferenciaId
+      ? (todasMovimentacoes || []).some(x =>
+          x.solicitacaoTransferenciaId === m.solicitacaoTransferenciaId &&
+          (x.tipo === "aprovacao_transferencia_saida" ||
+           x.tipo === "aprovacao_transferencia_entrada_sem_caixa" ||
+           x.tipo === "liberacao_reserva_transferencia_entrada" ||
+           x.tipo === "rejeicao_transferencia")
+        )
+      : false;
 
     const estornoDaVenda = m.tipo === "saida" ? obterEstornoDaVenda(m.id) : null;
 
@@ -5259,7 +5311,10 @@ function renderizarHistorico(listaMovs) {
         : '<span style="background:#ecfeff;color:#0f766e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">ENCOMENDA</span>';
       cor = custo ? "#c2410c" : "#0f766e";
     } else if(m.tipo === "reserva_transferencia_saida") {
-      if(estadoSolicitacaoTransf === "APROVADA" || estadoSolicitacaoTransf === "CONCLUIDA") {
+      if(temDecisaoExplicitaTransf) {
+        badge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">⏳ TRANSF. SAÍDA RESERVADA</span>';
+        cor = "#d97706";
+      } else if(estadoSolicitacaoTransf === "APROVADA" || estadoSolicitacaoTransf === "CONCLUIDA") {
         badge = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">✅ TRANSF. SAÍDA CONCLUÍDA</span>';
         cor = "#16a34a";
         produtoExibido = produtoExibido.replace("Transferência Pendente", "Transferência");
@@ -5274,7 +5329,10 @@ function renderizarHistorico(listaMovs) {
         cor = "#dc2626";
       }
     } else if(m.tipo === "reserva_transferencia_entrada") {
-      if(estadoSolicitacaoTransf === "APROVADA" || estadoSolicitacaoTransf === "CONCLUIDA") {
+      if(temDecisaoExplicitaTransf) {
+        badge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">🔒 TRANSF. ENTRADA RESERVADA</span>';
+        cor = "#d97706";
+      } else if(estadoSolicitacaoTransf === "APROVADA" || estadoSolicitacaoTransf === "CONCLUIDA") {
         badge = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">✅ TRANSF. ENTRADA CONCLUÍDA</span>';
         cor = "#16a34a";
         produtoExibido = produtoExibido.replace("Transferência Pendente", "Transferência");
@@ -5291,8 +5349,16 @@ function renderizarHistorico(listaMovs) {
     } else if(m.tipo === "reserva_sinal_encomenda") {
       badge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">🔒 SINAL PENDENTE</span>';
       cor = "#d97706";
+    } else if(m.tipo === "aprovacao_transferencia_saida" || m.tipo === "aprovacao_transferencia_entrada_sem_caixa") {
+      badge = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">✅ TRANSF. APROVADA</span>';
+      cor = "#16a34a";
+    } else if(m.tipo === "rejeicao_transferencia") {
+      badge = '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">❌ TRANSF. REJEITADA</span>';
+      cor = "#991b1b";
     } else if(m.tipo === "liberacao_reserva_transferencia_entrada" || m.tipo === "liberacao_reserva_sinal_encomenda") {
-      badge = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">🔓 RESERVA LIBERADA</span>';
+      badge = m.tipo === "liberacao_reserva_transferencia_entrada"
+        ? '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">✅ TRANSF. APROVADA / RESERVA LIBERADA</span>'
+        : '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">🔓 RESERVA LIBERADA</span>';
       cor = "#16a34a";
     } else if(m.tipo === "reposicao_reserva_transferencia_saida") {
       badge = '<span style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">↩ REPOSIÇÃO</span>';
@@ -5341,7 +5407,7 @@ function renderizarHistorico(listaMovs) {
       <td><b>${m.quantidade || 0}</b></td>
       <td><small>${formaExibida}</small></td>
       <td style="font-weight:bold;color:${cor};">${m.tipo==="estorno_venda" ? "-" : ""}${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</td>
-      <td><small>${m.nomeUsuario || m.usuario || '-'}</small></td>
+      <td><small>${m.nomeUsuario || m.usuario || '-'}</small>${m.executadoPorUsuario ? `<br><small style="color:#7c3aed;">Admin: ${m.executadoPorUsuario}</small>` : ''}</td>
       <td><small>${dt}</small></td>
       <td>${acao}</td>
     </tr>`;
@@ -9133,16 +9199,46 @@ async function aprovarTransferencia651(id) {
         dataAprovacao:agora, efeitoFinanceiroDefinitivo:true
       });
 
-      // Entrada física pendente deixa de ficar bloqueada após aprovação.
-      if(d.formaSTP === "Dinheiro" && d.direcao === "STP_PT" && d.caixaId) {
+      // FASE 6.5.6 — decisão administrativa explícita na trilha de auditoria.
+      // PT→STP: a saída física já ocorreu na reserva; aprovação tem efeito 0 Db.
+      if(d.direcao === "PT_STP") {
         tx.set(db.collection("movimentacoes").doc(), {
-          produto:`Liberação de Entrada Aprovada — ${d.cliente}`,
-          tipo:"liberacao_reserva_transferencia_entrada",
+          produto:`Transferência Aprovada PT→STP — ${d.cliente}`,
+          tipo:"aprovacao_transferencia_saida",
           quantidade:1, valor:Number(d.totalDb),
           formaPagamento:"Controle Interno - Aprovação",
           usuario:d.usuario, uid:d.uid, role:d.role,
           executadoPorUid:user.uid, executadoPorUsuario:user.email,
-          data:agora, caixaId:d.caixaId, solicitacaoTransferenciaId:id, transferenciaId:trRef.id
+          data:agora, caixaId:d.caixaId || null,
+          solicitacaoTransferenciaId:id, transferenciaId:trRef.id, direcao:d.direcao,
+          efeitoCaixa:0
+        });
+      }
+
+      // STP→PT: a entrada física já ocorreu e estava bloqueada; esta linha registra
+      // simultaneamente a aprovação e a liberação da reserva, sem nova entrada física.
+      if(d.formaSTP === "Dinheiro" && d.direcao === "STP_PT" && d.caixaId) {
+        tx.set(db.collection("movimentacoes").doc(), {
+          produto:`Transferência Aprovada STP→PT — ${d.cliente}`,
+          tipo:"liberacao_reserva_transferencia_entrada",
+          quantidade:1, valor:Number(d.totalDb),
+          formaPagamento:"Controle Interno - Aprovação / Reserva Liberada",
+          usuario:d.usuario, uid:d.uid, role:d.role,
+          executadoPorUid:user.uid, executadoPorUsuario:user.email,
+          data:agora, caixaId:d.caixaId, solicitacaoTransferenciaId:id, transferenciaId:trRef.id,
+          direcao:d.direcao, efeitoCaixa:0
+        });
+      } else if(d.direcao === "STP_PT") {
+        // Forma não física: ainda preserva a decisão no histórico geral.
+        tx.set(db.collection("movimentacoes").doc(), {
+          produto:`Transferência Aprovada STP→PT — ${d.cliente}`,
+          tipo:"aprovacao_transferencia_entrada_sem_caixa",
+          quantidade:1, valor:Number(d.totalDb),
+          formaPagamento:"Controle Interno - Aprovação / Sem impacto no caixa",
+          usuario:d.usuario, uid:d.uid, role:d.role,
+          executadoPorUid:user.uid, executadoPorUsuario:user.email,
+          data:agora, caixaId:null, solicitacaoTransferenciaId:id, transferenciaId:trRef.id,
+          direcao:d.direcao, efeitoCaixa:0
         });
       }
     });
@@ -9183,6 +9279,20 @@ async function rejeitarTransferencia651(id) {
         estado:"REJEITADA", motivoRejeicao:motivo.trim(),
         rejeitadoPorUid:user.uid, rejeitadoPorUsuario:user.email,
         dataRejeicao:agora, efeitoFinanceiroDefinitivo:false
+      });
+
+      // FASE 6.5.6 — a decisão de rejeitar é um evento administrativo próprio,
+      // sempre com efeito 0 Db. A reposição/devolução física, quando existir,
+      // permanece numa linha separada para a auditoria mostrar causa e efeito.
+      tx.set(db.collection("movimentacoes").doc(), {
+        produto:`Transferência Rejeitada ${d.direcao === "PT_STP" ? "PT→STP" : "STP→PT"} — ${d.cliente}`,
+        tipo:"rejeicao_transferencia",
+        quantidade:1, valor:Number(d.totalDb),
+        formaPagamento:"Controle Interno - Rejeição",
+        usuario:d.usuario, uid:d.uid, role:d.role,
+        executadoPorUid:user.uid, executadoPorUsuario:user.email,
+        data:agora, caixaId:d.caixaId || null, solicitacaoTransferenciaId:id,
+        direcao:d.direcao, motivoRejeicao:motivo.trim(), efeitoCaixa:0
       });
 
       if(d.formaSTP === "Dinheiro" && d.caixaId) {
