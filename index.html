@@ -1251,7 +1251,32 @@ tr:nth-child(even) { background-color: #f8fafc; }
           </div>
         </div>
 
-        <button onclick="f5RegistrarEncomenda()" class="btn-success" style="grid-column:1/-1;background:#0d9488;">📦 Registar Encomenda & Receber Sinal</button>
+        <button id="btnF5RegistrarEncomenda" onclick="f5RegistrarEncomenda()" class="btn-success" style="grid-column:1/-1;background:#0d9488;">📦 Registar Encomenda & Receber Sinal</button>
+      </div>
+    </div>
+
+    <div id="cardPedidosEncomenda651" class="card" style="border-left:4px solid #0ea5e9;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div>
+          <h3 style="color:#0369a1;margin-bottom:4px;">📨 Pedidos de Encomenda / Aprovação</h3>
+          <p id="textoPedidosEncomenda651" style="margin:0;color:#64748b;font-size:13px;">
+            Pedidos comerciais ainda sem efeito financeiro definitivo.
+          </p>
+        </div>
+        <span id="badgePedidosEncomenda651" style="background:#e0f2fe;color:#0369a1;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:800;">0 pendente(s)</span>
+      </div>
+      <div class="table-responsive" style="margin-top:12px;">
+        <table style="min-width:1050px;">
+          <thead>
+            <tr>
+              <th>Data</th><th>Cliente</th><th>Produto</th><th>Qtd</th><th>Venda</th>
+              <th>Sinal Informado</th><th>Forma</th><th>Estado</th><th>Solicitado por</th><th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="listaPedidosEncomenda651">
+            <tr><td colspan="10" style="color:#94a3b8;">Nenhum pedido carregado.</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -1471,9 +1496,34 @@ tr:nth-child(even) { background-color: #f8fafc; }
           </div>
         </div>
 
-        <button onclick="registrarTransferencia()" class="btn-success" style="grid-column:1/-1;background:#8b5cf6;">
+        <button id="btnRegistrarTransferencia651" onclick="registrarTransferencia()" class="btn-success" style="grid-column:1/-1;background:#8b5cf6;">
           💱 Registar Transferência
         </button>
+      </div>
+    </div>
+
+    <div id="cardPedidosTransferencia651" class="card" style="border-left:4px solid #8b5cf6;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div>
+          <h3 style="color:#6d28d9;margin-bottom:4px;">📨 Transferências Aguardando Aprovação</h3>
+          <p id="textoPedidosTransferencia651" style="margin:0;color:#64748b;font-size:13px;">
+            Pedidos pendentes. Movimentos físicos provisórios ficam reservados até aprovação ou rejeição.
+          </p>
+        </div>
+        <span id="badgePedidosTransferencia651" style="background:#ede9fe;color:#6d28d9;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:800;">0 pendente(s)</span>
+      </div>
+      <div class="table-responsive" style="margin-top:12px;">
+        <table style="min-width:1150px;">
+          <thead>
+            <tr>
+              <th>Data</th><th>Direção</th><th>Cliente</th><th>EUR</th><th>Db</th>
+              <th>Taxa</th><th>Forma STP</th><th>Estado</th><th>Solicitado por</th><th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="listaPedidosTransferencia651">
+            <tr><td colspan="10" style="color:#94a3b8;">Nenhum pedido carregado.</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -2252,7 +2302,8 @@ function desligarListenersSessao64() {
   const listeners = [
     "listenerProdutos","listenerMovimentacoes","listenerFuncionarios","listenerDespesas",
     "listenerEncomendas","listenerTransferencias","listenerArmazemPT","listenerLotesPT",
-    "listenerCaixaAtual","listenerCaixasAuditoria","listenerTesouraria"
+    "listenerCaixaAtual","listenerCaixasAuditoria","listenerTesouraria",
+    "listenerSolicitacoesEncomenda651","listenerSolicitacoesTransferencia651"
   ];
 
   listeners.forEach(nome => {
@@ -4452,7 +4503,10 @@ function carregar() {
 
   if(listenerTransferencias) listenerTransferencias();
   if(usuarioPodeTransferencias()) {
-    listenerTransferencias = db.collection("transferencias").onSnapshot(s => {
+    let qTransf651 = db.collection("transferencias");
+    if(!isAdmin) qTransf651 = qTransf651.where("uid","==",auth.currentUser.uid);
+
+    listenerTransferencias = qTransf651.onSnapshot(s => {
       todasTransferencias = [];
       s.forEach(d => {
         const t = d.data();
@@ -4467,10 +4521,12 @@ function carregar() {
       renderizarTransferencias();
       processarResumoTransferencias();
       processarDashboard();
-    }, err => console.warn("Transferências: modo offline/erro", err));
+    }, err => console.warn("Transferências: acesso/erro", err));
   } else {
     todasTransferencias = [];
   }
+
+  iniciarSolicitacoes651();
 }
 
 // Corrige a proteção do próprio administrador.
@@ -5496,10 +5552,23 @@ function calcularResumoCaixaFisico(movs, caixaId, valorInicial) {
     }
   });
 
+  let bloqueado = 0;
+  (movs || []).forEach(m => {
+    if(m.caixaId !== caixaId) return;
+    const v = Number(m.valor) || 0;
+    if(m.tipo === "reserva_transferencia_entrada" || m.tipo === "reserva_sinal_encomenda") bloqueado += v;
+    if(m.tipo === "liberacao_reserva_transferencia_entrada" || m.tipo === "liberacao_reserva_sinal_encomenda") bloqueado -= v;
+    if(m.tipo === "devolucao_reserva_transferencia_entrada" || m.tipo === "devolucao_reserva_sinal_encomenda") bloqueado -= v;
+  });
+  bloqueado = Math.max(0, bloqueado);
+
+  const esperado = (Number(valorInicial)||0) + entradas - saidas;
   return {
     entradas,
     saidas,
-    esperado: (Number(valorInicial)||0) + entradas - saidas
+    esperado,
+    bloqueado,
+    disponivel: Math.max(0, esperado - bloqueado)
   };
 }
 
@@ -5662,8 +5731,15 @@ function f5RenderizarLista() {
     if(enc.estado === 'CONCLUIDO') { lucro += lucroReal; custos += chegada; }
     const wa = enc.telefone ? `<a href="https://wa.me/${String(enc.telefone).replace(/[^0-9]/g,'')}" target="_blank" style="text-decoration:none;"><button class="btn-success btn-acao" style="background:#25d366;">📲 WA</button></a>` : '-';
     const estado = enc.estado === 'CONCLUIDO' ? '<span class="badge-concluido">CONCLUÍDO</span>' : '<span class="badge-em-transito">EM TRÂNSITO</span>';
-    let acao = enc.estado === 'EM_TRANSITO' ? `<button class="btn-success btn-acao" style="background:#0d9488;" onclick="f5AbrirFinalizacao('${enc.id}')">📦 Chegou / Entregar</button>` : `<span style="font-size:11px;color:#64748b;">Lucro: <b style="color:#059669;">${f5Moeda(lucroReal)}</b></span>`;
-    if(usuarioRole === 'admin') acao += ` <button class="btn-danger btn-acao" onclick="apagarEncomenda('${enc.id}')">🗑️</button>`;
+    let acao;
+    if(usuarioRole === 'admin') {
+      acao = enc.estado === 'EM_TRANSITO'
+        ? `<button class="btn-success btn-acao" style="background:#0d9488;" onclick="f5AbrirFinalizacao('${enc.id}')">📦 Chegou / Entregar</button>`
+        : `<span style="font-size:11px;color:#64748b;">Lucro: <b style="color:#059669;">${f5Moeda(lucroReal)}</b></span>`;
+      acao += ` <button class="btn-danger btn-acao" onclick="apagarEncomenda('${enc.id}')">🗑️</button>`;
+    } else {
+      acao = '<span style="font-size:11px;color:#64748b;">Somente acompanhamento</span>';
+    }
     return `<tr>
       <td><b>${String(enc.cliente||'-')}</b></td>
       <td><b>${String(enc.produto||'-')}</b></td>
@@ -5671,9 +5747,9 @@ function f5RenderizarLista() {
       <td>${f5Moeda(venda)}</td>
       <td style="color:#059669;font-weight:700;">${f5Moeda(sinal)}</td>
       <td style="color:#dc2626;font-weight:700;">${f5Moeda(falta)}</td>
-      <td>${f5Moeda(compra)}</td>
-      <td style="color:#d97706;font-weight:700;">${f5Moeda(chegada)}</td>
-      <td>${f5Moeda(custoReal)}</td>
+      <td>${usuarioRole === 'admin' ? f5Moeda(compra) : '🔒'}</td>
+      <td style="color:#d97706;font-weight:700;">${usuarioRole === 'admin' ? f5Moeda(chegada) : '🔒'}</td>
+      <td>${usuarioRole === 'admin' ? f5Moeda(custoReal) : '🔒'}</td>
       <td>${estado}</td>
       <td>${wa}</td>
       <td><div class="acoes-cell">${acao}</div></td>
@@ -7569,9 +7645,11 @@ function navegarPara(paginaId) {
     atualizarTransferenciaForm();
     renderizarTransferencias();
     processarResumoTransferencias();
+    renderizarSolicitacoesTransferencia651();
   }
   if(paginaId === "paginaEncomendas") {
     f5AtualizarResumoPagina();
+    renderizarSolicitacoesEncomenda651();
   }
   if(paginaId === "paginaDespesas") {
     iniciarListenerDespesasFase52();
@@ -7611,6 +7689,16 @@ function calcularResumoCaixaFisico(movs, caixaId, valorInicial) {
     if(m.tipo === "suprimento_caixa") { entradas += v; return; }
     if(m.tipo === "sangria_caixa") { saidas += v; return; }
 
+    // FASE 6.5.1 — movimentos físicos provisórios de pedidos pendentes.
+    // Saída pendente reduz imediatamente o dinheiro físico esperado.
+    if(m.tipo === "reserva_transferencia_saida") { saidas += v; return; }
+    // Entrada pendente existe fisicamente, mas permanece bloqueada até aprovação.
+    if(m.tipo === "reserva_transferencia_entrada" || m.tipo === "reserva_sinal_encomenda") { entradas += v; return; }
+    // Rejeição de saída pressupõe reposição física do valor.
+    if(m.tipo === "reposicao_reserva_transferencia_saida") { entradas += v; return; }
+    // Rejeição de entrada/sinal pressupõe devolução física ao cliente.
+    if(m.tipo === "devolucao_reserva_transferencia_entrada" || m.tipo === "devolucao_reserva_sinal_encomenda") { saidas += v; return; }
+
     if(m.tipo === "transferencia_entrada") {
       if(f.includes("Dinheiro")) entradas += v;
       return;
@@ -7646,7 +7734,16 @@ function calcularResumoCaixaFisico(movs, caixaId, valorInicial) {
 
 async function obterResumoCaixaAtualFirestore() {
   if(!caixaAtualObj) return null;
-  const snap = await db.collection("movimentacoes").where("caixaId", "==", caixaAtualObj.id).get();
+
+  let q = db.collection("movimentacoes").where("caixaId", "==", caixaAtualObj.id);
+  // FASE 6.5.1: vendedor só pode ler os próprios movimentos pelas Rules.
+  // Todas as reversões/aprovações administrativas relativas ao turno preservam
+  // o UID operacional original, mantendo a consulta completa e autorizada.
+  if(usuarioRole !== "admin") {
+    q = q.where("uid", "==", auth.currentUser.uid);
+  }
+
+  const snap = await q.get();
   const movs = [];
   snap.forEach(d => movs.push(d.data()));
   return calcularResumoCaixaFisico(movs, caixaAtualObj.id, caixaAtualObj.valorInicial);
@@ -7753,7 +7850,7 @@ async function registrarTransferencia() {
   if(exigeCaixa && calc.dir === "PT_STP") {
     try {
       const r = await obterResumoCaixaAtualFirestore();
-      const disponivel = r ? r.esperado : 0;
+      const disponivel = r ? (Number.isFinite(r.disponivel) ? r.disponivel : r.esperado) : 0;
       if(disponivel < calc.totalDb) {
         const falta = calc.totalDb - Math.max(0, disponivel);
         return alert(
@@ -8254,6 +8351,9 @@ function aplicarSegurancaInterface64() {
   mostrar("cardAuditoriaCaixas", admin);
   mostrar("blocoSangriaCaixa", admin);
 
+  // FASE 6.5.1 — botões e campos de aprovação.
+  configurarInterfaceAprovacoes651();
+
   // Estoque não deve permanecer acidentalmente em página financeira/caixa.
   if(estoque) {
     const paginasProibidas = [
@@ -8310,6 +8410,612 @@ navegarPara = function(paginaId) {
     return;
   }
   return navegarParaAntes64(paginaId);
+};
+
+
+
+/* =========================================================================
+   FASE 6.5.1 — HOMOLOGAÇÃO: APROVAÇÕES + RESERVAS FINANCEIRAS
+   - VENDA1/VENDA2 criam pedidos pendentes.
+   - ADMIN aprova/rejeita.
+   - Dinheiro físico real é registado provisoriamente no momento em que entra/sai.
+   - Entradas pendentes ficam bloqueadas até aprovação.
+   - Saídas pendentes reduzem imediatamente o saldo físico disponível.
+   ========================================================================= */
+
+let listenerSolicitacoesEncomenda651 = null;
+let listenerSolicitacoesTransferencia651 = null;
+let solicitacoesEncomenda651 = [];
+let solicitacoesTransferencia651 = [];
+
+function ehVendedor651() {
+  return usuarioRole === "venda1" || usuarioRole === "venda2";
+}
+
+function dataTxt651(v) {
+  const d = obterDataSegura(v);
+  return d.toLocaleString("pt-PT");
+}
+
+function configurarInterfaceAprovacoes651() {
+  const admin = usuarioRole === "admin";
+  const vendedor = ehVendedor651();
+
+  const custo = document.getElementById("f5EncCustoCompra");
+  if(custo) {
+    custo.classList.toggle("hidden", vendedor);
+    if(vendedor) custo.value = "";
+  }
+
+  const btnEnc = document.getElementById("btnF5RegistrarEncomenda");
+  if(btnEnc) {
+    btnEnc.innerText = vendedor
+      ? "📨 Enviar Encomenda para Aprovação"
+      : "📦 Registar Encomenda & Receber Sinal";
+  }
+
+  const btnTransf = document.getElementById("btnRegistrarTransferencia651");
+  if(btnTransf) {
+    btnTransf.innerText = vendedor
+      ? "📨 Enviar Transferência para Aprovação"
+      : "💱 Registar Transferência";
+  }
+
+  const txtEnc = document.getElementById("textoPedidosEncomenda651");
+  if(txtEnc) txtEnc.innerText = admin
+    ? "Pedidos enviados pelos vendedores. Só a aprovação transforma o pedido em encomenda oficial."
+    : "Os seus pedidos ficam pendentes até validação do Administrador. Custos internos não são visíveis.";
+
+  const txtTr = document.getElementById("textoPedidosTransferencia651");
+  if(txtTr) txtTr.innerText = admin
+    ? "Pedidos dos vendedores. Confira valores, caixa e taxas antes de aprovar."
+    : "Os seus pedidos ficam pendentes. O dinheiro físico envolvido fica reservado até decisão do Administrador.";
+}
+
+function iniciarSolicitacoes651() {
+  if(listenerSolicitacoesEncomenda651) listenerSolicitacoesEncomenda651();
+  if(listenerSolicitacoesTransferencia651) listenerSolicitacoesTransferencia651();
+
+  if(!(usuarioRole === "admin" || ehVendedor651()) || !auth.currentUser) {
+    solicitacoesEncomenda651 = [];
+    solicitacoesTransferencia651 = [];
+    renderizarSolicitacoes651();
+    return;
+  }
+
+  let qEnc = db.collection("encomenda_solicitacoes");
+  let qTr = db.collection("transferencia_solicitacoes");
+  if(ehVendedor651()) {
+    qEnc = qEnc.where("uid","==",auth.currentUser.uid);
+    qTr = qTr.where("uid","==",auth.currentUser.uid);
+  }
+
+  listenerSolicitacoesEncomenda651 = qEnc.onSnapshot(s => {
+    solicitacoesEncomenda651 = [];
+    s.forEach(d => solicitacoesEncomenda651.push({id:d.id, ...d.data()}));
+    solicitacoesEncomenda651.sort((a,b)=>obterDataSegura(b.data)-obterDataSegura(a.data));
+    renderizarSolicitacoesEncomenda651();
+  }, e => console.warn("Pedidos encomenda:", e));
+
+  listenerSolicitacoesTransferencia651 = qTr.onSnapshot(s => {
+    solicitacoesTransferencia651 = [];
+    s.forEach(d => solicitacoesTransferencia651.push({id:d.id, ...d.data()}));
+    solicitacoesTransferencia651.sort((a,b)=>obterDataSegura(b.data)-obterDataSegura(a.data));
+    renderizarSolicitacoesTransferencia651();
+  }, e => console.warn("Pedidos transferência:", e));
+}
+
+function badgeEstado651(st) {
+  if(st === "APROVADA" || st === "CONCLUIDA") return '<span class="badge-concluido">✅ APROVADA</span>';
+  if(st === "REJEITADA") return '<span class="status-caixa-fechado" style="background:#fee2e2;color:#b91c1c;">❌ REJEITADA</span>';
+  return '<span class="badge-em-transito">⏳ PENDENTE</span>';
+}
+
+function renderizarSolicitacoesEncomenda651() {
+  const tbody = document.getElementById("listaPedidosEncomenda651");
+  const badge = document.getElementById("badgePedidosEncomenda651");
+  if(!tbody) return;
+  const pend = solicitacoesEncomenda651.filter(x=>x.estado==="PENDENTE_APROVACAO").length;
+  if(badge) badge.innerText = `${pend} pendente(s)`;
+
+  tbody.innerHTML = solicitacoesEncomenda651.map(p => {
+    const acao = usuarioRole === "admin" && p.estado === "PENDENTE_APROVACAO"
+      ? `<button class="btn-success btn-acao" onclick="aprovarEncomenda651('${p.id}')">✅ Aprovar</button>
+         <button class="btn-danger btn-acao" onclick="rejeitarEncomenda651('${p.id}')">❌ Rejeitar</button>`
+      : '<span style="font-size:11px;color:#64748b;">Aguardando decisão</span>';
+    return `<tr>
+      <td><small>${dataTxt651(p.data)}</small></td>
+      <td><b>${String(p.cliente||"-")}</b></td>
+      <td>${String(p.produto||"-")}</td>
+      <td>${Number(p.quantidade)||1}</td>
+      <td>${f5Moeda(p.valorTotal)}</td>
+      <td>${f5Moeda(p.sinalInformado)}</td>
+      <td>${String(p.formaSinal||"-")}</td>
+      <td>${badgeEstado651(p.estado)}</td>
+      <td>${String(p.usuario||"-")}</td>
+      <td><div class="acoes-cell">${acao}</div></td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="10" style="color:#94a3b8;">Nenhum pedido de encomenda.</td></tr>';
+}
+
+function renderizarSolicitacoesTransferencia651() {
+  const tbody = document.getElementById("listaPedidosTransferencia651");
+  const badge = document.getElementById("badgePedidosTransferencia651");
+  if(!tbody) return;
+  const pend = solicitacoesTransferencia651.filter(x=>x.estado==="PENDENTE_APROVACAO").length;
+  if(badge) badge.innerText = `${pend} pendente(s)`;
+
+  tbody.innerHTML = solicitacoesTransferencia651.map(p => {
+    const dir = p.direcao === "PT_STP" ? "PT → STP" : "STP → PT";
+    const acao = usuarioRole === "admin" && p.estado === "PENDENTE_APROVACAO"
+      ? `<button class="btn-success btn-acao" onclick="aprovarTransferencia651('${p.id}')">✅ Aprovar</button>
+         <button class="btn-danger btn-acao" onclick="rejeitarTransferencia651('${p.id}')">❌ Rejeitar</button>`
+      : '<span style="font-size:11px;color:#64748b;">Aguardando decisão</span>';
+    return `<tr>
+      <td><small>${dataTxt651(p.data)}</small></td>
+      <td><b>${dir}</b></td>
+      <td>${String(p.cliente||"-")}</td>
+      <td>${Number(p.qtdEur||0).toLocaleString("pt-PT",{minimumFractionDigits:2})} €</td>
+      <td>${Number(p.totalDb||0).toLocaleString("pt-PT")} Db</td>
+      <td>${Number(p.taxaAplicada||0).toFixed(2)}</td>
+      <td>${String(p.formaSTP||"-")}</td>
+      <td>${badgeEstado651(p.estado)}</td>
+      <td>${String(p.usuario||"-")}</td>
+      <td><div class="acoes-cell">${acao}</div></td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="10" style="color:#94a3b8;">Nenhum pedido de transferência.</td></tr>';
+}
+
+function renderizarSolicitacoes651() {
+  renderizarSolicitacoesEncomenda651();
+  renderizarSolicitacoesTransferencia651();
+}
+
+async function criarPedidoEncomenda651() {
+  if(!navigator.onLine) return alert("É necessária ligação à internet.");
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const cliente = document.getElementById("f5EncCliente").value.trim();
+  const telefone = document.getElementById("f5EncTelefone").value.trim();
+  const produto = document.getElementById("f5EncProduto").value.trim();
+  const quantidade = Math.max(1, Math.floor(f5Numero("f5EncQtd") || 1));
+  const valorTotal = f5Numero("f5EncValorTotal");
+  const sinalInformado = f5Numero("f5EncSinalPago");
+  const formaSinal = document.getElementById("f5EncFormaSinal").value;
+  const observacao = document.getElementById("f5EncObservacao").value.trim();
+
+  if(!cliente || !produto || valorTotal <= 0 || sinalInformado <= 0)
+    return alert("Preencha cliente, produto, valor total e sinal recebido.");
+  if(sinalInformado > valorTotal)
+    return alert("O sinal não pode ser maior que o valor total.");
+
+  const exigeCaixa = formaSinal === "Dinheiro";
+  if(exigeCaixa && (!caixaAtualObj || caixaAtualObj.estado !== "aberto"))
+    return alert("O sinal foi recebido em dinheiro. Abra primeiro o Caixa/Turno.");
+
+  if(!confirm(
+    `Enviar esta encomenda para aprovação?\n\nCliente: ${cliente}\nProduto: ${produto}\n` +
+    `Venda: ${valorTotal.toLocaleString("pt-PT")} Db\nSinal informado: ${sinalInformado.toLocaleString("pt-PT")} Db\n\n` +
+    `${exigeCaixa ? "O sinal físico será registado provisoriamente no caixa e ficará BLOQUEADO até aprovação." : "Sem impacto no caixa físico enquanto estiver pendente."}`
+  )) return;
+
+  const btn = document.getElementById("btnF5RegistrarEncomenda");
+  if(btn) btn.disabled = true;
+
+  try {
+    const pedRef = db.collection("encomenda_solicitacoes").doc();
+    const movRef = exigeCaixa ? db.collection("movimentacoes").doc() : null;
+    const agora = new Date();
+
+    await db.runTransaction(async tx => {
+      let caixaId = null;
+      if(exigeCaixa) {
+        const caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
+        const caixaDoc = await tx.get(caixaRef);
+        if(!caixaDoc.exists || caixaDoc.data().estado !== "aberto") throw new Error("O caixa já não está aberto.");
+        if(caixaDoc.data().uid !== user.uid) throw new Error("O caixa aberto não pertence ao utilizador atual.");
+        caixaId = caixaAtualObj.id;
+      }
+
+      tx.set(pedRef, {
+        cliente, telefone, produto, quantidade, valorTotal,
+        sinalInformado, formaSinal, observacao,
+        estado:"PENDENTE_APROVACAO",
+        caixaId: exigeCaixa ? caixaAtualObj.id : null,
+        usuario:user.email, uid:user.uid, role:usuarioRole,
+        data:agora, efeitoFinanceiroDefinitivo:false
+      });
+
+      if(exigeCaixa) {
+        tx.set(movRef, {
+          produto:`Sinal Pendente de Encomenda — ${produto}`,
+          tipo:"reserva_sinal_encomenda",
+          quantidade:1, valor:sinalInformado,
+          formaPagamento:"Dinheiro - Sinal Pendente",
+          cliente, usuario:user.email, uid:user.uid, role:usuarioRole,
+          data:agora, caixaId, solicitacaoEncomendaId:pedRef.id
+        });
+      }
+    });
+
+    ["f5EncCliente","f5EncTelefone","f5EncProduto","f5EncValorTotal","f5EncSinalPago","f5EncObservacao"].forEach(id=>{
+      const e=document.getElementById(id); if(e) e.value="";
+    });
+    document.getElementById("f5EncQtd").value="1";
+    document.getElementById("f5EncFormaSinal").value="Dinheiro";
+    f5AtualizarResumoPagina();
+    alert("Pedido enviado para aprovação. O Administrador deverá confirmar antes de virar encomenda oficial.");
+  } catch(e) {
+    alert("Erro ao enviar pedido de encomenda: " + (e.message || e));
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}
+
+async function criarPedidoTransferencia651() {
+  if(!navigator.onLine) return alert("É necessária ligação à internet.");
+  const user = auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const calc = calcularTransferencia();
+  if(!calc || calc.eur <= 0 || calc.ref <= 0 || calc.aplicada <= 0)
+    return alert("Informe o valor em Euros e as duas taxas.");
+
+  const cliente = document.getElementById("transfCliente").value.trim();
+  const telefone = document.getElementById("transfTelefone").value.trim();
+  const formaSTP = document.getElementById("transfFormaSTP").value;
+  const observacao = document.getElementById("transfObservacao").value.trim();
+  if(!cliente) return alert("Informe o nome do cliente/remetente.");
+
+  const exigeCaixa = formaSTP === "Dinheiro";
+  if(exigeCaixa && (!caixaAtualObj || caixaAtualObj.estado !== "aberto"))
+    return alert("Esta operação usa dinheiro físico. Abra primeiro o Caixa/Turno.");
+
+  if(exigeCaixa && calc.dir === "PT_STP") {
+    const r = await obterResumoCaixaAtualFirestore();
+    const disponivel = r ? (Number.isFinite(r.disponivel) ? r.disponivel : r.esperado) : 0;
+    if(disponivel < calc.totalDb) {
+      return alert(
+        `Saldo disponível insuficiente.\n\n` +
+        `Dinheiro físico esperado: ${(r?.esperado||0).toLocaleString("pt-PT")} Db\n` +
+        `Bloqueado em pedidos pendentes: ${(r?.bloqueado||0).toLocaleString("pt-PT")} Db\n` +
+        `Disponível para nova operação: ${Math.max(0,disponivel).toLocaleString("pt-PT")} Db\n` +
+        `Necessário: ${calc.totalDb.toLocaleString("pt-PT")} Db`
+      );
+    }
+  }
+
+  const impacto = !exigeCaixa ? "Sem impacto físico no caixa."
+    : calc.dir === "PT_STP"
+      ? `Saída física provisória de ${calc.totalDb.toLocaleString("pt-PT")} Db.`
+      : `Entrada física provisória de ${calc.totalDb.toLocaleString("pt-PT")} Db, bloqueada até aprovação.`;
+
+  if(!confirm(
+    `Enviar transferência para aprovação?\n\nCliente: ${cliente}\n` +
+    `${calc.eur.toLocaleString("pt-PT",{minimumFractionDigits:2})} € = ${calc.totalDb.toLocaleString("pt-PT")} Db\n` +
+    `Taxa aplicada: ${calc.aplicada.toFixed(2)} Db/€\n\n${impacto}`
+  )) return;
+
+  const btn = document.getElementById("btnRegistrarTransferencia651");
+  if(btn) btn.disabled = true;
+
+  try {
+    const pedRef = db.collection("transferencia_solicitacoes").doc();
+    const movRef = exigeCaixa ? db.collection("movimentacoes").doc() : null;
+    const agora = new Date();
+
+    await db.runTransaction(async tx => {
+      let caixaId = null;
+      if(exigeCaixa) {
+        const caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
+        const caixaDoc = await tx.get(caixaRef);
+        if(!caixaDoc.exists || caixaDoc.data().estado !== "aberto") throw new Error("O caixa já não está aberto.");
+        if(caixaDoc.data().uid !== user.uid) throw new Error("O caixa aberto não pertence ao utilizador atual.");
+        caixaId = caixaAtualObj.id;
+      }
+
+      tx.set(pedRef, {
+        direcao:calc.dir, cliente, telefone, qtdEur:calc.eur,
+        taxaReferencia:calc.ref, taxaAplicada:calc.aplicada,
+        totalDb:calc.totalDb, margemDb:calc.margemDb, formaSTP,
+        observacao, estado:"PENDENTE_APROVACAO",
+        caixaId: exigeCaixa ? caixaAtualObj.id : null,
+        usuario:user.email, uid:user.uid, role:usuarioRole,
+        data:agora, efeitoFinanceiroDefinitivo:false
+      });
+
+      if(exigeCaixa) {
+        tx.set(movRef, {
+          produto:`Transferência Pendente ${calc.dir === "PT_STP" ? "PT→STP" : "STP→PT"} — ${cliente}`,
+          tipo: calc.dir === "PT_STP" ? "reserva_transferencia_saida" : "reserva_transferencia_entrada",
+          quantidade:1, valor:calc.totalDb,
+          formaPagamento:"Dinheiro - Transferência Pendente",
+          cliente, telefone, usuario:user.email, uid:user.uid, role:usuarioRole,
+          data:agora, caixaId, solicitacaoTransferenciaId:pedRef.id, direcao:calc.dir
+        });
+      }
+    });
+
+    document.getElementById("transfCliente").value="";
+    document.getElementById("transfTelefone").value="";
+    document.getElementById("transfQtdEur").value="";
+    document.getElementById("transfObservacao").value="";
+    calcularTransferencia();
+    alert("Transferência enviada para aprovação. O valor físico envolvido ficou protegido no caixa.");
+  } catch(e) {
+    alert("Erro ao enviar transferência para aprovação: " + (e.message || e));
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}
+
+// Mantém o fluxo direto para ADMIN; vendedor usa pedido.
+const f5RegistrarEncomendaDireta651 = f5RegistrarEncomenda;
+f5RegistrarEncomenda = async function() {
+  if(ehVendedor651()) return criarPedidoEncomenda651();
+  return f5RegistrarEncomendaDireta651();
+};
+
+const registrarTransferenciaDireta651 = registrarTransferencia;
+registrarTransferencia = async function() {
+  if(ehVendedor651()) return criarPedidoTransferencia651();
+  return registrarTransferenciaDireta651();
+};
+
+async function aprovarEncomenda651(id) {
+  if(usuarioRole !== "admin") return alert("Acesso restrito.");
+  const p = solicitacoesEncomenda651.find(x=>x.id===id);
+  if(!p || p.estado !== "PENDENTE_APROVACAO") return alert("Pedido já processado ou não encontrado.");
+
+  const custoRaw = prompt(
+    `Aprovar encomenda de ${p.cliente} — ${p.produto}\n\n` +
+    `Venda: ${f5Moeda(p.valorTotal)}\nSinal informado: ${f5Moeda(p.sinalInformado)}\n\n` +
+    `Informe o CUSTO DE COMPRA (Db):`,
+    "0"
+  );
+  if(custoRaw === null) return;
+  const custoCompra = Number(String(custoRaw).replace(",", "."));
+  if(!Number.isFinite(custoCompra) || custoCompra < 0) return alert("Custo de compra inválido.");
+
+  if(!confirm("Confirmar aprovação? A encomenda passará a ser oficial.")) return;
+
+  try {
+    const user = auth.currentUser;
+    const pedRef = db.collection("encomenda_solicitacoes").doc(id);
+    const encRef = db.collection("encomendas").doc();
+    const agora = new Date();
+
+    await db.runTransaction(async tx => {
+      const pedDoc = await tx.get(pedRef);
+      if(!pedDoc.exists || pedDoc.data().estado !== "PENDENTE_APROVACAO") throw new Error("Pedido já foi processado.");
+      const d = pedDoc.data();
+
+      tx.set(encRef, {
+        cliente:d.cliente, telefone:d.telefone, produto:d.produto,
+        quantidade:d.quantidade, valorTotal:d.valorTotal,
+        sinalPago:d.sinalInformado, formaSinal:d.formaSinal,
+        custoCompra, custosChegada:0, custoTotalReal:custoCompra, lucroReal:null,
+        estado:"EM_TRANSITO", usuario:d.usuario, uid:d.uid, role:d.role,
+        criadoPorUid:d.uid, criadoPorUsuario:d.usuario,
+        aprovadoPorUid:user.uid, aprovadoPorUsuario:user.email,
+        solicitacaoId:id, observacao:d.observacao || "", data:agora
+      });
+
+      tx.update(pedRef, {
+        estado:"APROVADA", encomendaId:encRef.id,
+        aprovadoPorUid:user.uid, aprovadoPorUsuario:user.email,
+        dataAprovacao:agora, efeitoFinanceiroDefinitivo:true, custoCompra
+      });
+
+      if(d.formaSinal === "Dinheiro" && d.caixaId) {
+        tx.set(db.collection("movimentacoes").doc(), {
+          produto:`Liberação de Sinal Aprovado — ${d.produto}`,
+          tipo:"liberacao_reserva_sinal_encomenda",
+          quantidade:1, valor:d.sinalInformado,
+          formaPagamento:"Controle Interno - Aprovação",
+          usuario:d.usuario, uid:d.uid, role:d.role,
+          executadoPorUid:user.uid, executadoPorUsuario:user.email,
+          data:agora, caixaId:d.caixaId, solicitacaoEncomendaId:id, encomendaId:encRef.id
+        });
+      }
+    });
+
+    alert("Encomenda aprovada e registada oficialmente.");
+  } catch(e) {
+    alert("Erro ao aprovar encomenda: " + (e.message || e));
+  }
+}
+
+async function rejeitarEncomenda651(id) {
+  if(usuarioRole !== "admin") return alert("Acesso restrito.");
+  const p = solicitacoesEncomenda651.find(x=>x.id===id);
+  if(!p || p.estado !== "PENDENTE_APROVACAO") return alert("Pedido já processado ou não encontrado.");
+
+  const motivo = prompt("Motivo da rejeição:", "");
+  if(motivo === null) return;
+  if(!motivo.trim()) return alert("Informe o motivo da rejeição.");
+
+  if(p.formaSinal === "Dinheiro" && p.sinalInformado > 0) {
+    if(!confirm(
+      `ATENÇÃO: há ${f5Moeda(p.sinalInformado)} recebidos fisicamente.\n\n` +
+      `Só confirme a rejeição depois de devolver este valor ao cliente.`
+    )) return;
+  }
+
+  try {
+    const user = auth.currentUser;
+    const pedRef = db.collection("encomenda_solicitacoes").doc(id);
+    const agora = new Date();
+
+    await db.runTransaction(async tx => {
+      const pedDoc = await tx.get(pedRef);
+      if(!pedDoc.exists || pedDoc.data().estado !== "PENDENTE_APROVACAO") throw new Error("Pedido já foi processado.");
+      const d = pedDoc.data();
+
+      tx.update(pedRef, {
+        estado:"REJEITADA", motivoRejeicao:motivo.trim(),
+        rejeitadoPorUid:user.uid, rejeitadoPorUsuario:user.email,
+        dataRejeicao:agora, efeitoFinanceiroDefinitivo:false
+      });
+
+      if(d.formaSinal === "Dinheiro" && d.caixaId && Number(d.sinalInformado)>0) {
+        tx.set(db.collection("movimentacoes").doc(), {
+          produto:`Devolução de Sinal Rejeitado — ${d.produto}`,
+          tipo:"devolucao_reserva_sinal_encomenda",
+          quantidade:1, valor:Number(d.sinalInformado),
+          formaPagamento:"Dinheiro - Devolução de Sinal",
+          usuario:d.usuario, uid:d.uid, role:d.role,
+          executadoPorUid:user.uid, executadoPorUsuario:user.email,
+          data:agora, caixaId:d.caixaId, solicitacaoEncomendaId:id
+        });
+      }
+    });
+
+    alert("Pedido rejeitado e tratado na auditoria.");
+  } catch(e) {
+    alert("Erro ao rejeitar encomenda: " + (e.message || e));
+  }
+}
+
+async function aprovarTransferencia651(id) {
+  if(usuarioRole !== "admin") return alert("Acesso restrito.");
+  const p = solicitacoesTransferencia651.find(x=>x.id===id);
+  if(!p || p.estado !== "PENDENTE_APROVACAO") return alert("Pedido já processado ou não encontrado.");
+
+  if(!confirm(
+    `Aprovar transferência?\n\n${p.direcao === "PT_STP" ? "PT → STP" : "STP → PT"}\n` +
+    `${Number(p.qtdEur).toLocaleString("pt-PT",{minimumFractionDigits:2})} € = ${Number(p.totalDb).toLocaleString("pt-PT")} Db\n` +
+    `Taxa aplicada: ${Number(p.taxaAplicada).toFixed(2)} Db/€`
+  )) return;
+
+  try {
+    const user = auth.currentUser;
+    const pedRef = db.collection("transferencia_solicitacoes").doc(id);
+    const trRef = db.collection("transferencias").doc();
+    const agora = new Date();
+
+    await db.runTransaction(async tx => {
+      const pedDoc = await tx.get(pedRef);
+      if(!pedDoc.exists || pedDoc.data().estado !== "PENDENTE_APROVACAO") throw new Error("Pedido já foi processado.");
+      const d = pedDoc.data();
+
+      tx.set(trRef, {
+        direcao:d.direcao, cliente:d.cliente, telefone:d.telefone,
+        qtdEur:d.qtdEur, taxaReferencia:d.taxaReferencia, taxaAplicada:d.taxaAplicada,
+        totalDb:d.totalDb, margemDb:d.margemDb, formaSTP:d.formaSTP,
+        estado:"CONCLUIDA", observacao:d.observacao || "", caixaId:d.caixaId || null,
+        usuario:d.usuario, uid:d.uid, role:d.role,
+        criadoPorUid:d.uid, criadoPorUsuario:d.usuario,
+        aprovadoPorUid:user.uid, aprovadoPorUsuario:user.email,
+        solicitacaoId:id, data:agora
+      });
+
+      tx.update(pedRef, {
+        estado:"APROVADA", transferenciaId:trRef.id,
+        aprovadoPorUid:user.uid, aprovadoPorUsuario:user.email,
+        dataAprovacao:agora, efeitoFinanceiroDefinitivo:true
+      });
+
+      // Entrada física pendente deixa de ficar bloqueada após aprovação.
+      if(d.formaSTP === "Dinheiro" && d.direcao === "STP_PT" && d.caixaId) {
+        tx.set(db.collection("movimentacoes").doc(), {
+          produto:`Liberação de Entrada Aprovada — ${d.cliente}`,
+          tipo:"liberacao_reserva_transferencia_entrada",
+          quantidade:1, valor:Number(d.totalDb),
+          formaPagamento:"Controle Interno - Aprovação",
+          usuario:d.usuario, uid:d.uid, role:d.role,
+          executadoPorUid:user.uid, executadoPorUsuario:user.email,
+          data:agora, caixaId:d.caixaId, solicitacaoTransferenciaId:id, transferenciaId:trRef.id
+        });
+      }
+    });
+
+    alert("Transferência aprovada e registada oficialmente.");
+  } catch(e) {
+    alert("Erro ao aprovar transferência: " + (e.message || e));
+  }
+}
+
+async function rejeitarTransferencia651(id) {
+  if(usuarioRole !== "admin") return alert("Acesso restrito.");
+  const p = solicitacoesTransferencia651.find(x=>x.id===id);
+  if(!p || p.estado !== "PENDENTE_APROVACAO") return alert("Pedido já processado ou não encontrado.");
+
+  const motivo = prompt("Motivo da rejeição:", "");
+  if(motivo === null) return;
+  if(!motivo.trim()) return alert("Informe o motivo da rejeição.");
+
+  if(p.formaSTP === "Dinheiro") {
+    const msg = p.direcao === "PT_STP"
+      ? `A saída provisória de ${Number(p.totalDb).toLocaleString("pt-PT")} Db deverá ser REPosta fisicamente no caixa antes de confirmar a rejeição.`
+      : `A entrada provisória de ${Number(p.totalDb).toLocaleString("pt-PT")} Db deverá ser DEVOLVIDA ao cliente antes de confirmar a rejeição.`;
+    if(!confirm(msg)) return;
+  }
+
+  try {
+    const user = auth.currentUser;
+    const pedRef = db.collection("transferencia_solicitacoes").doc(id);
+    const agora = new Date();
+
+    await db.runTransaction(async tx => {
+      const pedDoc = await tx.get(pedRef);
+      if(!pedDoc.exists || pedDoc.data().estado !== "PENDENTE_APROVACAO") throw new Error("Pedido já foi processado.");
+      const d = pedDoc.data();
+
+      tx.update(pedRef, {
+        estado:"REJEITADA", motivoRejeicao:motivo.trim(),
+        rejeitadoPorUid:user.uid, rejeitadoPorUsuario:user.email,
+        dataRejeicao:agora, efeitoFinanceiroDefinitivo:false
+      });
+
+      if(d.formaSTP === "Dinheiro" && d.caixaId) {
+        const tipo = d.direcao === "PT_STP"
+          ? "reposicao_reserva_transferencia_saida"
+          : "devolucao_reserva_transferencia_entrada";
+        tx.set(db.collection("movimentacoes").doc(), {
+          produto:`Reversão de Transferência Rejeitada — ${d.cliente}`,
+          tipo, quantidade:1, valor:Number(d.totalDb),
+          formaPagamento:"Dinheiro - Reversão de Pedido",
+          usuario:d.usuario, uid:d.uid, role:d.role,
+          executadoPorUid:user.uid, executadoPorUsuario:user.email,
+          data:agora, caixaId:d.caixaId, solicitacaoTransferenciaId:id, direcao:d.direcao
+        });
+      }
+    });
+
+    alert("Pedido de transferência rejeitado e reserva física tratada.");
+  } catch(e) {
+    alert("Erro ao rejeitar transferência: " + (e.message || e));
+  }
+}
+
+
+
+/* FASE 6.5.1 — um turno não pode ser fechado com pedidos financeiros pendentes.
+   Evita que uma aprovação/rejeição posterior altere um caixa já fechado. */
+const abrirModalFecharCaixaAntes651 = abrirModalFecharCaixa;
+abrirModalFecharCaixa = function() {
+  if(caixaAtualObj) {
+    const pendEnc = (solicitacoesEncomenda651 || []).filter(p =>
+      p.estado === "PENDENTE_APROVACAO" &&
+      p.caixaId === caixaAtualObj.id
+    );
+    const pendTr = (solicitacoesTransferencia651 || []).filter(p =>
+      p.estado === "PENDENTE_APROVACAO" &&
+      p.caixaId === caixaAtualObj.id
+    );
+    const total = pendEnc.length + pendTr.length;
+    if(total > 0) {
+      return alert(
+        `Este turno possui ${total} pedido(s) financeiro(s) aguardando aprovação.\n\n` +
+        `Encomendas pendentes: ${pendEnc.length}\n` +
+        `Transferências pendentes: ${pendTr.length}\n\n` +
+        `O Administrador deve APROVAR ou REJEITAR esses pedidos antes do fecho do caixa.`
+      );
+    }
+  }
+  return abrirModalFecharCaixaAntes651();
 };
 
 </script>
