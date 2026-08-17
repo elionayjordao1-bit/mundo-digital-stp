@@ -2924,7 +2924,7 @@ function abrirAuditoriaDetalhadaModal(caixaId) {
         <span class="kpi-value">${valInicial.toLocaleString('pt-PT')} Db</span>
       </div>
       <div class="kpi-card green">
-        <span class="kpi-title">Vendas em Dinheiro</span>
+        <span class="kpi-title">Movimentações em Dinheiro</span>
         <span class="kpi-value">${totalVendasDinheiro.toLocaleString('pt-PT')} Db</span>
       </div>
       <div class="kpi-card purple">
@@ -5123,6 +5123,16 @@ function renderizarHistorico(listaMovs) {
 
     let badge = '<span style="background:#eff6ff;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">ENTRADA</span>';
     let cor = "#2563eb";
+    let produtoExibido = m.produto || '-';
+    let formaExibida = m.formaPagamento || 'Geral';
+
+    // FASE 6.5.4 — O documento de movimentação continua imutável.
+    // O estado visual da reserva de transferência é derivado do pedido de aprovação,
+    // evitando uma segunda saída/entrada financeira e respeitando as Rules atuais.
+    const solicitacaoTransf = m.solicitacaoTransferenciaId
+      ? (solicitacoesTransferencia651 || []).find(x => x.id === m.solicitacaoTransferenciaId)
+      : null;
+    const estadoSolicitacaoTransf = String(solicitacaoTransf?.estado || "");
 
     const estornoDaVenda = m.tipo === "saida" ? obterEstornoDaVenda(m.id) : null;
 
@@ -5139,11 +5149,35 @@ function renderizarHistorico(listaMovs) {
         : '<span style="background:#ecfeff;color:#0f766e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">ENCOMENDA</span>';
       cor = custo ? "#c2410c" : "#0f766e";
     } else if(m.tipo === "reserva_transferencia_saida") {
-      badge = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">⏳ TRANSF. SAÍDA PENDENTE</span>';
-      cor = "#dc2626";
+      if(estadoSolicitacaoTransf === "APROVADA" || estadoSolicitacaoTransf === "CONCLUIDA") {
+        badge = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">✅ TRANSF. SAÍDA CONCLUÍDA</span>';
+        cor = "#16a34a";
+        produtoExibido = produtoExibido.replace("Transferência Pendente", "Transferência");
+        formaExibida = formaExibida.replace("Transferência Pendente", "Transferência Concluída");
+      } else if(estadoSolicitacaoTransf === "REJEITADA") {
+        badge = '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">❌ TRANSF. SAÍDA REJEITADA</span>';
+        cor = "#991b1b";
+        produtoExibido = produtoExibido.replace("Transferência Pendente", "Transferência Rejeitada");
+        formaExibida = formaExibida.replace("Transferência Pendente", "Transferência Rejeitada");
+      } else {
+        badge = '<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">⏳ TRANSF. SAÍDA PENDENTE</span>';
+        cor = "#dc2626";
+      }
     } else if(m.tipo === "reserva_transferencia_entrada") {
-      badge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">🔒 TRANSF. ENTRADA PENDENTE</span>';
-      cor = "#d97706";
+      if(estadoSolicitacaoTransf === "APROVADA" || estadoSolicitacaoTransf === "CONCLUIDA") {
+        badge = '<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">✅ TRANSF. ENTRADA CONCLUÍDA</span>';
+        cor = "#16a34a";
+        produtoExibido = produtoExibido.replace("Transferência Pendente", "Transferência");
+        formaExibida = formaExibida.replace("Transferência Pendente", "Transferência Concluída");
+      } else if(estadoSolicitacaoTransf === "REJEITADA") {
+        badge = '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">❌ TRANSF. ENTRADA REJEITADA</span>';
+        cor = "#991b1b";
+        produtoExibido = produtoExibido.replace("Transferência Pendente", "Transferência Rejeitada");
+        formaExibida = formaExibida.replace("Transferência Pendente", "Transferência Rejeitada");
+      } else {
+        badge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">🔒 TRANSF. ENTRADA PENDENTE</span>';
+        cor = "#d97706";
+      }
     } else if(m.tipo === "reserva_sinal_encomenda") {
       badge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-weight:bold;font-size:11px;">🔒 SINAL PENDENTE</span>';
       cor = "#d97706";
@@ -5192,10 +5226,10 @@ function renderizarHistorico(listaMovs) {
 
     html += `<tr style="${estornoDaVenda ? 'opacity:.72;' : ''}">
       <td>${foto}</td>
-      <td><b>${m.produto || '-'}</b>${m.tipo==="estorno_venda" ? `<br><small style="color:#991b1b;">Motivo: ${m.motivoEstorno||"-"}</small>` : ""}</td>
+      <td><b>${produtoExibido}</b>${m.tipo==="estorno_venda" ? `<br><small style="color:#991b1b;">Motivo: ${m.motivoEstorno||"-"}</small>` : ""}</td>
       <td>${badge}</td>
       <td><b>${m.quantidade || 0}</b></td>
-      <td><small>${m.formaPagamento || 'Geral'}</small></td>
+      <td><small>${formaExibida}</small></td>
       <td style="font-weight:bold;color:${cor};">${m.tipo==="estorno_venda" ? "-" : ""}${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</td>
       <td><small>${m.nomeUsuario || m.usuario || '-'}</small></td>
       <td><small>${dt}</small></td>
@@ -8572,6 +8606,8 @@ function iniciarSolicitacoes651() {
     s.forEach(d => solicitacoesTransferencia651.push({id:d.id, ...d.data()}));
     solicitacoesTransferencia651.sort((a,b)=>obterDataSegura(b.data)-obterDataSegura(a.data));
     renderizarSolicitacoesTransferencia651();
+    // Reflete imediatamente APROVADA/REJEITADA no Histórico de Movimentações.
+    if(Array.isArray(todasMovimentacoes)) renderizarHistorico(todasMovimentacoes);
   }, e => console.warn("Pedidos transferência:", e));
 }
 
