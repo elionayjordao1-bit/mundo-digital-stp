@@ -2870,92 +2870,202 @@ function carregarAuditoriaCaixasAdmin() {
   });
 }
 
+/* FASE 6.5.5 — AUDITORIA DETALHADA DO TURNO
+   A auditoria passa a distinguir natureza, entrada, saída e movimentos sem efeito físico.
+   A matemática do caixa continua centralizada em calcularResumoCaixaFisico(). */
+function classificarMovimentoAuditoriaTurno(m) {
+  const tipo = String(m?.tipo || "");
+  const forma = String(m?.formaPagamento || "");
+  const produto = String(m?.produto || "");
+  const valor = Number(m?.valor) || 0;
+  const ehDinheiro = forma.includes("Dinheiro") || (!forma.includes("Transferencia") && !forma.includes("Cartao"));
+
+  const retorno = (natureza, efeito = 0, cor = "#64748b", fundo = "#f1f5f9") => ({
+    natureza,
+    efeito,
+    cor,
+    fundo
+  });
+
+  if(tipo === "suprimento_caixa")
+    return retorno("SUPRIMENTO DE CAIXA", +valor, "#047857", "#dcfce7");
+  if(tipo === "sangria_caixa")
+    return retorno("SANGRIA DE CAIXA", -valor, "#b91c1c", "#fee2e2");
+
+  if(tipo === "reserva_transferencia_saida")
+    return retorno("TRANSFERÊNCIA PT→STP — SAÍDA RESERVADA", -valor, "#b45309", "#fef3c7");
+  if(tipo === "reserva_transferencia_entrada")
+    return retorno("TRANSFERÊNCIA STP→PT — ENTRADA RESERVADA", +valor, "#b45309", "#fef3c7");
+  if(tipo === "reserva_sinal_encomenda")
+    return retorno("SINAL DE ENCOMENDA — PENDENTE", +valor, "#b45309", "#fef3c7");
+
+  if(tipo === "liberacao_reserva_transferencia_entrada")
+    return retorno("TRANSFERÊNCIA APROVADA — RESERVA LIBERADA", 0, "#047857", "#dcfce7");
+  if(tipo === "liberacao_reserva_sinal_encomenda")
+    return retorno("SINAL DE ENCOMENDA — APROVADO / LIBERADO", 0, "#047857", "#dcfce7");
+
+  if(tipo === "reposicao_reserva_transferencia_saida")
+    return retorno("TRANSFERÊNCIA REJEITADA — REPOSIÇÃO NO CAIXA", +valor, "#1d4ed8", "#dbeafe");
+  if(tipo === "devolucao_reserva_transferencia_entrada")
+    return retorno("TRANSFERÊNCIA REJEITADA — DEVOLUÇÃO AO CLIENTE", -valor, "#b91c1c", "#fee2e2");
+  if(tipo === "devolucao_reserva_sinal_encomenda")
+    return retorno("ENCOMENDA REJEITADA — DEVOLUÇÃO DO SINAL", -valor, "#b91c1c", "#fee2e2");
+
+  if(tipo === "transferencia_entrada")
+    return retorno("TRANSFERÊNCIA STP→PT — CONCLUÍDA", ehDinheiro ? +valor : 0, "#047857", "#dcfce7");
+  if(tipo === "transferencia_saida")
+    return retorno("TRANSFERÊNCIA PT→STP — CONCLUÍDA", ehDinheiro ? -valor : 0, "#047857", "#dcfce7");
+
+  if(tipo === "despesa_caixa")
+    return retorno("DESPESA OPERACIONAL — CAIXA", ehDinheiro ? -valor : 0, "#b91c1c", "#fee2e2");
+  if(tipo === "estorno_venda")
+    return retorno("ESTORNO DE VENDA", ehDinheiro ? -valor : 0, "#b91c1c", "#fee2e2");
+
+  if(tipo === "saida") {
+    if(typeof ehTransferenciaLegacy === "function" && ehTransferenciaLegacy(m)) {
+      const dir = typeof direcaoTransferenciaLegacy === "function" ? direcaoTransferenciaLegacy(m) : "PT_STP";
+      return dir === "STP_PT"
+        ? retorno("TRANSFERÊNCIA LEGADA STP→PT", +valor, "#64748b", "#f1f5f9")
+        : retorno("TRANSFERÊNCIA LEGADA PT→STP", -valor, "#64748b", "#f1f5f9");
+    }
+    if(m?.origem === "encomenda" || /encomenda/i.test(produto))
+      return retorno("RECEBIMENTO DE ENCOMENDA", ehDinheiro ? +valor : 0, "#0f766e", "#ccfbf1");
+    return retorno("VENDA", ehDinheiro ? +valor : 0, "#047857", "#dcfce7");
+  }
+
+  return retorno(tipo ? tipo.replaceAll("_", " ").toUpperCase() : "MOVIMENTO", 0);
+}
+
 function abrirAuditoriaDetalhadaModal(caixaId) {
-  let c = todosCaixasAuditoria.find(item => item.id === caixaId);
+  const c = todosCaixasAuditoria.find(item => item.id === caixaId);
   if(!c) return;
 
   auditTituloModal.innerText = `Auditoria do Turno #${caixaId.substring(0,8).toUpperCase()}`;
 
-  let dtAberto = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
-  let dtFechado = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'EM ABERTO';
+  const dtAberto = c.dataAbertura ? c.dataAbertura.toDate().toLocaleString('pt-PT') : '-';
+  const dtFechado = c.dataFechamento ? c.dataFechamento.toDate().toLocaleString('pt-PT') : 'EM ABERTO';
 
-  let vendasDoTurno = todasMovimentacoes.filter(m => m.caixaId === caixaId);
+  const movimentosDoTurno = todasMovimentacoes
+    .filter(m => m.caixaId === caixaId)
+    .slice()
+    .sort((a,b) => {
+      const da = a?.data?.toDate ? a.data.toDate().getTime() : 0;
+      const dbb = b?.data?.toDate ? b.data.toDate().getTime() : 0;
+      return da - dbb;
+    });
 
-  let totalVendasDinheiro = 0;
-  let htmlVendas = "";
+  const valInicial = Number(c.valorInicial) || 0;
+  const resumoFisico = calcularResumoCaixaFisico(movimentosDoTurno, caixaId, valInicial);
+  const entradasFisicas = Number(resumoFisico?.entradas) || 0;
+  const saidasFisicas = Number(resumoFisico?.saidas) || 0;
+  const bloqueadoAtual = Number(resumoFisico?.bloqueado) || 0;
+  const disponivelAtual = Number(resumoFisico?.disponivel) || 0;
+  const dinEsperadoCalculado = c.dinheiroEsperado !== undefined
+    ? Number(c.dinheiroEsperado) || 0
+    : Number(resumoFisico?.esperado) || 0;
 
-  vendasDoTurno.forEach(m => {
-    let dHora = m.data ? m.data.toDate().toLocaleTimeString('pt-PT', {hour: '2-digit', minute:'2-digit'}) : '-';
-    let val = Number(m.valor) || 0;
-    let fPag = m.formaPagamento || "Dinheiro";
+  let htmlMovimentos = "";
+  movimentosDoTurno.forEach(m => {
+    const dHora = m.data?.toDate
+      ? m.data.toDate().toLocaleTimeString('pt-PT', {hour:'2-digit', minute:'2-digit'})
+      : '-';
+    const val = Number(m.valor) || 0;
+    const fPag = m.formaPagamento || "Geral";
+    const classif = classificarMovimentoAuditoriaTurno(m);
+    const efeito = Number(classif.efeito) || 0;
+    const efeitoTxt = efeito > 0
+      ? `+${efeito.toLocaleString('pt-PT')} Db`
+      : efeito < 0
+        ? `${efeito.toLocaleString('pt-PT')} Db`
+        : '0 Db';
+    const efeitoCor = efeito > 0 ? '#047857' : efeito < 0 ? '#b91c1c' : '#64748b';
 
-    if(fPag.includes("Dinheiro") || (!fPag.includes("Transferencia") && !fPag.includes("Cartao"))) {
-      totalVendasDinheiro += val;
-    }
-
-    htmlVendas += `
+    htmlMovimentos += `
       <tr>
         <td>${dHora}</td>
-        <td><b>${m.produto}</b></td>
-        <td>${m.quantidade} un</td>
+        <td style="text-align:left;"><b>${m.produto || '-'}</b></td>
+        <td>
+          <span style="display:inline-block;background:${classif.fundo};color:${classif.cor};padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap;">
+            ${classif.natureza}
+          </span>
+        </td>
+        <td>${Number(m.quantidade)||1} un</td>
         <td><b>${val.toLocaleString('pt-PT')} Db</b></td>
+        <td><b style="color:${efeitoCor};">${efeitoTxt}</b></td>
         <td><small>${fPag}</small></td>
-        <td><small>${m.usuario}</small></td>
+        <td><small>${m.usuario || '-'}</small></td>
       </tr>
     `;
   });
 
-  let valInicial = Number(c.valorInicial) || 0;
-  let dinEsperadoCalculado = c.dinheiroEsperado !== undefined ? c.dinheiroEsperado : (valInicial + totalVendasDinheiro);
+  const diff = c.diferenca !== undefined ? Number(c.diferenca) || 0 : null;
+  const prestacaoTxt = c.estado === "fechado"
+    ? (typeof badgePrestacao63 === "function" ? badgePrestacao63(c) : (c.estadoPrestacao || '-'))
+    : '<span style="color:#64748b;font-weight:700;">Turno em aberto</span>';
 
-  let htmlAudit = `
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:15px; font-size:13px;">
-      <div><b>Funcionário:</b> ${c.usuario}</div>
+  const htmlAudit = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;background:#f8fafc;padding:15px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:15px;font-size:13px;">
+      <div><b>Funcionário:</b> ${c.usuario || '-'}</div>
       <div><b>Função:</b> ${(c.role||'venda1').toUpperCase()}</div>
-      <div><b>UID:</b> <small>${c.uid}</small></div>
+      <div><b>UID:</b> <small>${c.uid || '-'}</small></div>
       <div><b>Abertura:</b> ${dtAberto}</div>
       <div><b>Fechamento:</b> ${dtFechado}</div>
       <div><b>Fechado Por:</b> ${c.fechadoPorUsuario || '-'}</div>
+      <div><b>Prestação:</b> ${prestacaoTxt}</div>
     </div>
 
-    <div class="kpi-grid" style="margin-bottom: 15px;">
+    <div class="kpi-grid" style="margin-bottom:15px;">
       <div class="kpi-card blue">
         <span class="kpi-title">Valor Inicial</span>
         <span class="kpi-value">${valInicial.toLocaleString('pt-PT')} Db</span>
       </div>
       <div class="kpi-card green">
-        <span class="kpi-title">Movimentações em Dinheiro</span>
-        <span class="kpi-value">${totalVendasDinheiro.toLocaleString('pt-PT')} Db</span>
+        <span class="kpi-title">Entradas Físicas</span>
+        <span class="kpi-value">+${entradasFisicas.toLocaleString('pt-PT')} Db</span>
+      </div>
+      <div class="kpi-card red">
+        <span class="kpi-title">Saídas Físicas</span>
+        <span class="kpi-value">-${saidasFisicas.toLocaleString('pt-PT')} Db</span>
       </div>
       <div class="kpi-card purple">
         <span class="kpi-title">Dinheiro Esperado</span>
         <span class="kpi-value">${dinEsperadoCalculado.toLocaleString('pt-PT')} Db</span>
       </div>
-      <div class="kpi-card ${c.diferenca < 0 ? 'red' : (c.diferenca > 0 ? 'orange' : 'green')}">
+      <div class="kpi-card ${diff !== null && diff < 0 ? 'red' : (diff !== null && diff > 0 ? 'orange' : 'green')}">
         <span class="kpi-title">Dinheiro Contado / Dif.</span>
-        <span class="kpi-value">${c.dinheiroContado !== undefined ? c.dinheiroContado.toLocaleString('pt-PT') + ' Db' : 'Em aberto'}</span>
-        <span class="kpi-sub" style="color:inherit;">
-          ${c.diferenca !== undefined ? 'Diferença: ' + c.diferenca + ' Db' : ''}
-        </span>
+        <span class="kpi-value">${c.dinheiroContado !== undefined ? Number(c.dinheiroContado).toLocaleString('pt-PT') + ' Db' : 'Em aberto'}</span>
+        <span class="kpi-sub" style="color:inherit;">${diff !== null ? 'Diferença: ' + diff.toLocaleString('pt-PT') + ' Db' : ''}</span>
       </div>
+      ${c.estado === "aberto" && bloqueadoAtual > 0 ? `
+      <div class="kpi-card orange">
+        <span class="kpi-title">Reservado / Bloqueado</span>
+        <span class="kpi-value">${bloqueadoAtual.toLocaleString('pt-PT')} Db</span>
+        <span class="kpi-sub" style="color:#b45309;">Livre para nova saída: ${disponivelAtual.toLocaleString('pt-PT')} Db</span>
+      </div>` : ''}
+    </div>
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;margin-bottom:15px;font-size:12px;color:#475569;line-height:1.6;">
+      <b>Leitura do caixa:</b> Valor inicial + Entradas físicas − Saídas físicas = Dinheiro esperado.
+      Movimentos de aprovação que apenas liberam uma reserva aparecem com <b>efeito 0 Db</b>, preservando a trilha de auditoria sem duplicar dinheiro.
     </div>
 
     ${c.observacaoFechamento ? `
-      <div style="background:#fffbe6; padding:10px; border-radius:8px; border:1px solid #fde68a; margin-bottom:15px; font-size:13px; color:#92400e;">
+      <div style="background:#fffbe6;padding:10px;border-radius:8px;border:1px solid #fde68a;margin-bottom:15px;font-size:13px;color:#92400e;">
         <b>💬 Observação do Fechamento:</b> ${c.observacaoFechamento}
       </div>
     ` : ''}
 
-    <h4 style="margin: 15px 0 8px 0; color:#1e293b;">🛒 Vendas Realizadas Neste Turno (${vendasDoTurno.length})</h4>
+    <h4 style="margin:15px 0 8px;color:#1e293b;">📋 Movimentos do Turno (${movimentosDoTurno.length})</h4>
     <div class="table-responsive">
-      <table style="min-width:100%;">
+      <table style="min-width:1050px;">
         <thead>
           <tr>
-            <th>Horário</th><th>Produto</th><th>Qtd</th><th>Valor</th><th>Forma Pag.</th><th>Funcionário</th>
+            <th>Horário</th><th style="text-align:left;">Operação</th><th>Ação / Natureza</th><th>Qtd</th>
+            <th>Valor Registado</th><th>Efeito no Caixa</th><th>Forma / Detalhe</th><th>Utilizador</th>
           </tr>
         </thead>
         <tbody>
-          ${htmlVendas || '<tr><td colspan="6" style="color:#94a3b8;">Nenhuma venda cadastrada neste turno.</td></tr>'}
+          ${htmlMovimentos || '<tr><td colspan="8" style="color:#94a3b8;">Nenhum movimento registado neste turno.</td></tr>'}
         </tbody>
       </table>
     </div>
