@@ -1127,6 +1127,16 @@ tr:nth-child(even) { background-color: #f8fafc; }
             <span class="kpi-title">Saídas Físicas</span>
             <span id="kpiCaixaSaidasDinheiro" class="kpi-value">0 Db</span>
           </div>
+          <div class="kpi-card teal">
+            <span class="kpi-title">Transferências — Entradas</span>
+            <span id="kpiCaixaTransferEntradas" class="kpi-value">0 Db</span>
+            <span class="kpi-sub" style="color:#0f766e;">Já incluído nas Entradas Físicas</span>
+          </div>
+          <div class="kpi-card orange">
+            <span class="kpi-title">Transferências — Saídas</span>
+            <span id="kpiCaixaTransferSaidas" class="kpi-value">0 Db</span>
+            <span class="kpi-sub" style="color:#b45309;">Já incluído nas Saídas Físicas</span>
+          </div>
           <div class="kpi-card purple">
             <span class="kpi-title">Dinheiro Esperado no Caixa</span>
             <span id="kpiCaixaDinheiroEsperado" class="kpi-value">0 Db</span>
@@ -1973,7 +1983,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <span>Valor Inicial:</span> <b id="lblModalValorInicial">0 Db</b>
       </div>
       <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-        <span>Vendas Dinheiro:</span> <b id="lblModalVendasDinheiro">0 Db</b>
+        <span>Entradas Físicas:</span> <b id="lblModalVendasDinheiro">0 Db</b>
       </div>
       <div style="display:flex; justify-content:space-between; font-size:14px; color:#2563eb; font-weight:bold; border-top:1px dashed #cbd5e1; padding-top:4px;">
         <span>Dinheiro Esperado:</span> <span id="lblModalDinheiroEsperado">0 Db</span>
@@ -8001,6 +8011,33 @@ function calcularResumoCaixaFisico(movs, caixaId, valorInicial) {
   };
 }
 
+// FASE 6.6 — leitura informativa das transferências dentro do turno.
+// Estes valores são subconjuntos das entradas/saídas físicas e NÃO são somados novamente ao caixa.
+function calcularResumoTransferenciasTurno(movs, caixaId) {
+  let entradasTransferencia = 0;
+  let saidasTransferencia = 0;
+
+  (movs || []).forEach(m => {
+    if(m.caixaId !== caixaId) return;
+    const v = Number(m.valor) || 0;
+
+    if(m.tipo === "reserva_transferencia_entrada" ||
+       m.tipo === "reposicao_reserva_transferencia_saida" ||
+       m.tipo === "transferencia_entrada") {
+      entradasTransferencia += v;
+      return;
+    }
+
+    if(m.tipo === "reserva_transferencia_saida" ||
+       m.tipo === "devolucao_reserva_transferencia_entrada" ||
+       m.tipo === "transferencia_saida") {
+      saidasTransferencia += v;
+    }
+  });
+
+  return { entradasTransferencia, saidasTransferencia };
+}
+
 async function obterResumoCaixaAtualFirestore() {
   if(!caixaAtualObj) return null;
 
@@ -8021,10 +8058,15 @@ async function obterResumoCaixaAtualFirestore() {
 function atualizarKpiCaixaAbertoLocal() {
   if(!caixaAtualObj) return;
   const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
+  const rt = calcularResumoTransferenciasTurno(todasMovimentacoes, caixaAtualObj.id);
   const elSaidas = document.getElementById("kpiCaixaSaidasDinheiro");
+  const elTrEntradas = document.getElementById("kpiCaixaTransferEntradas");
+  const elTrSaidas = document.getElementById("kpiCaixaTransferSaidas");
   kpiCaixaInicial.innerText = (Number(caixaAtualObj.valorInicial)||0).toLocaleString('pt-PT') + " Db";
   kpiCaixaVendasDinheiro.innerText = r.entradas.toLocaleString('pt-PT') + " Db";
   if(elSaidas) elSaidas.innerText = r.saidas.toLocaleString('pt-PT') + " Db";
+  if(elTrEntradas) elTrEntradas.innerText = rt.entradasTransferencia.toLocaleString('pt-PT') + " Db";
+  if(elTrSaidas) elTrSaidas.innerText = rt.saidasTransferencia.toLocaleString('pt-PT') + " Db";
   kpiCaixaDinheiroEsperado.innerText = r.esperado.toLocaleString('pt-PT') + " Db";
 }
 
@@ -9160,10 +9202,56 @@ async function rejeitarEncomenda651(id) {
   }
 }
 
+// FASE 6.6 — saldo real da Tesouraria consultado diretamente no Firestore.
+// Usado nas aprovações para impedir saída de EUR/Banco sem saldo disponível.
+async function obterSaldoTesourariaContaFirestore651(conta) {
+  const snap = await db.collection("tesouraria_movimentos").get();
+  let saldo = 0;
+  snap.forEach(doc => {
+    const m = doc.data() || {};
+    const vo = Number(m.valorOrigem) || 0;
+    const vd = Number(m.valorDestino) || 0;
+    if(m.origem === conta) saldo -= vo;
+    if(m.destino === conta) saldo += vd;
+  });
+  return saldo;
+}
+
 async function aprovarTransferencia651(id) {
   if(usuarioRole !== "admin") return alert("Acesso restrito.");
   const p = solicitacoesTransferencia651.find(x=>x.id===id);
   if(!p || p.estado !== "PENDENTE_APROVACAO") return alert("Pedido já processado ou não encontrado.");
+
+  // A direção comercial também altera a posição patrimonial em EUR:
+  // PT→STP recebe EUR em Portugal; STP→PT entrega EUR em Portugal.
+  try {
+    if(p.direcao === "STP_PT") {
+      const saldoEur = await obterSaldoTesourariaContaFirestore651("portugal_eur");
+      const eurNecessario = Number(p.qtdEur) || 0;
+      if(saldoEur + 1e-9 < eurNecessario) {
+        return alert(
+          `Saldo insuficiente em Portugal / EUR para aprovar esta transferência.\n\n` +
+          `Disponível: ${saldoEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €\n` +
+          `Necessário entregar: ${eurNecessario.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €\n\n` +
+          `Registe primeiro o saldo real ou uma entrada de EUR na Tesouraria.`
+        );
+      }
+    }
+
+    if(p.direcao === "PT_STP" && p.formaSTP !== "Dinheiro") {
+      const saldoBanco = await obterSaldoTesourariaContaFirestore651("banco_stp");
+      const dbNecessario = Number(p.totalDb) || 0;
+      if(saldoBanco + 1e-9 < dbNecessario) {
+        return alert(
+          `Saldo insuficiente no Banco STP / DobraPay para aprovar esta transferência.\n\n` +
+          `Disponível: ${saldoBanco.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db\n` +
+          `Necessário entregar: ${dbNecessario.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db`
+        );
+      }
+    }
+  } catch(e) {
+    return alert("Não foi possível validar os saldos da Tesouraria: " + (e.message || e));
+  }
 
   if(!confirm(
     `Aprovar transferência?\n\n${p.direcao === "PT_STP" ? "PT → STP" : "STP → PT"}\n` +
@@ -9198,6 +9286,63 @@ async function aprovarTransferencia651(id) {
         aprovadoPorUid:user.uid, aprovadoPorUsuario:user.email,
         dataAprovacao:agora, efeitoFinanceiroDefinitivo:true
       });
+
+      // FASE 6.6 — integração Transferências ⇄ Tesouraria.
+      // PT→STP: EUR recebidos em Portugal aumentam Portugal/EUR.
+      // STP→PT: EUR entregues em Portugal reduzem Portugal/EUR.
+      // O lado STN em DINHEIRO continua no caixa físico; se for DobraPay/Transferência,
+      // o lado STN é refletido no Banco STP. Nenhum destes movimentos é receita/despesa.
+      const eur = Number(d.qtdEur) || 0;
+      const dbValor = Number(d.totalDb) || 0;
+      const baseTes = {
+        tipo:"transferencia_cliente",
+        taxaReferencia:Number(d.taxaReferencia) || null,
+        taxaAplicada:Number(d.taxaAplicada) || null,
+        margemDb:0,
+        usuario:user.email,
+        nomeUsuario:usuarioNome || "",
+        uid:user.uid, role:usuarioRole,
+        transferenciaId:trRef.id, solicitacaoTransferenciaId:id,
+        direcao:d.direcao, cliente:d.cliente || "", data:agora
+      };
+
+      if(d.direcao === "PT_STP") {
+        tx.set(db.collection("tesouraria_movimentos").doc(), {
+          ...baseTes,
+          origem:"cliente_externo", destino:"portugal_eur",
+          moedaOrigem:"EUR", moedaDestino:"EUR",
+          valorOrigem:eur, valorDestino:eur,
+          observacao:`Transferência PT→STP aprovada — EUR recebidos em Portugal — ${d.cliente || "Cliente"}`
+        });
+
+        if(d.formaSTP !== "Dinheiro") {
+          tx.set(db.collection("tesouraria_movimentos").doc(), {
+            ...baseTes,
+            origem:"banco_stp", destino:"cliente_externo",
+            moedaOrigem:"STN", moedaDestino:"STN",
+            valorOrigem:dbValor, valorDestino:dbValor,
+            observacao:`Transferência PT→STP aprovada — Db entregues via Banco/DobraPay — ${d.cliente || "Cliente"}`
+          });
+        }
+      } else if(d.direcao === "STP_PT") {
+        tx.set(db.collection("tesouraria_movimentos").doc(), {
+          ...baseTes,
+          origem:"portugal_eur", destino:"cliente_externo",
+          moedaOrigem:"EUR", moedaDestino:"EUR",
+          valorOrigem:eur, valorDestino:eur,
+          observacao:`Transferência STP→PT aprovada — EUR entregues em Portugal — ${d.cliente || "Cliente"}`
+        });
+
+        if(d.formaSTP !== "Dinheiro") {
+          tx.set(db.collection("tesouraria_movimentos").doc(), {
+            ...baseTes,
+            origem:"cliente_externo", destino:"banco_stp",
+            moedaOrigem:"STN", moedaDestino:"STN",
+            valorOrigem:dbValor, valorDestino:dbValor,
+            observacao:`Transferência STP→PT aprovada — Db recebidos via Banco/DobraPay — ${d.cliente || "Cliente"}`
+          });
+        }
+      }
 
       // FASE 6.5.6 — decisão administrativa explícita na trilha de auditoria.
       // PT→STP: a saída física já ocorreu na reserva; aprovação tem efeito 0 Db.
