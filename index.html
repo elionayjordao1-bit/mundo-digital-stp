@@ -796,10 +796,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div class="card" style="border-left:4px solid #0f766e;">
       <h3 style="color:#0f766e;">💰 Posição Financeira Atual</h3>
       <div class="kpi-grid">
-        <div class="kpi-card green">
+        <div class="kpi-card green" onclick="abrirDetalheCaixaLojaGlobal()" title="Clique para ver o detalhamento dos turnos abertos" style="cursor:pointer;">
           <span class="kpi-title">🏪 Caixa Loja</span>
           <span id="finPosCaixa" class="kpi-value">0 Db</span>
-          <span class="kpi-sub">Turno atualmente aberto</span>
+          <span id="finPosCaixaSub" class="kpi-sub">Nenhum turno aberto · clique para detalhar</span>
         </div>
         <div class="kpi-card blue">
           <span class="kpi-title">👤 Responsável / Reserva</span>
@@ -1599,10 +1599,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
 
     <div class="kpi-grid">
-      <div class="kpi-card green">
+      <div class="kpi-card green" onclick="abrirDetalheCaixaLojaGlobal()" title="Clique para ver o detalhamento dos turnos abertos" style="cursor:pointer;">
         <span class="kpi-title">🏪 Caixa Loja</span>
         <span id="tesKpiCaixa" class="kpi-value">0 Db</span>
-        <span class="kpi-sub">Saldo físico operacional</span>
+        <span id="tesKpiCaixaSub" class="kpi-sub">Nenhum turno aberto · clique para detalhar</span>
       </div>
       <div class="kpi-card blue">
         <span class="kpi-title">👤 Responsável / Reserva</span>
@@ -6362,12 +6362,63 @@ function moedaContaTes(id) {
   return id === "portugal_eur" ? "EUR" : "STN";
 }
 
-function saldoContaTes(id) {
-  if(id === "caixa_stp") {
-    if(!caixaAtualObj) return 0;
-    const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
-    return Number(r.esperado) || 0;
+/* FASE 6.6.2 — Caixa Loja representa TODOS os turnos abertos da loja.
+   O valor é somente posição física esperada; não cria movimento novo nem duplica patrimônio. */
+function obterResumoCaixaLojaGlobal() {
+  let abertos = (todosCaixasAuditoria || []).filter(c => String(c.estado || "") === "aberto");
+
+  // Fallback durante os primeiros instantes de carregamento da sessão.
+  if(abertos.length === 0 && caixaAtualObj && caixaAtualObj.estado === "aberto") {
+    abertos = [caixaAtualObj];
   }
+
+  const detalhes = abertos.map(c => {
+    let r = {entradas:0, saidas:0, esperado:Number(c.valorInicial)||0, bloqueado:0, disponivel:Number(c.valorInicial)||0};
+    try {
+      r = calcularResumoCaixaFisico(todasMovimentacoes || [], c.id, c.valorInicial);
+    } catch(e) {}
+
+    const movsTurno = (todasMovimentacoes || []).filter(m => m.caixaId === c.id);
+    let transfEntradas = 0, transfSaidas = 0;
+    movsTurno.forEach(m => {
+      const v = Number(m.valor)||0;
+      const f = String(m.formaPagamento||"");
+      if(m.tipo === "reserva_transferencia_entrada" || (m.tipo === "transferencia_entrada" && f.includes("Dinheiro"))) transfEntradas += v;
+      if(m.tipo === "reserva_transferencia_saida" || (m.tipo === "transferencia_saida" && f.includes("Dinheiro"))) transfSaidas += v;
+    });
+
+    return {
+      ...c,
+      resumo:r,
+      transfEntradas,
+      transfSaidas
+    };
+  });
+
+  return {
+    quantidade: detalhes.length,
+    esperado: detalhes.reduce((s,x)=>s+(Number(x.resumo.esperado)||0),0),
+    entradas: detalhes.reduce((s,x)=>s+(Number(x.resumo.entradas)||0),0),
+    saidas: detalhes.reduce((s,x)=>s+(Number(x.resumo.saidas)||0),0),
+    bloqueado: detalhes.reduce((s,x)=>s+(Number(x.resumo.bloqueado)||0),0),
+    disponivel: detalhes.reduce((s,x)=>s+(Number(x.resumo.disponivel)||0),0),
+    detalhes
+  };
+}
+
+function atualizarSubtitulosCaixaLojaGlobal() {
+  const g = obterResumoCaixaLojaGlobal();
+  const texto = g.quantidade === 0
+    ? "Nenhum turno aberto · clique para detalhar"
+    : `${g.quantidade} turno${g.quantidade===1?"":"s"} aberto${g.quantidade===1?"":"s"} · saldo esperado · clique para detalhar`;
+  const a = document.getElementById("finPosCaixaSub");
+  const b = document.getElementById("tesKpiCaixaSub");
+  if(a) a.innerText = texto;
+  if(b) b.innerText = texto;
+}
+
+function saldoContaTes(id) {
+  if(id === "caixa_stp") return Number(obterResumoCaixaLojaGlobal().esperado) || 0;
   return Number(contasTesouraria[id]) || 0;
 }
 
@@ -6834,6 +6885,7 @@ function renderizarTesouraria() {
   if(document.getElementById("tesKpiResponsavel")) tesKpiResponsavel.innerText = saldoContaTes("responsavel_stp").toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
   if(document.getElementById("tesKpiBancoStp")) tesKpiBancoStp.innerText = saldoContaTes("banco_stp").toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
   if(document.getElementById("tesKpiPortugalEur")) tesKpiPortugalEur.innerText = saldoContaTes("portugal_eur").toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2}) + " €";
+  atualizarSubtitulosCaixaLojaGlobal();
 
   let lista = [...movimentosTesouraria];
   const iniV = document.getElementById("tesDataInicio")?.value || "";
@@ -6953,10 +7005,8 @@ function finAplicarPeriodo() {
 }
 
 function finSaldoCaixaAtual() {
-  if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") return 0;
   try {
-    const r = calcularResumoCaixaFisico(todasMovimentacoes, caixaAtualObj.id, caixaAtualObj.valorInicial);
-    return finNumero(r.esperado);
+    return finNumero(obterResumoCaixaLojaGlobal().esperado);
   } catch(e) {
     return 0;
   }
@@ -7162,6 +7212,7 @@ function processarFinanceiro() {
   set("finKpiMargemLiquida", `Margem líquida: ${margemLiquidaPct.toLocaleString("pt-PT",{maximumFractionDigits:1})}%`);
 
   set("finPosCaixa", finMoedaDb(caixa));
+  atualizarSubtitulosCaixaLojaGlobal();
   set("finPosResponsavel", finMoedaDb(responsavel));
   set("finPosPrestacaoPendente", finMoedaDb(prestacaoPendente));
   set("finPosBanco", finMoedaDb(banco));
@@ -9489,6 +9540,82 @@ abrirModalFecharCaixa = function() {
   return abrirModalFecharCaixaAntes651();
 };
 
+</script>
+
+<!-- FASE 6.6.2 — DETALHE GLOBAL DO CAIXA LOJA -->
+<div id="modalDetalheCaixaLojaGlobal" class="modal-overlay hidden no-print">
+  <div class="modal-content large" style="max-width:1100px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+      <div>
+        <h3 style="color:#047857;margin-bottom:5px;">🏪 Caixa Loja — Turnos Abertos</h3>
+        <p style="margin:0;color:#64748b;font-size:12px;line-height:1.6;">
+          Detalhamento do dinheiro físico esperado em todos os turnos atualmente abertos.
+          Este painel é informativo e não cria movimentos financeiros.
+        </p>
+      </div>
+      <button onclick="fecharDetalheCaixaLojaGlobal()" class="btn-secondary" style="min-height:36px;">✕ Fechar</button>
+    </div>
+    <div id="resumoDetalheCaixaLojaGlobal" class="kpi-grid" style="margin-top:15px;"></div>
+    <div class="table-responsive">
+      <table style="min-width:1250px;">
+        <thead><tr>
+          <th>Turno</th><th>Funcionário</th><th>Abertura</th><th>Inicial</th>
+          <th>Entradas Físicas</th><th>Saídas Físicas</th><th>Transf. Entrada</th><th>Transf. Saída</th>
+          <th>Reservado</th><th>Esperado</th><th>Disponível</th><th>Ação</th>
+        </tr></thead>
+        <tbody id="listaDetalheCaixaLojaGlobal"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;font-size:12px;color:#475569;line-height:1.6;">
+      <b>Regra:</b> Caixa Loja = soma do dinheiro esperado dos turnos <b>ABERTOS</b>.
+      Ao fechar um turno, o valor deixa o Caixa Loja e passa para <b>Prestação Pendente</b>;
+      depois da entrega, passa para <b>Responsável / Reserva</b>. O Total Disponível STN não deve duplicar o mesmo dinheiro.
+    </div>
+  </div>
+</div>
+
+<script>
+function abrirDetalheCaixaLojaGlobal() {
+  if(usuarioRole !== "admin") return;
+  const modal = document.getElementById("modalDetalheCaixaLojaGlobal");
+  const resumoEl = document.getElementById("resumoDetalheCaixaLojaGlobal");
+  const listaEl = document.getElementById("listaDetalheCaixaLojaGlobal");
+  if(!modal || !resumoEl || !listaEl) return;
+
+  const g = obterResumoCaixaLojaGlobal();
+  const db = v => (Number(v)||0).toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
+  resumoEl.innerHTML = `
+    <div class="kpi-card green"><span class="kpi-title">Caixa Loja Total</span><span class="kpi-value">${db(g.esperado)}</span><span class="kpi-sub">${g.quantidade} turno(s) aberto(s)</span></div>
+    <div class="kpi-card blue"><span class="kpi-title">Entradas Físicas</span><span class="kpi-value">+${db(g.entradas)}</span><span class="kpi-sub">Somadas nos turnos abertos</span></div>
+    <div class="kpi-card red"><span class="kpi-title">Saídas Físicas</span><span class="kpi-value">-${db(g.saidas)}</span><span class="kpi-sub">Somadas nos turnos abertos</span></div>
+    <div class="kpi-card orange"><span class="kpi-title">Reservado / Bloqueado</span><span class="kpi-value">${db(g.bloqueado)}</span><span class="kpi-sub">Ainda não reutilizável</span></div>
+    <div class="kpi-card teal"><span class="kpi-title">Disponível para Saída</span><span class="kpi-value">${db(g.disponivel)}</span><span class="kpi-sub">Esperado menos bloqueado</span></div>`;
+
+  listaEl.innerHTML = g.detalhes.map(c => {
+    const r = c.resumo;
+    const dt = c.dataAbertura?.toDate ? c.dataAbertura.toDate().toLocaleString("pt-PT") : (c.dataAbertura ? new Date(c.dataAbertura).toLocaleString("pt-PT") : "-");
+    return `<tr>
+      <td><b>#${String(c.id||"").substring(0,8).toUpperCase()}</b></td>
+      <td><b>${c.nomeUsuario || c.usuario || "-"}</b><br><small>${String(c.role||"").toUpperCase()}</small></td>
+      <td><small>${dt}</small></td>
+      <td>${db(c.valorInicial)}</td>
+      <td style="color:#047857;font-weight:700;">+${db(r.entradas)}</td>
+      <td style="color:#b91c1c;font-weight:700;">-${db(r.saidas)}</td>
+      <td>${db(c.transfEntradas)}</td>
+      <td>${db(c.transfSaidas)}</td>
+      <td style="color:#b45309;font-weight:700;">${db(r.bloqueado)}</td>
+      <td style="color:#047857;font-weight:800;">${db(r.esperado)}</td>
+      <td style="font-weight:700;">${db(r.disponivel)}</td>
+      <td><button class="btn-secondary btn-acao" onclick="fecharDetalheCaixaLojaGlobal(); abrirAuditoriaDetalhadaModal('${c.id}')">🔍 Auditoria</button></td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="12" style="color:#94a3b8;">Nenhum turno aberto neste momento.</td></tr>';
+
+  modal.classList.remove("hidden");
+}
+
+function fecharDetalheCaixaLojaGlobal() {
+  document.getElementById("modalDetalheCaixaLojaGlobal")?.classList.add("hidden");
+}
 </script>
 
 <!-- FASE 6.3 — MODAL PRESTAÇÃO DE CONTAS -->
