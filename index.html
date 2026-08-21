@@ -9924,6 +9924,30 @@ async function cadastrarItemSoltoPT(){
   }catch(e){alert("Erro ao registar compra: "+(e.message||e));}
 }
 
+function armIdsItensDespachoPendente(){
+  const ids=new Set();
+  (solicitacoesDespachoArmazem||[])
+    .filter(r=>r.estado==="PENDENTE_APROVACAO")
+    .forEach(r=>(r.idsItens||[]).forEach(id=>ids.add(String(id))));
+  return ids;
+}
+
+function armRenderSelecaoDespachoPT(){
+  const tabela=document.getElementById("listaSelecaoLotePT");
+  if(!tabela) return;
+  const pendentes=armIdsItensDespachoPendente();
+  let sel="";
+  (todosItensSoltosPT||[]).forEach(i=>{
+    if(pendentes.has(String(i.id))) return;
+    const eur=Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0;
+    const subtotalEur=(Number(i.quantidade)||0)*eur;
+    const vendaSug=Math.round(eur*26*1.3);
+    sel+=`<tr><td><input type="checkbox" class="chk-item-pt" value="${i.id}" data-custototal="${subtotalEur}" onchange="atualizarResumoDespachoArmazem()"></td><td><b>${i.nome}</b> (${i.categoria||"Geral"})</td><td>${i.quantidade} un</td><td><b>${subtotalEur.toFixed(2)} €</b></td><td><input class="preco-venda-lote" data-id="${i.id}" type="number" min="0" step="1" value="${vendaSug}" style="width:120px;" oninput="atualizarResumoDespachoArmazem()"></td><td class="margem-venda-lote" data-id="${i.id}">—</td></tr>`;
+  });
+  tabela.innerHTML=sel||'<tr><td colspan="6" style="color:#94a3b8;">Nenhum artigo disponível para novo despacho. Itens com despacho pendente ficam reservados até decisão do ADMIN.</td></tr>';
+  atualizarResumoDespachoArmazem();
+}
+
 function atualizarPagamentoFreteArmazemUI(){
   const moeda=document.getElementById("loteFreteMoeda")?.value||"EUR";
   armPreencherConta("loteFreteConta",moeda);
@@ -9969,6 +9993,8 @@ async function despacharLotePT(){
   if(freteValor>0&&!contaPagamento) return alert("Selecione a conta de pagamento do frete.");
   if(freteValor>0&&freteMoeda==="STN"&&taxaCambio<=0) return alert("Informe a taxa Db/€ para converter o frete ao custo do lote.");
   const idsItens=chks.map(c=>c.value);
+  const pendentes=armIdsItensDespachoPendente();
+  if(idsItens.some(id=>pendentes.has(String(id)))) return alert("Um dos artigos selecionados já está reservado num despacho pendente de aprovação. Atualize a página.");
   const itens=todosItensSoltosPT.filter(i=>idsItens.includes(i.id));
   if(itens.length!==idsItens.length) return alert("Algum artigo selecionado já não está disponível. Atualize a página.");
   const custoTotalItensEuro=itens.reduce((s,i)=>s+(Number(i.quantidade)||0)*(Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0),0);
@@ -9986,7 +10012,8 @@ async function despacharLotePT(){
       batch.set(histRef,{...armHistoricoPayload("DESPACHO_SOLICITADO",{referencia:identificador,despachoSolicitacaoId:reqRef.id,quantidade:itens.reduce((s,i)=>s+(Number(i.quantidade)||0),0),valor:freteValor,moeda:freteMoeda,contaPagamento:freteValor>0?contaPagamento:"",fornecedor:transportador,estado:"PENDENTE_APROVACAO",observacao}),data:agora});
       await batch.commit();
       document.getElementById("loteNomeIdentificador").value=""; document.getElementById("loteFreteEuro").value=""; document.getElementById("loteTransportador").value=""; document.getElementById("loteObservacao").value="";
-      alert("Despacho enviado para aprovação. Nenhum artigo foi movido e nenhum frete foi debitado ainda.");
+      chks.forEach(c=>c.checked=false);
+      alert("Despacho enviado para aprovação. Os artigos ficam reservados e deixam de aparecer na seleção até o ADMIN aprovar ou rejeitar.");
     }catch(e){alert("Erro ao enviar despacho: "+(e.message||e));}
     return;
   }
@@ -10346,7 +10373,7 @@ function armIniciarListenersSolicitacoes(){
   const uid=auth.currentUser?.uid; if(!uid)return;
   const build=(col,assign)=>{let q=db.collection(col); if(usuarioRole!=="admin")q=q.where("uid","==",uid); return q.onSnapshot(s=>{const arr=[]; s.forEach(d=>arr.push({id:d.id,...d.data()})); arr.sort((a,b)=>obterDataSegura(b.data)-obterDataSegura(a.data)); assign(arr); renderizarSolicitacoesArmazem();},e=>console.warn(col,e));};
   listenerArmCompraSolic=build("armazem_compra_solicitacoes",a=>solicitacoesCompraArmazem=a);
-  listenerArmDespachoSolic=build("armazem_despacho_solicitacoes",a=>solicitacoesDespachoArmazem=a);
+  listenerArmDespachoSolic=build("armazem_despacho_solicitacoes",a=>{solicitacoesDespachoArmazem=a; armRenderSelecaoDespachoPT();});
   listenerArmAcertoSolic=build("armazem_acerto_solicitacoes",a=>solicitacoesAcertoArmazem=a);
 }
 function armIniciarListenerHistorico(){
@@ -10356,7 +10383,7 @@ function armIniciarListenerHistorico(){
 function carregarArmazemPTTresPassos(){
   if(!usuarioPodeArmazemPT())return;
   if(listenerArmazemPT)listenerArmazemPT(); if(listenerLotesPT)listenerLotesPT();
-  listenerArmazemPT=db.collection("armazem_pt").orderBy("dataRegisto","desc").onSnapshot(s=>{todosItensSoltosPT=[]; let h="",sel=""; s.forEach(d=>{const i={id:d.id,...d.data()}; if(i.estado!=="EM_LISBOA")return; todosItensSoltosPT.push(i); const eur=Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0; const subtotalEur=(Number(i.quantidade)||0)*eur; const original=Number(i.custoUnitarioOriginal)||eur; const moeda=i.moedaCompra||"EUR"; h+=`<tr><td><b>${i.nome}</b></td><td>${i.categoria||"Geral"}</td><td><b>${i.quantidade} un</b></td><td>${armFmtValor(original,moeda)}</td><td>${subtotalEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${i.fornecedor||"-"}</td><td><small>${armData(i.dataRegisto)}</small></td></tr>`; const vendaSug=Math.round(eur*26*1.3); sel+=`<tr><td><input type="checkbox" class="chk-item-pt" value="${i.id}" data-custototal="${subtotalEur}" onchange="atualizarResumoDespachoArmazem()"></td><td><b>${i.nome}</b> (${i.categoria||"Geral"})</td><td>${i.quantidade} un</td><td><b>${subtotalEur.toFixed(2)} €</b></td><td><input class="preco-venda-lote" data-id="${i.id}" type="number" min="0" step="1" value="${vendaSug}" style="width:120px;" oninput="atualizarResumoDespachoArmazem()"></td><td class="margem-venda-lote" data-id="${i.id}">—</td></tr>`;}); listaItensSoltosPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo oficial aguardando lote.</td></tr>'; listaSelecaoLotePT.innerHTML=sel||'<tr><td colspan="4" style="color:#94a3b8;">Nenhum artigo disponível.</td></tr>'; atualizarResumoDespachoArmazem();},e=>console.warn("Armazém PT",e));
+  listenerArmazemPT=db.collection("armazem_pt").orderBy("dataRegisto","desc").onSnapshot(s=>{todosItensSoltosPT=[]; let h=""; s.forEach(d=>{const i={id:d.id,...d.data()}; if(i.estado!=="EM_LISBOA")return; todosItensSoltosPT.push(i); const eur=Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0; const subtotalEur=(Number(i.quantidade)||0)*eur; const original=Number(i.custoUnitarioOriginal)||eur; const moeda=i.moedaCompra||"EUR"; h+=`<tr><td><b>${i.nome}</b></td><td>${i.categoria||"Geral"}</td><td><b>${i.quantidade} un</b></td><td>${armFmtValor(original,moeda)}</td><td>${subtotalEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${i.fornecedor||"-"}</td><td><small>${armData(i.dataRegisto)}</small></td></tr>`;}); listaItensSoltosPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo oficial aguardando lote.</td></tr>'; armRenderSelecaoDespachoPT();},e=>console.warn("Armazém PT",e));
   listenerLotesPT=db.collection("lotes_pt").orderBy("dataEnvio","desc").onSnapshot(s=>{todosLotesPT=[];let h="";s.forEach(d=>{const l={id:d.id,...d.data()};todosLotesPT.push(l);const st=l.estado==="EM_TRANSITO"?'<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>':'<span class="badge-concluido">RECEBIDO</span>'; const btn=l.estado==="EM_TRANSITO"?(usuarioRole==="admin"?`<button class="btn-success btn-acao" onclick="abrirModalRecebimentoLoteST('${l.id}')">🛬 Receber e consolidar</button>`:`<span style="color:#92400e;font-weight:700;font-size:11px;">⏳ Aguardando receção pelo ADMIN</span>`):"—"; const nomes=(l.itens||[]).map(i=>`${i.nome} (${i.quantidade}un)`).join(", "); h+=`<tr><td><b>${l.identificador}</b></td><td><small>${nomes}</small></td><td>${armFmtValor(l.freteValorOriginal??l.custoFreteEuro,l.freteMoeda||"EUR")}</td><td>${((Number(l.custoTotalItensEuro)||0)+(Number(l.custoFreteEuro)||0)).toFixed(2)} €</td><td>${st}</td><td><small>${armData(l.dataEnvio)}</small></td><td>${btn}</td></tr>`;});listaLotesEmTransitoPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum lote enviado.</td></tr>';},e=>console.warn("Lotes PT",e));
   armIniciarListenersSolicitacoes(); armIniciarListenerHistorico();
   atualizarPagamentoCompraArmazemUI(); atualizarPagamentoFreteArmazemUI(); atualizarPagamentoAcertoArmazemUI();
