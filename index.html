@@ -5059,6 +5059,7 @@ function abrirModalRecebimentoLoteST(loteId){
   modalRecebimentoLoteST.classList.remove("hidden");
 }
 function fecharModalRecebimentoLoteST(){modalRecebimentoLoteST.classList.add("hidden");}
+// FASE 6.4.6 — receção física segura; ESTOQUE nunca grava Tesouraria diretamente.
 async function confirmarRecebimentoLoteST(){
   if(!usuarioPodeArmazemPT()) return alert("Acesso restrito ao Administrador / Estoque.");
   const loteId=recebimentoLoteId.value, taxa=Number(recebimentoTaxaCambio.value)||0, valorPag=Number(recebimentoPagamentoValor.value)||0, formaPag=recebimentoPagamentoForma.value, obs=recebimentoPagamentoObs.value.trim();
@@ -10084,7 +10085,8 @@ async function confirmarRecebimentoLoteST(){
   }catch(e){
     const msg=(e&&e.message)||String(e||"");
     if(/permission|insufficient/i.test(msg)) {
-      alert("Recebimento bloqueado pelas regras de segurança.\n\nO perfil ESTOQUE não tentou movimentar a Tesouraria; a operação física foi recusada porque as Firestore Rules publicadas ainda não autorizam todos os campos/coleções desta versão.\n\nPublique o arquivo firestore_rules_Fase6_4_5_Recebimento_Seguro.rules e tente novamente.");
+      const codigo = e?.code ? `\nCódigo: ${e.code}` : "";
+      alert("Recebimento bloqueado pelas regras de segurança."+codigo+"\n\nA Fase 6.4.6 mantém o ESTOQUE sem acesso à Tesouraria. O recebimento usa somente: lotes_pt, produtos, movimentacoes, armazem_movimentos e, quando há acerto, armazem_acerto_solicitacoes.\n\nPublique as Rules Fase 6.4.6 juntamente com este HTML e teste novamente.");
     } else {
       alert("Erro ao receber lote: "+msg);
     }
