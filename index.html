@@ -3247,7 +3247,7 @@ function fecharModalAuditoria() {
    LÓGICA DO ARMAZÉM PORTUGAL
    ========================================================================= */
 
-function carregarArmazemPTTresPassos() {
+function carregarArmazemPTTresPassos_LEGACY() {
   if(listenerArmazemPT) listenerArmazemPT();
   if(listenerLotesPT) listenerLotesPT();
 
@@ -5050,7 +5050,7 @@ function renderizarHistorico(listaMovs) {
 }
 
 // Armazém PT: novo fluxo de receção + pagamento/acerto da fábrica.
-function abrirModalRecebimentoLoteST(loteId){
+function abrirModalRecebimentoLoteST_LEGACY(loteId){
   if(!usuarioPodeArmazemPT()) return alert("Acesso restrito ao Administrador / Estoque.");
   const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote) return alert("Lote não encontrado.");
   if(lote.estado==="RECEBIDO") return alert("Este lote já foi recebido.");
@@ -5060,7 +5060,7 @@ function abrirModalRecebimentoLoteST(loteId){
 }
 function fecharModalRecebimentoLoteST(){modalRecebimentoLoteST.classList.add("hidden");}
 // FASE 6.4.6 — receção física segura; ESTOQUE nunca grava Tesouraria diretamente.
-async function confirmarRecebimentoLoteST(){
+async function confirmarRecebimentoLoteST_LEGACY(){
   if(!usuarioPodeArmazemPT()) return alert("Acesso restrito ao Administrador / Estoque.");
   const loteId=recebimentoLoteId.value, taxa=Number(recebimentoTaxaCambio.value)||0, valorPag=Number(recebimentoPagamentoValor.value)||0, formaPag=recebimentoPagamentoForma.value, obs=recebimentoPagamentoObs.value.trim();
   if(taxa<=0||valorPag<0) return alert("Informe valores válidos.");
@@ -9817,6 +9817,11 @@ function armHistoricoPayload(tipo, dados={}){
     uid: auth.currentUser?.uid || "",
     role: usuarioRole || "",
     executadoPorUsuario: dados.executadoPorUsuario || null,
+    incorporarAoCusto: dados.incorporarAoCusto === true,
+    taxaCambioRecebimento: dados.taxaCambioRecebimento != null ? Number(dados.taxaCambioRecebimento) : null,
+    custoBaseSTN: dados.custoBaseSTN != null ? Number(dados.custoBaseSTN) : null,
+    custoIncorporavelSTN: dados.custoIncorporavelSTN != null ? Number(dados.custoIncorporavelSTN) : null,
+    custoTotalConsolidadoSTN: dados.custoTotalConsolidadoSTN != null ? Number(dados.custoTotalConsolidadoSTN) : null,
     data: new Date()
   };
 }
@@ -10033,96 +10038,257 @@ async function rejeitarDespachoArmazem(id){
 }
 
 function abrirModalRecebimentoLoteST(loteId){
-  if(!usuarioPodeArmazemPT())return alert("Acesso restrito ao Administrador / Estoque."); const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote)return alert("Lote não encontrado."); if(lote.estado==="RECEBIDO")return alert("Este lote já foi recebido."); recebimentoLoteId.value=loteId; recebimentoLoteTitulo.innerText=`Receber lote: ${lote.identificador||loteId}`; recebimentoTaxaCambio.value="26.0"; recebimentoPagamentoValor.value="0"; recebimentoPagamentoMoeda.value="STN"; recebimentoPagamentoObs.value=""; if(document.getElementById("recebimentoIncorporarCusto"))document.getElementById("recebimentoIncorporarCusto").value="SIM"; atualizarPagamentoAcertoArmazemUI(); modalRecebimentoLoteST.classList.remove("hidden");
+  // FASE 6.4.7 — receção e consolidação final são exclusivas do ADMIN.
+  if(usuarioRole!=="admin") return alert("Recebimento em São Tomé é exclusivo do Administrador. O perfil ESTOQUE acompanha o lote, mas não consolida estoque, custo ou Tesouraria.");
+  const lote=todosLotesPT.find(l=>l.id===loteId);
+  if(!lote) return alert("Lote não encontrado.");
+  if(lote.estado==="RECEBIDO") return alert("Este lote já foi recebido.");
+  if(lote.estado!=="EM_TRANSITO") return alert("Somente lotes EM TRÂNSITO podem ser recebidos.");
+  recebimentoLoteId.value=loteId;
+  recebimentoLoteTitulo.innerText=`Receber e consolidar lote: ${lote.identificador||loteId}`;
+  recebimentoTaxaCambio.value=String(Number(lote.taxaCambioFrete)||26.0);
+  recebimentoPagamentoValor.value="0";
+  recebimentoPagamentoMoeda.value="STN";
+  recebimentoPagamentoObs.value="";
+  if(document.getElementById("recebimentoIncorporarCusto")) document.getElementById("recebimentoIncorporarCusto").value="SIM";
+  atualizarPagamentoAcertoArmazemUI();
+  modalRecebimentoLoteST.classList.remove("hidden");
 }
+
 function atualizarPagamentoAcertoArmazemUI(){
   const moeda=document.getElementById("recebimentoPagamentoMoeda")?.value||"STN";
   armPreencherConta("recebimentoPagamentoConta",moeda);
   const lbl=document.getElementById("recebimentoContaLabel"), ajuda=document.getElementById("recebimentoContaAjuda");
-  if(lbl) lbl.innerText=usuarioRole==="estoque"?"Conta sugerida (ADMIN valida):":"Conta de pagamento:";
-  if(ajuda) ajuda.innerText=usuarioRole==="estoque"
-    ?"Você não movimenta esta conta. A seleção é apenas uma proposta para o ADMIN; nenhum débito ocorre nesta etapa."
-    :"Como ADMIN, esta conta será debitada somente após a confirmação desta operação.";
+  if(lbl) lbl.innerText="Conta de pagamento:";
+  if(ajuda) ajuda.innerText="Somente o ADMIN pode confirmar o recebimento. Se houver acerto, esta conta será debitada na mesma confirmação; marque se o valor integra ou não o custo real do lote.";
 }
+
 async function confirmarRecebimentoLoteST(){
-  if(!usuarioPodeArmazemPT())return alert("Acesso restrito ao Administrador / Estoque."); const loteId=recebimentoLoteId.value, taxa=Number(recebimentoTaxaCambio.value)||0, valorPag=Number(recebimentoPagamentoValor.value)||0, moedaPag=recebimentoPagamentoMoeda.value, contaPag=recebimentoPagamentoConta.value, obs=recebimentoPagamentoObs.value.trim(), incorporarAoCusto=(valorPag>0 && document.getElementById("recebimentoIncorporarCusto")?.value==="SIM"); if(taxa<=0||valorPag<0)return alert("Informe valores válidos."); const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote)return alert("Lote não encontrado."); if(valorPag>0&&!contaPag)return alert("Selecione a conta do acerto."); if(usuarioRole==="admin"&&valorPag>0&&!armSaldoSuficiente(contaPag,valorPag))return alert(`Saldo insuficiente em ${armNomeConta(contaPag)}.`); if(!confirm(`Confirmar recebimento físico do lote ${lote.identificador}?${valorPag>0?`\nAcerto: ${armFmtValor(valorPag,moedaPag)} — ${usuarioRole==="estoque"?"será enviado para aprovação":"será debitado agora"}`:""}`))return;
-  const btn=document.getElementById("btnConfirmarRecebimentoLoteST"); if(btn)btn.disabled=true;
-  try{
-    const loteRef=db.collection("lotes_pt").doc(loteId), histRecRef=db.collection("armazem_movimentos").doc();
-    const acertoReqRef=(valorPag>0&&usuarioRole==="estoque")?db.collection("armazem_acerto_solicitacoes").doc():null;
-    const histAcertoRef=acertoReqRef?db.collection("armazem_movimentos").doc():null;
-    const tesRef=(valorPag>0&&usuarioRole==="admin")?db.collection("tesouraria_movimentos").doc():null;
-    const pagRef=(valorPag>0&&usuarioRole==="admin")?db.collection("pagamentos_despacho").doc():null;
-    await db.runTransaction(async tx=>{
-      const ldDoc=await tx.get(loteRef); if(!ldDoc.exists)throw new Error("Lote não encontrado."); const ld=ldDoc.data(); if(ld.estado!=="EM_TRANSITO")throw new Error("Este lote não está disponível para recebimento."); const agora=new Date();
-      for(const item of (ld.itens||[])){
-        const qtd=Number(item.quantidade)||0;
-        const qtdTotalLote=(ld.itens||[]).reduce((sum,it)=>sum+(Number(it.quantidade)||0),0)||1;
-        const acertoSTNAdmin=(usuarioRole==="admin"&&valorPag>0&&incorporarAoCusto)?(moedaPag==="EUR"?valorPag*taxa:valorPag):0;
-        const parcelaAcertoUnit=acertoSTNAdmin/qtdTotalLote;
-        const custoNovo=Math.round(((Number(item.custoFinalUnitarioEuro)||0)*taxa)+parcelaAcertoUnit);
-        const vendaPretendida=Number(item.precoVendaPretendido)||Math.round(custoNovo*1.3);
-        const existente=todosProdutos.find(p=>String(p.nome||"").toLowerCase().trim()===String(item.nome||"").toLowerCase().trim());
-        if(existente){
-          const estoqueAntigo=Number(existente.estoque)||0, custoAntigo=Number(existente.compra)||0;
-          const novoEstoque=estoqueAntigo+qtd;
-          const custoMedio=novoEstoque>0?Math.round(((estoqueAntigo*custoAntigo)+(qtd*custoNovo))/novoEstoque):custoNovo;
-          const vendaAtual=Number(existente.venda)||0;
-          const atualizarVenda=vendaPretendida>0 && vendaPretendida!==vendaAtual && confirm(`O produto ${item.nome} já existe.\nPreço atual: ${vendaAtual.toLocaleString('pt-PT')} Db\nPreço proposto no lote: ${vendaPretendida.toLocaleString('pt-PT')} Db\n\nOK = atualizar preço de venda | Cancelar = manter preço atual`);
-          const payload={estoque:novoEstoque,compra:custoMedio}; if(atualizarVenda)payload.venda=vendaPretendida;
-          tx.update(db.collection("produtos").doc(existente.id),payload);
-        } else {
-          tx.set(db.collection("produtos").doc(),{nome:item.nome||"Importado PT",barcode:"",categoria:item.categoria||"Importado PT",estoque:qtd,minimo:2,compra:custoNovo,venda:vendaPretendida,foto:""});
-        }
-        tx.set(db.collection("movimentacoes").doc(),{produto:item.nome||"Importado PT",tipo:"entrada",quantidade:qtd,valor:custoNovo*qtd,formaPagamento:`Entrada Stock Lote PT (${ld.identificador||loteId})`,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora,loteId,precoVendaPretendido:vendaPretendida});
-      }
-      tx.update(loteRef,{estado:"RECEBIDO",dataRecebimento:agora,taxaCambioRecebimento:taxa,recebidoPorUid:auth.currentUser.uid,recebidoPorUsuario:auth.currentUser.email,acertoPendente:!!acertoReqRef,acertoIncorporavelPendente:!!(acertoReqRef&&incorporarAoCusto)});
-      tx.set(histRecRef,{...armHistoricoPayload("RECEBIMENTO_LOTE",{referencia:ld.identificador||loteId,loteId,quantidade:(ld.itens||[]).reduce((s,i)=>s+(Number(i.quantidade)||0),0),estado:"RECEBIDO",observacao:obs}),data:agora});
-      if(acertoReqRef){tx.set(acertoReqRef,{loteId,identificadorLote:ld.identificador||loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,observacao:obs,incorporarAoCusto,taxaCambioRecebimento:taxa,estado:"PENDENTE_APROVACAO",usuario:auth.currentUser.email,nomeUsuario:usuarioNome||"",uid:auth.currentUser.uid,role:usuarioRole,data:agora}); tx.set(histAcertoRef,{...armHistoricoPayload("ACERTO_SOLICITADO",{referencia:ld.identificador||loteId,acertoSolicitacaoId:acertoReqRef.id,loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,estado:"PENDENTE_APROVACAO",observacao:obs,incorporarAoCusto,taxaCambioRecebimento:taxa}),data:agora});}
-      if(tesRef){tx.set(tesRef,armMovTesPayload("acerto_armazem",contaPag,moedaPag,valorPag,loteId,`Acerto recebimento lote ${ld.identificador||loteId}`)); tx.set(pagRef,{loteId,identificadorLote:ld.identificador||loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,formaPagamento:"Tesouraria",observacao:obs,incorporarAoCusto,taxaCambioRecebimento:taxa,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora});}
-    });
-    fecharModalRecebimentoLoteST(); alert(valorPag>0&&usuarioRole==="estoque"?"Lote recebido fisicamente. O acerto financeiro foi enviado para aprovação do Administrador.":"Lote recebido no estoque de São Tomé com sucesso.");
-  }catch(e){
-    const msg=(e&&e.message)||String(e||"");
-    if(/permission|insufficient/i.test(msg)) {
-      const codigo = e?.code ? `\nCódigo: ${e.code}` : "";
-      alert("Recebimento bloqueado pelas regras de segurança."+codigo+"\n\nA Fase 6.4.6 mantém o ESTOQUE sem acesso à Tesouraria. O recebimento usa somente: lotes_pt, produtos, movimentacoes, armazem_movimentos e, quando há acerto, armazem_acerto_solicitacoes.\n\nPublique as Rules Fase 6.4.6 juntamente com este HTML e teste novamente.");
-    } else {
-      alert("Erro ao receber lote: "+msg);
+  if(usuarioRole!=="admin") return alert("Ação bloqueada: somente o Administrador pode receber e consolidar lotes em São Tomé.");
+  if(!navigator.onLine) return alert("O recebimento final exige conexão com a internet.");
+
+  const loteId=recebimentoLoteId.value;
+  const taxa=Number(recebimentoTaxaCambio.value)||0;
+  const valorPag=Number(recebimentoPagamentoValor.value)||0;
+  const moedaPag=recebimentoPagamentoMoeda.value;
+  const contaPag=recebimentoPagamentoConta.value;
+  const obs=recebimentoPagamentoObs.value.trim();
+  const incorporarAoCusto=(valorPag>0 && document.getElementById("recebimentoIncorporarCusto")?.value==="SIM");
+
+  if(taxa<=0 || valorPag<0) return alert("Informe uma taxa de câmbio e valores válidos.");
+  const loteLocal=todosLotesPT.find(l=>l.id===loteId);
+  if(!loteLocal) return alert("Lote não encontrado.");
+  if(loteLocal.estado!=="EM_TRANSITO") return alert("Este lote já não está disponível para recebimento.");
+  if(valorPag>0 && !contaPag) return alert("Selecione a conta do acerto.");
+
+  // Saldo financeiro é validado diretamente no Firestore antes da transação final.
+  if(valorPag>0){
+    try{
+      const saldoReal=typeof obterSaldoTesourariaContaFirestore651==="function"
+        ? await obterSaldoTesourariaContaFirestore651(contaPag)
+        : saldoContaTes(contaPag);
+      if((Number(saldoReal)||0)+0.0001 < valorPag) return alert(`Saldo insuficiente em ${armNomeConta(contaPag)}.`);
+    }catch(e){
+      return alert("Não foi possível validar o saldo da Tesouraria: "+(e.message||e));
     }
-  }finally{if(btn)btn.disabled=false;}
-}
-async function aprovarAcertoArmazem(id){
-  if(usuarioRole!=="admin")return alert("Apenas ADMIN pode aprovar.");
-  const r=solicitacoesAcertoArmazem.find(x=>x.id===id); if(!r)return;
-  if(!armSaldoSuficiente(r.contaPagamento,r.valor))return alert(`Saldo insuficiente em ${armNomeConta(r.contaPagamento)}.`);
-  const incorporar=!!r.incorporarAoCusto;
-  if(!confirm(`Aprovar acerto ${armFmtValor(r.valor,r.moeda)} do lote ${r.identificadorLote}?\n\nIncorporar ao custo: ${incorporar?"SIM":"NÃO"}`))return;
-  const reqRef=db.collection("armazem_acerto_solicitacoes").doc(id),tesRef=db.collection("tesouraria_movimentos").doc(),pagRef=db.collection("pagamentos_despacho").doc(),histRef=db.collection("armazem_movimentos").doc(),loteRef=db.collection("lotes_pt").doc(r.loteId);
-  try{await db.runTransaction(async tx=>{
-    const d=await tx.get(reqRef); if(!d.exists||d.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida.");
-    const x=d.data(), agora=new Date();
-    tx.set(tesRef,armMovTesPayload("acerto_armazem",x.contaPagamento,x.moeda,Number(x.valor)||0,x.loteId,`Acerto lote ${x.identificadorLote||x.loteId}`));
-    tx.set(pagRef,{loteId:x.loteId,identificadorLote:x.identificadorLote||x.loteId,valor:Number(x.valor)||0,moeda:x.moeda,contaPagamento:x.contaPagamento,formaPagamento:"Tesouraria",observacao:x.observacao||"",incorporarAoCusto:!!x.incorporarAoCusto,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora,solicitacaoAcertoId:id});
-    if(x.incorporarAoCusto){
-      const loteDoc=await tx.get(loteRef); if(!loteDoc.exists)throw new Error("Lote não encontrado para incorporar o custo.");
-      const ld=loteDoc.data(), taxa=Number(x.taxaCambioRecebimento)||Number(ld.taxaCambioRecebimento)||0; if(taxa<=0)throw new Error("Taxa de recebimento inválida para incorporar o custo.");
-      const totalQtd=(ld.itens||[]).reduce((sum,it)=>sum+(Number(it.quantidade)||0),0)||1;
-      const acertoSTN=x.moeda==="EUR"?(Number(x.valor)||0)*taxa:(Number(x.valor)||0), deltaUnit=acertoSTN/totalQtd;
-      for(const item of (ld.itens||[])){
-        const qtd=Number(item.quantidade)||0; if(qtd<=0)continue;
-        const prod=todosProdutos.find(p=>String(p.nome||"").toLowerCase().trim()===String(item.nome||"").toLowerCase().trim()); if(!prod)continue;
-        const stockAtual=Number(prod.estoque)||0, custoAtual=Number(prod.compra)||0;
-        // O delta é atribuído apenas às unidades deste lote ainda representadas no stock; evita substituir todo o histórico por um custo novo.
-        const unidadesAjustaveis=Math.min(qtd,stockAtual);
-        const novoCusto=stockAtual>0?Math.round(((stockAtual*custoAtual)+(unidadesAjustaveis*deltaUnit))/stockAtual):Math.round(custoAtual+deltaUnit);
-        tx.update(db.collection("produtos").doc(prod.id),{compra:novoCusto});
+  }
+
+  // Decisão de preço é tomada ANTES da transaction; transactions podem repetir automaticamente.
+  const decisaoVenda={};
+  for(const item of (loteLocal.itens||[])){
+    const existente=todosProdutos.find(p=>String(p.nome||"").toLowerCase().trim()===String(item.nome||"").toLowerCase().trim());
+    const proposta=Number(item.precoVendaPretendido)||0;
+    if(existente && proposta>0 && proposta!==Number(existente.venda||0)){
+      decisaoVenda[existente.id]=confirm(`O produto ${item.nome} já existe.\nPreço atual: ${Number(existente.venda||0).toLocaleString('pt-PT')} Db\nPreço proposto no lote: ${proposta.toLocaleString('pt-PT')} Db\n\nOK = atualizar preço de venda | Cancelar = manter preço atual`);
+    }
+  }
+
+  const acertoTexto=valorPag>0
+    ? `\nAcerto: ${armFmtValor(valorPag,moedaPag)} — ${armNomeConta(contaPag)}\nIncorporar ao custo: ${incorporarAoCusto?"SIM":"NÃO"}`
+    : "\nSem acerto financeiro adicional.";
+  if(!confirm(`Confirmar RECEBIMENTO FINAL do lote ${loteLocal.identificador||loteId}?\n\nTaxa para custo STP: ${taxa.toLocaleString('pt-PT')} Db/€${acertoTexto}\n\nEsta ação dará entrada definitiva no estoque de São Tomé.`)) return;
+
+  const btn=document.getElementById("btnConfirmarRecebimentoLoteST");
+  if(btn) btn.disabled=true;
+
+  try{
+    const loteRef=db.collection("lotes_pt").doc(loteId);
+    const histRef=db.collection("armazem_movimentos").doc();
+    const tesRef=valorPag>0?db.collection("tesouraria_movimentos").doc():null;
+    const pagRef=valorPag>0?db.collection("pagamentos_despacho").doc():null;
+
+    await db.runTransaction(async tx=>{
+      // ---------------- FASE A: TODAS AS LEITURAS PRIMEIRO ----------------
+      const loteDoc=await tx.get(loteRef);
+      if(!loteDoc.exists) throw new Error("Lote não encontrado.");
+      const ld=loteDoc.data();
+      if(ld.estado!=="EM_TRANSITO") throw new Error("O lote já foi recebido ou alterado por outra sessão.");
+
+      const itens=ld.itens||[];
+      const refsExistentes=[];
+      const mapaExistentes={};
+      for(const item of itens){
+        const local=todosProdutos.find(p=>String(p.nome||"").toLowerCase().trim()===String(item.nome||"").toLowerCase().trim());
+        if(local && !mapaExistentes[local.id]){
+          const ref=db.collection("produtos").doc(local.id);
+          refsExistentes.push(ref);
+          mapaExistentes[local.id]={ref,local};
+        }
       }
-      tx.update(loteRef,{acertoIncorporadoAoCusto:true,acertoIncorporadoValor:Number(x.valor)||0,acertoIncorporadoMoeda:x.moeda,acertoIncorporadoSTN:acertoSTN,dataConsolidacaoCusto:agora,acertoPendente:false,acertoIncorporavelPendente:false});
-    } else tx.update(loteRef,{acertoPendente:false,acertoIncorporavelPendente:false});
-    tx.update(reqRef,{estado:"APROVADA",aprovadoPorUid:auth.currentUser.uid,aprovadoPorUsuario:auth.currentUser.email,dataAprovacao:agora});
-    tx.set(histRef,{...armHistoricoPayload("ACERTO_APROVADO",{referencia:x.identificadorLote||x.loteId,acertoSolicitacaoId:id,loteId:x.loteId,valor:x.valor,moeda:x.moeda,contaPagamento:x.contaPagamento,estado:"APROVADA",observacao:x.observacao||"",incorporarAoCusto:!!x.incorporarAoCusto,taxaCambioRecebimento:x.taxaCambioRecebimento||null}),data:agora});
-  }); alert(incorporar?"Acerto aprovado, debitado e incorporado ao custo do lote.":"Acerto aprovado e debitado da Tesouraria sem alterar o custo."); atualizarCentralNotificacoes();}catch(e){alert("Erro: "+(e.message||e));}
+      const docsExistentes=await Promise.all(refsExistentes.map(ref=>tx.get(ref)));
+      const dadosExistentes={};
+      docsExistentes.forEach(d=>{if(d.exists) dadosExistentes[d.id]={id:d.id,...d.data()};});
+      // Nenhum tx.get pode existir abaixo desta linha.
+
+      // ---------------- FASE B: CÁLCULOS E ESCRITAS ----------------
+      const agora=new Date();
+      const totalQtd=itens.reduce((sum,it)=>sum+(Number(it.quantidade)||0),0)||1;
+      const acertoSTN=(valorPag>0 && incorporarAoCusto)
+        ? (moedaPag==="EUR" ? valorPag*taxa : valorPag)
+        : 0;
+      const parcelaAcertoUnit=acertoSTN/totalQtd;
+      let custoBaseTotalSTN=0;
+
+      for(const item of itens){
+        const qtd=Number(item.quantidade)||0;
+        if(qtd<=0) continue;
+        const custoBaseUnitSTN=(Number(item.custoFinalUnitarioEuro)||0)*taxa;
+        custoBaseTotalSTN += custoBaseUnitSTN*qtd;
+        const custoNovo=Math.round(custoBaseUnitSTN+parcelaAcertoUnit);
+        const vendaPretendida=Number(item.precoVendaPretendido)||Math.round(custoNovo*1.3);
+        const local=todosProdutos.find(p=>String(p.nome||"").toLowerCase().trim()===String(item.nome||"").toLowerCase().trim());
+        const existente=local?dadosExistentes[local.id]:null;
+
+        if(existente){
+          const estoqueAntigo=Number(existente.estoque)||0;
+          const custoAntigo=Number(existente.compra)||0;
+          const novoEstoque=estoqueAntigo+qtd;
+          const custoMedio=novoEstoque>0
+            ? Math.round(((estoqueAntigo*custoAntigo)+(qtd*custoNovo))/novoEstoque)
+            : custoNovo;
+          const payload={estoque:novoEstoque,compra:custoMedio};
+          if(decisaoVenda[existente.id]===true) payload.venda=vendaPretendida;
+          tx.update(db.collection("produtos").doc(existente.id),payload);
+        }else{
+          tx.set(db.collection("produtos").doc(),{
+            nome:item.nome||"Importado PT",barcode:"",categoria:item.categoria||"Importado PT",
+            estoque:qtd,minimo:2,compra:custoNovo,venda:vendaPretendida,foto:""
+          });
+        }
+
+        tx.set(db.collection("movimentacoes").doc(),{
+          produto:item.nome||"Importado PT",tipo:"entrada",quantidade:qtd,valor:custoNovo*qtd,
+          formaPagamento:`Entrada Stock Lote PT (${ld.identificador||loteId})`,
+          usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora,
+          loteId,precoVendaPretendido:vendaPretendida,custoUnitarioConsolidadoSTN:custoNovo
+        });
+      }
+
+      if(tesRef){
+        tx.set(tesRef,armMovTesPayload("acerto_armazem",contaPag,moedaPag,valorPag,loteId,`Acerto recebimento lote ${ld.identificador||loteId}${incorporarAoCusto?" — incorporado ao custo":" — não incorporado ao custo"}`));
+        tx.set(pagRef,{
+          loteId,identificadorLote:ld.identificador||loteId,valor:valorPag,moeda:moedaPag,
+          contaPagamento:contaPag,formaPagamento:"Tesouraria",observacao:obs,
+          incorporarAoCusto,taxaCambioRecebimento:taxa,usuario:auth.currentUser.email,
+          uid:auth.currentUser.uid,role:usuarioRole,data:agora
+        });
+      }
+
+      const custoTotalConsolidadoSTN=custoBaseTotalSTN+acertoSTN;
+      tx.update(loteRef,{
+        estado:"RECEBIDO",dataRecebimento:agora,taxaCambioRecebimento:taxa,
+        recebidoPorUid:auth.currentUser.uid,recebidoPorUsuario:auth.currentUser.email,
+        acertoPendente:false,acertoIncorporavelPendente:false,
+        acertoValor:valorPag||0,acertoMoeda:valorPag>0?moedaPag:null,
+        acertoContaPagamento:valorPag>0?contaPag:null,acertoIncorporadoAoCusto:!!(valorPag>0&&incorporarAoCusto),
+        acertoIncorporadoSTN:acertoSTN,custoBaseTotalSTN,custoTotalConsolidadoSTN,
+        dataConsolidacaoCusto:agora
+      });
+
+      tx.set(histRef,{...armHistoricoPayload("RECEBIMENTO_LOTE",{
+        referencia:ld.identificador||loteId,loteId,quantidade:totalQtd,valor:valorPag,
+        moeda:valorPag>0?moedaPag:"",contaPagamento:valorPag>0?contaPag:"",
+        estado:"RECEBIDO",observacao:obs,incorporarAoCusto,
+        taxaCambioRecebimento:taxa,custoBaseSTN:custoBaseTotalSTN,
+        custoIncorporavelSTN:acertoSTN,custoTotalConsolidadoSTN
+      }),data:agora});
+    });
+
+    fecharModalRecebimentoLoteST();
+    alert(valorPag>0
+      ? `Lote recebido e consolidado com sucesso. Acerto ${incorporarAoCusto?"incorporado ao custo":"registado apenas como movimento financeiro"}.`
+      : "Lote recebido e consolidado no estoque de São Tomé com sucesso.");
+    atualizarCentralNotificacoes();
+  }catch(e){
+    console.error("Recebimento final Armazém",e);
+    alert("Erro ao receber lote: "+(e.message||e)+(e?.code?`\nCódigo: ${e.code}`:""));
+  }finally{
+    if(btn) btn.disabled=false;
+  }
+}
+
+async function aprovarAcertoArmazem(id){
+  // Compatibilidade apenas para solicitações pendentes criadas por versões anteriores.
+  if(usuarioRole!=="admin") return alert("Apenas ADMIN pode aprovar.");
+  const r=solicitacoesAcertoArmazem.find(x=>x.id===id); if(!r)return;
+  const incorporar=!!r.incorporarAoCusto;
+  const reqRef=db.collection("armazem_acerto_solicitacoes").doc(id);
+  const loteRef=db.collection("lotes_pt").doc(r.loteId);
+  const tesRef=db.collection("tesouraria_movimentos").doc();
+  const pagRef=db.collection("pagamentos_despacho").doc();
+  const histRef=db.collection("armazem_movimentos").doc();
+  try{
+    const saldoReal=await obterSaldoTesourariaContaFirestore651(r.contaPagamento);
+    if((Number(saldoReal)||0)+0.0001<Number(r.valor||0)) return alert(`Saldo insuficiente em ${armNomeConta(r.contaPagamento)}.`);
+    if(!confirm(`Aprovar acerto legado ${armFmtValor(r.valor,r.moeda)} do lote ${r.identificadorLote||r.loteId}?\n\nIncorporar ao custo: ${incorporar?"SIM":"NÃO"}`))return;
+
+    await db.runTransaction(async tx=>{
+      // TODAS AS LEITURAS ANTES DAS ESCRITAS.
+      const reqDoc=await tx.get(reqRef);
+      const loteDoc=await tx.get(loteRef);
+      if(!reqDoc.exists||reqDoc.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida.");
+      if(!loteDoc.exists)throw new Error("Lote não encontrado.");
+      const x=reqDoc.data(), ld=loteDoc.data(), agora=new Date();
+
+      const refs=[];
+      const locais=[];
+      if(incorporar){
+        for(const item of (ld.itens||[])){
+          const p=todosProdutos.find(z=>String(z.nome||"").toLowerCase().trim()===String(item.nome||"").toLowerCase().trim());
+          if(p && !locais.some(v=>v.id===p.id)){locais.push(p);refs.push(db.collection("produtos").doc(p.id));}
+        }
+      }
+      const prodDocs=await Promise.all(refs.map(ref=>tx.get(ref)));
+      const prodMap={}; prodDocs.forEach(d=>{if(d.exists)prodMap[d.id]={id:d.id,...d.data()};});
+      // Nenhum tx.get abaixo.
+
+      tx.set(tesRef,armMovTesPayload("acerto_armazem",x.contaPagamento,x.moeda,Number(x.valor)||0,x.loteId,`Acerto legado lote ${x.identificadorLote||x.loteId}`));
+      tx.set(pagRef,{loteId:x.loteId,identificadorLote:x.identificadorLote||x.loteId,valor:Number(x.valor)||0,moeda:x.moeda,contaPagamento:x.contaPagamento,formaPagamento:"Tesouraria",observacao:x.observacao||"",incorporarAoCusto:!!x.incorporarAoCusto,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora,solicitacaoAcertoId:id});
+
+      if(incorporar){
+        const taxa=Number(x.taxaCambioRecebimento)||Number(ld.taxaCambioRecebimento)||0;
+        if(taxa<=0)throw new Error("Taxa de recebimento inválida para incorporar o custo.");
+        const totalQtd=(ld.itens||[]).reduce((sum,it)=>sum+(Number(it.quantidade)||0),0)||1;
+        const acertoSTN=x.moeda==="EUR"?(Number(x.valor)||0)*taxa:(Number(x.valor)||0);
+        const deltaUnit=acertoSTN/totalQtd;
+        for(const item of (ld.itens||[])){
+          const pLocal=locais.find(z=>String(z.nome||"").toLowerCase().trim()===String(item.nome||"").toLowerCase().trim());
+          const prod=pLocal?prodMap[pLocal.id]:null; if(!prod)continue;
+          const qtd=Number(item.quantidade)||0, stockAtual=Number(prod.estoque)||0, custoAtual=Number(prod.compra)||0;
+          const unidadesAjustaveis=Math.min(qtd,stockAtual);
+          const novoCusto=stockAtual>0?Math.round(((stockAtual*custoAtual)+(unidadesAjustaveis*deltaUnit))/stockAtual):Math.round(custoAtual+deltaUnit);
+          tx.update(db.collection("produtos").doc(prod.id),{compra:novoCusto});
+        }
+        tx.update(loteRef,{acertoIncorporadoAoCusto:true,acertoIncorporadoValor:Number(x.valor)||0,acertoIncorporadoMoeda:x.moeda,acertoIncorporadoSTN:acertoSTN,dataConsolidacaoCusto:agora,acertoPendente:false,acertoIncorporavelPendente:false});
+      }else{
+        tx.update(loteRef,{acertoPendente:false,acertoIncorporavelPendente:false});
+      }
+      tx.update(reqRef,{estado:"APROVADA",aprovadoPorUid:auth.currentUser.uid,aprovadoPorUsuario:auth.currentUser.email,dataAprovacao:agora});
+      tx.set(histRef,{...armHistoricoPayload("ACERTO_APROVADO",{referencia:x.identificadorLote||x.loteId,acertoSolicitacaoId:id,loteId:x.loteId,valor:x.valor,moeda:x.moeda,contaPagamento:x.contaPagamento,estado:"APROVADA",observacao:x.observacao||"",incorporarAoCusto:!!x.incorporarAoCusto,taxaCambioRecebimento:x.taxaCambioRecebimento||null}),data:agora});
+    });
+    alert(incorporar?"Acerto legado aprovado e incorporado ao custo.":"Acerto legado aprovado sem alterar o custo.");
+    atualizarCentralNotificacoes();
+  }catch(e){alert("Erro: "+(e.message||e));}
 }
 async function rejeitarAcertoArmazem(id){
   if(usuarioRole!=="admin")return; const r=solicitacoesAcertoArmazem.find(x=>x.id===id); if(!r)return; const motivo=prompt("Motivo da rejeição (obrigatório):",""); if(!motivo?.trim())return alert("Informe o motivo."); const reqRef=db.collection("armazem_acerto_solicitacoes").doc(id),histRef=db.collection("armazem_movimentos").doc(); try{await db.runTransaction(async tx=>{const d=await tx.get(reqRef); if(!d.exists||d.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida."); const agora=new Date(); tx.update(reqRef,{estado:"REJEITADA",motivoRejeicao:motivo.trim(),rejeitadoPorUid:auth.currentUser.uid,rejeitadoPorUsuario:auth.currentUser.email,dataRejeicao:agora}); tx.set(histRef,{...armHistoricoPayload("ACERTO_REJEITADO",{referencia:r.identificadorLote||r.loteId,acertoSolicitacaoId:id,loteId:r.loteId,valor:r.valor,moeda:r.moeda,contaPagamento:r.contaPagamento,estado:"REJEITADA",observacao:motivo.trim()}),data:agora});});}catch(e){alert("Erro: "+(e.message||e));}
@@ -10191,7 +10357,7 @@ function carregarArmazemPTTresPassos(){
   if(!usuarioPodeArmazemPT())return;
   if(listenerArmazemPT)listenerArmazemPT(); if(listenerLotesPT)listenerLotesPT();
   listenerArmazemPT=db.collection("armazem_pt").orderBy("dataRegisto","desc").onSnapshot(s=>{todosItensSoltosPT=[]; let h="",sel=""; s.forEach(d=>{const i={id:d.id,...d.data()}; if(i.estado!=="EM_LISBOA")return; todosItensSoltosPT.push(i); const eur=Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0; const subtotalEur=(Number(i.quantidade)||0)*eur; const original=Number(i.custoUnitarioOriginal)||eur; const moeda=i.moedaCompra||"EUR"; h+=`<tr><td><b>${i.nome}</b></td><td>${i.categoria||"Geral"}</td><td><b>${i.quantidade} un</b></td><td>${armFmtValor(original,moeda)}</td><td>${subtotalEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${i.fornecedor||"-"}</td><td><small>${armData(i.dataRegisto)}</small></td></tr>`; const vendaSug=Math.round(eur*26*1.3); sel+=`<tr><td><input type="checkbox" class="chk-item-pt" value="${i.id}" data-custototal="${subtotalEur}" onchange="atualizarResumoDespachoArmazem()"></td><td><b>${i.nome}</b> (${i.categoria||"Geral"})</td><td>${i.quantidade} un</td><td><b>${subtotalEur.toFixed(2)} €</b></td><td><input class="preco-venda-lote" data-id="${i.id}" type="number" min="0" step="1" value="${vendaSug}" style="width:120px;" oninput="atualizarResumoDespachoArmazem()"></td><td class="margem-venda-lote" data-id="${i.id}">—</td></tr>`;}); listaItensSoltosPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo oficial aguardando lote.</td></tr>'; listaSelecaoLotePT.innerHTML=sel||'<tr><td colspan="4" style="color:#94a3b8;">Nenhum artigo disponível.</td></tr>'; atualizarResumoDespachoArmazem();},e=>console.warn("Armazém PT",e));
-  listenerLotesPT=db.collection("lotes_pt").orderBy("dataEnvio","desc").onSnapshot(s=>{todosLotesPT=[];let h="";s.forEach(d=>{const l={id:d.id,...d.data()};todosLotesPT.push(l);const st=l.estado==="EM_TRANSITO"?'<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>':'<span class="badge-concluido">RECEBIDO</span>'; const btn=l.estado==="EM_TRANSITO"?`<button class="btn-success btn-acao" onclick="abrirModalRecebimentoLoteST('${l.id}')">🛬 Receber</button>`:"—"; const nomes=(l.itens||[]).map(i=>`${i.nome} (${i.quantidade}un)`).join(", "); h+=`<tr><td><b>${l.identificador}</b></td><td><small>${nomes}</small></td><td>${armFmtValor(l.freteValorOriginal??l.custoFreteEuro,l.freteMoeda||"EUR")}</td><td>${((Number(l.custoTotalItensEuro)||0)+(Number(l.custoFreteEuro)||0)).toFixed(2)} €</td><td>${st}</td><td><small>${armData(l.dataEnvio)}</small></td><td>${btn}</td></tr>`;});listaLotesEmTransitoPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum lote enviado.</td></tr>';},e=>console.warn("Lotes PT",e));
+  listenerLotesPT=db.collection("lotes_pt").orderBy("dataEnvio","desc").onSnapshot(s=>{todosLotesPT=[];let h="";s.forEach(d=>{const l={id:d.id,...d.data()};todosLotesPT.push(l);const st=l.estado==="EM_TRANSITO"?'<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>':'<span class="badge-concluido">RECEBIDO</span>'; const btn=l.estado==="EM_TRANSITO"?(usuarioRole==="admin"?`<button class="btn-success btn-acao" onclick="abrirModalRecebimentoLoteST('${l.id}')">🛬 Receber e consolidar</button>`:`<span style="color:#92400e;font-weight:700;font-size:11px;">⏳ Aguardando receção pelo ADMIN</span>`):"—"; const nomes=(l.itens||[]).map(i=>`${i.nome} (${i.quantidade}un)`).join(", "); h+=`<tr><td><b>${l.identificador}</b></td><td><small>${nomes}</small></td><td>${armFmtValor(l.freteValorOriginal??l.custoFreteEuro,l.freteMoeda||"EUR")}</td><td>${((Number(l.custoTotalItensEuro)||0)+(Number(l.custoFreteEuro)||0)).toFixed(2)} €</td><td>${st}</td><td><small>${armData(l.dataEnvio)}</small></td><td>${btn}</td></tr>`;});listaLotesEmTransitoPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum lote enviado.</td></tr>';},e=>console.warn("Lotes PT",e));
   armIniciarListenersSolicitacoes(); armIniciarListenerHistorico();
   atualizarPagamentoCompraArmazemUI(); atualizarPagamentoFreteArmazemUI(); atualizarPagamentoAcertoArmazemUI();
   const btnC=document.getElementById("btnCadastrarItemPT"),btnD=document.getElementById("btnDespacharLotePT"),aj=document.getElementById("armazemAprovacaoAjuda"),reg=document.getElementById("ptCompraRegraPerfil");
@@ -10215,6 +10381,7 @@ function construirNotificacoesAdmin(){
   const add=(tipo,modulo,titulo,mensagem,pagina,ref="")=>n.push({tipo,modulo,titulo,mensagem,pagina,ref});
   (solicitacoesCompraArmazem||[]).filter(x=>x.estado==="PENDENTE_APROVACAO").forEach(x=>add("ACAO","Armazém","Compra aguardando aprovação",`${x.quantidade||0} × ${x.nome||"artigo"} — ${armFmtValor(x.total,x.moeda)}`,"paginaArmazemPT",x.id));
   (solicitacoesDespachoArmazem||[]).filter(x=>x.estado==="PENDENTE_APROVACAO").forEach(x=>add("ACAO","Armazém","Despacho aguardando aprovação",`${x.identificador||"Lote"} — frete ${armFmtValor(x.freteValor,x.freteMoeda)}`,"paginaArmazemPT",x.id));
+  (todosLotesPT||[]).filter(x=>x.estado==="EM_TRANSITO").forEach(x=>add("ACAO","Armazém","Lote aguardando receção em São Tomé",`${x.identificador||"Lote"} — confirmar chegada, taxa, eventual acerto e custo final`,"paginaArmazemPT",x.id));
   (solicitacoesAcertoArmazem||[]).filter(x=>x.estado==="PENDENTE_APROVACAO").forEach(x=>add("ACAO","Armazém","Acerto aguardando aprovação",`${x.identificadorLote||"Lote"} — ${armFmtValor(x.valor,x.moeda)} — incorporar: ${x.incorporarAoCusto?"SIM":"NÃO"}`,"paginaArmazemPT",x.id));
   (todasTransferencias||[]).filter(x=>String(x.status||x.estado||"").toUpperCase().includes("PENDENTE")).forEach(x=>add("ACAO","Transferências","Transferência aguardando decisão",`${x.nomeCliente||x.cliente||"Cliente"} — ${Number(x.valorEUR||x.valorEuro||0).toLocaleString('pt-PT')} €`,"paginaTransferencias",x.id));
   (todasEncomendas||[]).filter(x=>String(x.estado||x.status||"").toUpperCase().includes("PENDENTE_APROVACAO")).forEach(x=>add("ACAO","Encomendas","Encomenda aguardando aprovação",`${x.cliente||"Cliente"} — ${x.produto||"Produto"}`,"paginaEncomendas",x.id));
@@ -10238,6 +10405,8 @@ function renderizarCentralNotificacoes(){
 }
 setInterval(()=>{try{atualizarCentralNotificacoes();}catch(e){}},5000);
 </script>
+
+<!-- FASE 6.4.7: recebimento final e consolidação de custo exclusivos do ADMIN; transaction com todas as leituras antes das escritas. -->
 
 </body>
 </html>
