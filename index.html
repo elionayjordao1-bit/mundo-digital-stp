@@ -375,6 +375,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
   <div id="userInfoHeader" class="hidden" style="font-size: 14px;">
     <span id="userEmailSpan"></span> | <span id="userRoleSpan" style="font-weight: bold; text-transform: uppercase;"></span>
+    <button id="btnCentralNotificacoes" onclick="abrirCentralNotificacoes()" class="btn-secondary hidden" style="position:relative;margin-left:10px;min-height:36px;padding:4px 12px;">🔔 <span id="notifBadge" style="display:none;position:absolute;top:-7px;right:-7px;background:#dc2626;color:white;border-radius:999px;min-width:20px;height:20px;line-height:20px;font-size:11px;font-weight:800;">0</span></button>
     <button onclick="logout()" class="btn-danger" style="margin-left: 10px; min-height: 36px; padding: 4px 10px;">Sair</button>
   </div>
 </header>
@@ -1881,7 +1882,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       </table></div>
       <h4 style="margin-top:18px;">💸 Acertos no Recebimento</h4>
       <div class="table-responsive"><table style="min-width:950px;">
-        <thead><tr><th>Data</th><th>Solicitante</th><th>Lote</th><th>Valor</th><th>Pagamento</th><th>Estado</th><th>Ação</th></tr></thead>
+        <thead><tr><th>Data</th><th>Solicitante</th><th>Lote</th><th>Valor</th><th>Pagamento</th><th>Incorporar custo?</th><th>Estado</th><th>Ação</th></tr></thead>
         <tbody id="listaSolicitacoesAcertoArmazem"></tbody>
       </table></div>
     </div>
@@ -2050,12 +2051,35 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <label style="font-size:12px;font-weight:600;">Conta de pagamento:</label>
       <select id="recebimentoPagamentoConta" style="margin:4px 0 8px;"></select>
       <label style="font-size:12px;font-weight:600;">Observação:</label>
-      <input type="text" id="recebimentoPagamentoObs" placeholder="Ex.: acerto da fábrica / despacho">
+      <input type="text" id="recebimentoPagamentoObs" placeholder="Ex.: alfândega / transporte local / acerto da fábrica" style="margin-bottom:8px;">
+      <div id="blocoIncorporarCusto" style="background:#fff7ed;border:1px solid #fdba74;padding:10px;border-radius:8px;">
+        <label style="font-size:12px;font-weight:800;color:#9a3412;">Este acerto integra o custo real do lote?</label>
+        <select id="recebimentoIncorporarCusto" style="margin:6px 0 0;">
+          <option value="SIM">Sim — incorporar ao custo dos produtos</option>
+          <option value="NAO">Não — apenas movimento financeiro</option>
+        </select>
+        <small style="display:block;color:#7c2d12;margin-top:5px;">Se SIM, o custo só será consolidado quando o ADMIN aprovar o acerto. Se NÃO, o pagamento não altera o custo do produto.</small>
+      </div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <button id="btnConfirmarRecebimentoLoteST" onclick="confirmarRecebimentoLoteST()" class="btn-success" style="flex:1;min-width:160px;">🛬 Confirmar Receção</button>
       <button onclick="fecharModalRecebimentoLoteST()" class="btn-secondary" style="min-width:100px;">Cancelar</button>
     </div>
+  </div>
+</div>
+
+<!-- FASE 6.4.4 — CENTRAL DE NOTIFICAÇÕES ADMIN -->
+<div id="modalCentralNotificacoes" class="modal-overlay hidden no-print">
+  <div class="modal-content large" style="max-width:900px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f1f5f9;padding-bottom:8px;">
+      <div><h3 style="margin:0;">🔔 Central de Notificações</h3><small style="color:#64748b;">Pendências e alertas administrativos em um só lugar.</small></div>
+      <button onclick="fecharCentralNotificacoes()" class="btn-secondary">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;">
+      <select id="notifFiltro" onchange="renderizarCentralNotificacoes()" style="width:auto;"><option value="">Tudo</option><option value="ACAO">Ação necessária</option><option value="ALERTA">Alertas</option><option value="INFO">Informação</option></select>
+      <span id="notifResumo" style="font-size:12px;color:#64748b;align-self:center;"></span>
+    </div>
+    <div id="listaCentralNotificacoes" style="max-height:62vh;overflow:auto;"></div>
   </div>
 </div>
 
@@ -10007,11 +10031,11 @@ async function rejeitarDespachoArmazem(id){
 }
 
 function abrirModalRecebimentoLoteST(loteId){
-  if(!usuarioPodeArmazemPT())return alert("Acesso restrito ao Administrador / Estoque."); const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote)return alert("Lote não encontrado."); if(lote.estado==="RECEBIDO")return alert("Este lote já foi recebido."); recebimentoLoteId.value=loteId; recebimentoLoteTitulo.innerText=`Receber lote: ${lote.identificador||loteId}`; recebimentoTaxaCambio.value="26.0"; recebimentoPagamentoValor.value="0"; recebimentoPagamentoMoeda.value="STN"; recebimentoPagamentoObs.value=""; atualizarPagamentoAcertoArmazemUI(); modalRecebimentoLoteST.classList.remove("hidden");
+  if(!usuarioPodeArmazemPT())return alert("Acesso restrito ao Administrador / Estoque."); const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote)return alert("Lote não encontrado."); if(lote.estado==="RECEBIDO")return alert("Este lote já foi recebido."); recebimentoLoteId.value=loteId; recebimentoLoteTitulo.innerText=`Receber lote: ${lote.identificador||loteId}`; recebimentoTaxaCambio.value="26.0"; recebimentoPagamentoValor.value="0"; recebimentoPagamentoMoeda.value="STN"; recebimentoPagamentoObs.value=""; if(document.getElementById("recebimentoIncorporarCusto"))document.getElementById("recebimentoIncorporarCusto").value="SIM"; atualizarPagamentoAcertoArmazemUI(); modalRecebimentoLoteST.classList.remove("hidden");
 }
 function atualizarPagamentoAcertoArmazemUI(){const moeda=document.getElementById("recebimentoPagamentoMoeda")?.value||"STN"; armPreencherConta("recebimentoPagamentoConta",moeda);}
 async function confirmarRecebimentoLoteST(){
-  if(!usuarioPodeArmazemPT())return alert("Acesso restrito ao Administrador / Estoque."); const loteId=recebimentoLoteId.value, taxa=Number(recebimentoTaxaCambio.value)||0, valorPag=Number(recebimentoPagamentoValor.value)||0, moedaPag=recebimentoPagamentoMoeda.value, contaPag=recebimentoPagamentoConta.value, obs=recebimentoPagamentoObs.value.trim(); if(taxa<=0||valorPag<0)return alert("Informe valores válidos."); const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote)return alert("Lote não encontrado."); if(valorPag>0&&!contaPag)return alert("Selecione a conta do acerto."); if(usuarioRole==="admin"&&valorPag>0&&!armSaldoSuficiente(contaPag,valorPag))return alert(`Saldo insuficiente em ${armNomeConta(contaPag)}.`); if(!confirm(`Confirmar recebimento físico do lote ${lote.identificador}?${valorPag>0?`\nAcerto: ${armFmtValor(valorPag,moedaPag)} — ${usuarioRole==="estoque"?"será enviado para aprovação":"será debitado agora"}`:""}`))return;
+  if(!usuarioPodeArmazemPT())return alert("Acesso restrito ao Administrador / Estoque."); const loteId=recebimentoLoteId.value, taxa=Number(recebimentoTaxaCambio.value)||0, valorPag=Number(recebimentoPagamentoValor.value)||0, moedaPag=recebimentoPagamentoMoeda.value, contaPag=recebimentoPagamentoConta.value, obs=recebimentoPagamentoObs.value.trim(), incorporarAoCusto=(valorPag>0 && document.getElementById("recebimentoIncorporarCusto")?.value==="SIM"); if(taxa<=0||valorPag<0)return alert("Informe valores válidos."); const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote)return alert("Lote não encontrado."); if(valorPag>0&&!contaPag)return alert("Selecione a conta do acerto."); if(usuarioRole==="admin"&&valorPag>0&&!armSaldoSuficiente(contaPag,valorPag))return alert(`Saldo insuficiente em ${armNomeConta(contaPag)}.`); if(!confirm(`Confirmar recebimento físico do lote ${lote.identificador}?${valorPag>0?`\nAcerto: ${armFmtValor(valorPag,moedaPag)} — ${usuarioRole==="estoque"?"será enviado para aprovação":"será debitado agora"}`:""}`))return;
   const btn=document.getElementById("btnConfirmarRecebimentoLoteST"); if(btn)btn.disabled=true;
   try{
     const loteRef=db.collection("lotes_pt").doc(loteId), histRecRef=db.collection("armazem_movimentos").doc();
@@ -10022,7 +10046,11 @@ async function confirmarRecebimentoLoteST(){
     await db.runTransaction(async tx=>{
       const ldDoc=await tx.get(loteRef); if(!ldDoc.exists)throw new Error("Lote não encontrado."); const ld=ldDoc.data(); if(ld.estado!=="EM_TRANSITO")throw new Error("Este lote não está disponível para recebimento."); const agora=new Date();
       for(const item of (ld.itens||[])){
-        const qtd=Number(item.quantidade)||0, custoNovo=Math.round((Number(item.custoFinalUnitarioEuro)||0)*taxa);
+        const qtd=Number(item.quantidade)||0;
+        const qtdTotalLote=(ld.itens||[]).reduce((sum,it)=>sum+(Number(it.quantidade)||0),0)||1;
+        const acertoSTNAdmin=(usuarioRole==="admin"&&valorPag>0&&incorporarAoCusto)?(moedaPag==="EUR"?valorPag*taxa:valorPag):0;
+        const parcelaAcertoUnit=acertoSTNAdmin/qtdTotalLote;
+        const custoNovo=Math.round(((Number(item.custoFinalUnitarioEuro)||0)*taxa)+parcelaAcertoUnit);
         const vendaPretendida=Number(item.precoVendaPretendido)||Math.round(custoNovo*1.3);
         const existente=todosProdutos.find(p=>String(p.nome||"").toLowerCase().trim()===String(item.nome||"").toLowerCase().trim());
         if(existente){
@@ -10038,16 +10066,45 @@ async function confirmarRecebimentoLoteST(){
         }
         tx.set(db.collection("movimentacoes").doc(),{produto:item.nome||"Importado PT",tipo:"entrada",quantidade:qtd,valor:custoNovo*qtd,formaPagamento:`Entrada Stock Lote PT (${ld.identificador||loteId})`,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora,loteId,precoVendaPretendido:vendaPretendida});
       }
-      tx.update(loteRef,{estado:"RECEBIDO",dataRecebimento:agora,taxaCambioRecebimento:taxa,recebidoPorUid:auth.currentUser.uid,recebidoPorUsuario:auth.currentUser.email,acertoPendente:!!acertoReqRef});
+      tx.update(loteRef,{estado:"RECEBIDO",dataRecebimento:agora,taxaCambioRecebimento:taxa,recebidoPorUid:auth.currentUser.uid,recebidoPorUsuario:auth.currentUser.email,acertoPendente:!!acertoReqRef,acertoIncorporavelPendente:!!(acertoReqRef&&incorporarAoCusto)});
       tx.set(histRecRef,{...armHistoricoPayload("RECEBIMENTO_LOTE",{referencia:ld.identificador||loteId,loteId,quantidade:(ld.itens||[]).reduce((s,i)=>s+(Number(i.quantidade)||0),0),estado:"RECEBIDO",observacao:obs}),data:agora});
-      if(acertoReqRef){tx.set(acertoReqRef,{loteId,identificadorLote:ld.identificador||loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,observacao:obs,estado:"PENDENTE_APROVACAO",usuario:auth.currentUser.email,nomeUsuario:usuarioNome||"",uid:auth.currentUser.uid,role:usuarioRole,data:agora}); tx.set(histAcertoRef,{...armHistoricoPayload("ACERTO_SOLICITADO",{referencia:ld.identificador||loteId,acertoSolicitacaoId:acertoReqRef.id,loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,estado:"PENDENTE_APROVACAO",observacao:obs}),data:agora});}
-      if(tesRef){tx.set(tesRef,armMovTesPayload("acerto_armazem",contaPag,moedaPag,valorPag,loteId,`Acerto recebimento lote ${ld.identificador||loteId}`)); tx.set(pagRef,{loteId,identificadorLote:ld.identificador||loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,formaPagamento:"Tesouraria",observacao:obs,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora});}
+      if(acertoReqRef){tx.set(acertoReqRef,{loteId,identificadorLote:ld.identificador||loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,observacao:obs,incorporarAoCusto,taxaCambioRecebimento:taxa,estado:"PENDENTE_APROVACAO",usuario:auth.currentUser.email,nomeUsuario:usuarioNome||"",uid:auth.currentUser.uid,role:usuarioRole,data:agora}); tx.set(histAcertoRef,{...armHistoricoPayload("ACERTO_SOLICITADO",{referencia:ld.identificador||loteId,acertoSolicitacaoId:acertoReqRef.id,loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,estado:"PENDENTE_APROVACAO",observacao:obs,incorporarAoCusto,taxaCambioRecebimento:taxa}),data:agora});}
+      if(tesRef){tx.set(tesRef,armMovTesPayload("acerto_armazem",contaPag,moedaPag,valorPag,loteId,`Acerto recebimento lote ${ld.identificador||loteId}`)); tx.set(pagRef,{loteId,identificadorLote:ld.identificador||loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,formaPagamento:"Tesouraria",observacao:obs,incorporarAoCusto,taxaCambioRecebimento:taxa,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora});}
     });
     fecharModalRecebimentoLoteST(); alert(valorPag>0&&usuarioRole==="estoque"?"Lote recebido fisicamente. O acerto financeiro foi enviado para aprovação do Administrador.":"Lote recebido no estoque de São Tomé com sucesso.");
   }catch(e){alert("Erro ao receber lote: "+(e.message||e));}finally{if(btn)btn.disabled=false;}
 }
 async function aprovarAcertoArmazem(id){
-  if(usuarioRole!=="admin")return alert("Apenas ADMIN pode aprovar."); const r=solicitacoesAcertoArmazem.find(x=>x.id===id); if(!r)return; if(!armSaldoSuficiente(r.contaPagamento,r.valor))return alert(`Saldo insuficiente em ${armNomeConta(r.contaPagamento)}.`); if(!confirm(`Aprovar acerto ${armFmtValor(r.valor,r.moeda)} do lote ${r.identificadorLote}?`))return; const reqRef=db.collection("armazem_acerto_solicitacoes").doc(id),tesRef=db.collection("tesouraria_movimentos").doc(),pagRef=db.collection("pagamentos_despacho").doc(),histRef=db.collection("armazem_movimentos").doc(); try{await db.runTransaction(async tx=>{const d=await tx.get(reqRef); if(!d.exists||d.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida."); const x=d.data(),agora=new Date(); tx.set(tesRef,armMovTesPayload("acerto_armazem",x.contaPagamento,x.moeda,Number(x.valor)||0,x.loteId,`Acerto lote ${x.identificadorLote||x.loteId}`)); tx.set(pagRef,{loteId:x.loteId,identificadorLote:x.identificadorLote||x.loteId,valor:Number(x.valor)||0,moeda:x.moeda,contaPagamento:x.contaPagamento,formaPagamento:"Tesouraria",observacao:x.observacao||"",usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora,solicitacaoAcertoId:id}); tx.update(reqRef,{estado:"APROVADA",aprovadoPorUid:auth.currentUser.uid,aprovadoPorUsuario:auth.currentUser.email,dataAprovacao:agora}); tx.set(histRef,{...armHistoricoPayload("ACERTO_APROVADO",{referencia:x.identificadorLote||x.loteId,acertoSolicitacaoId:id,loteId:x.loteId,valor:x.valor,moeda:x.moeda,contaPagamento:x.contaPagamento,estado:"APROVADA",observacao:x.observacao||""}),data:agora});}); alert("Acerto aprovado e debitado da Tesouraria.");}catch(e){alert("Erro: "+(e.message||e));}
+  if(usuarioRole!=="admin")return alert("Apenas ADMIN pode aprovar.");
+  const r=solicitacoesAcertoArmazem.find(x=>x.id===id); if(!r)return;
+  if(!armSaldoSuficiente(r.contaPagamento,r.valor))return alert(`Saldo insuficiente em ${armNomeConta(r.contaPagamento)}.`);
+  const incorporar=!!r.incorporarAoCusto;
+  if(!confirm(`Aprovar acerto ${armFmtValor(r.valor,r.moeda)} do lote ${r.identificadorLote}?\n\nIncorporar ao custo: ${incorporar?"SIM":"NÃO"}`))return;
+  const reqRef=db.collection("armazem_acerto_solicitacoes").doc(id),tesRef=db.collection("tesouraria_movimentos").doc(),pagRef=db.collection("pagamentos_despacho").doc(),histRef=db.collection("armazem_movimentos").doc(),loteRef=db.collection("lotes_pt").doc(r.loteId);
+  try{await db.runTransaction(async tx=>{
+    const d=await tx.get(reqRef); if(!d.exists||d.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida.");
+    const x=d.data(), agora=new Date();
+    tx.set(tesRef,armMovTesPayload("acerto_armazem",x.contaPagamento,x.moeda,Number(x.valor)||0,x.loteId,`Acerto lote ${x.identificadorLote||x.loteId}`));
+    tx.set(pagRef,{loteId:x.loteId,identificadorLote:x.identificadorLote||x.loteId,valor:Number(x.valor)||0,moeda:x.moeda,contaPagamento:x.contaPagamento,formaPagamento:"Tesouraria",observacao:x.observacao||"",incorporarAoCusto:!!x.incorporarAoCusto,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora,solicitacaoAcertoId:id});
+    if(x.incorporarAoCusto){
+      const loteDoc=await tx.get(loteRef); if(!loteDoc.exists)throw new Error("Lote não encontrado para incorporar o custo.");
+      const ld=loteDoc.data(), taxa=Number(x.taxaCambioRecebimento)||Number(ld.taxaCambioRecebimento)||0; if(taxa<=0)throw new Error("Taxa de recebimento inválida para incorporar o custo.");
+      const totalQtd=(ld.itens||[]).reduce((sum,it)=>sum+(Number(it.quantidade)||0),0)||1;
+      const acertoSTN=x.moeda==="EUR"?(Number(x.valor)||0)*taxa:(Number(x.valor)||0), deltaUnit=acertoSTN/totalQtd;
+      for(const item of (ld.itens||[])){
+        const qtd=Number(item.quantidade)||0; if(qtd<=0)continue;
+        const prod=todosProdutos.find(p=>String(p.nome||"").toLowerCase().trim()===String(item.nome||"").toLowerCase().trim()); if(!prod)continue;
+        const stockAtual=Number(prod.estoque)||0, custoAtual=Number(prod.compra)||0;
+        // O delta é atribuído apenas às unidades deste lote ainda representadas no stock; evita substituir todo o histórico por um custo novo.
+        const unidadesAjustaveis=Math.min(qtd,stockAtual);
+        const novoCusto=stockAtual>0?Math.round(((stockAtual*custoAtual)+(unidadesAjustaveis*deltaUnit))/stockAtual):Math.round(custoAtual+deltaUnit);
+        tx.update(db.collection("produtos").doc(prod.id),{compra:novoCusto});
+      }
+      tx.update(loteRef,{acertoIncorporadoAoCusto:true,acertoIncorporadoValor:Number(x.valor)||0,acertoIncorporadoMoeda:x.moeda,acertoIncorporadoSTN:acertoSTN,dataConsolidacaoCusto:agora,acertoPendente:false,acertoIncorporavelPendente:false});
+    } else tx.update(loteRef,{acertoPendente:false,acertoIncorporavelPendente:false});
+    tx.update(reqRef,{estado:"APROVADA",aprovadoPorUid:auth.currentUser.uid,aprovadoPorUsuario:auth.currentUser.email,dataAprovacao:agora});
+    tx.set(histRef,{...armHistoricoPayload("ACERTO_APROVADO",{referencia:x.identificadorLote||x.loteId,acertoSolicitacaoId:id,loteId:x.loteId,valor:x.valor,moeda:x.moeda,contaPagamento:x.contaPagamento,estado:"APROVADA",observacao:x.observacao||"",incorporarAoCusto:!!x.incorporarAoCusto,taxaCambioRecebimento:x.taxaCambioRecebimento||null}),data:agora});
+  }); alert(incorporar?"Acerto aprovado, debitado e incorporado ao custo do lote.":"Acerto aprovado e debitado da Tesouraria sem alterar o custo."); atualizarCentralNotificacoes();}catch(e){alert("Erro: "+(e.message||e));}
 }
 async function rejeitarAcertoArmazem(id){
   if(usuarioRole!=="admin")return; const r=solicitacoesAcertoArmazem.find(x=>x.id===id); if(!r)return; const motivo=prompt("Motivo da rejeição (obrigatório):",""); if(!motivo?.trim())return alert("Informe o motivo."); const reqRef=db.collection("armazem_acerto_solicitacoes").doc(id),histRef=db.collection("armazem_movimentos").doc(); try{await db.runTransaction(async tx=>{const d=await tx.get(reqRef); if(!d.exists||d.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida."); const agora=new Date(); tx.update(reqRef,{estado:"REJEITADA",motivoRejeicao:motivo.trim(),rejeitadoPorUid:auth.currentUser.uid,rejeitadoPorUsuario:auth.currentUser.email,dataRejeicao:agora}); tx.set(histRef,{...armHistoricoPayload("ACERTO_REJEITADO",{referencia:r.identificadorLote||r.loteId,acertoSolicitacaoId:id,loteId:r.loteId,valor:r.valor,moeda:r.moeda,contaPagamento:r.contaPagamento,estado:"REJEITADA",observacao:motivo.trim()}),data:agora});});}catch(e){alert("Erro: "+(e.message||e));}
@@ -10059,7 +10116,7 @@ function renderizarSolicitacoesArmazem(){
   const compra=document.getElementById("listaSolicitacoesCompraArmazem"),desp=document.getElementById("listaSolicitacoesDespachoArmazem"),ac=document.getElementById("listaSolicitacoesAcertoArmazem");
   if(compra)compra.innerHTML=solicitacoesCompraArmazem.map(r=>`<tr><td><small>${armData(r.data)}</small></td><td>${r.nomeUsuario||r.usuario||"-"}</td><td><b>${r.nome}</b></td><td>${r.quantidade}</td><td>${armFmtValor(r.total,r.moeda)}</td><td>${armNomeConta(r.contaPagamento)}</td><td>${armBadgeEstado(r.estado)}</td><td>${admin&&r.estado==="PENDENTE_APROVACAO"?`<button class="btn-success btn-acao" onclick="aprovarCompraArmazem('${r.id}')">Aprovar</button> <button class="btn-danger btn-acao" onclick="rejeitarCompraArmazem('${r.id}')">Rejeitar</button>`:"—"}</td></tr>`).join("")||'<tr><td colspan="8" style="color:#94a3b8;">Nenhuma solicitação.</td></tr>';
   if(desp)desp.innerHTML=solicitacoesDespachoArmazem.map(r=>`<tr><td><small>${armData(r.data)}</small></td><td>${r.nomeUsuario||r.usuario||"-"}</td><td><b>${r.identificador}</b></td><td>${(r.itensSnapshot||[]).length}</td><td>${armFmtValor(r.freteValor,r.freteMoeda)}</td><td>${Number(r.freteValor)>0?armNomeConta(r.contaPagamento):"Sem custo"}</td><td>${armBadgeEstado(r.estado)}</td><td>${admin&&r.estado==="PENDENTE_APROVACAO"?`<button class="btn-success btn-acao" onclick="aprovarDespachoArmazem('${r.id}')">Aprovar</button> <button class="btn-danger btn-acao" onclick="rejeitarDespachoArmazem('${r.id}')">Rejeitar</button>`:"—"}</td></tr>`).join("")||'<tr><td colspan="8" style="color:#94a3b8;">Nenhuma solicitação.</td></tr>';
-  if(ac)ac.innerHTML=solicitacoesAcertoArmazem.map(r=>`<tr><td><small>${armData(r.data)}</small></td><td>${r.nomeUsuario||r.usuario||"-"}</td><td><b>${r.identificadorLote||r.loteId||"-"}</b></td><td>${armFmtValor(r.valor,r.moeda)}</td><td>${armNomeConta(r.contaPagamento)}</td><td>${armBadgeEstado(r.estado)}</td><td>${admin&&r.estado==="PENDENTE_APROVACAO"?`<button class="btn-success btn-acao" onclick="aprovarAcertoArmazem('${r.id}')">Aprovar</button> <button class="btn-danger btn-acao" onclick="rejeitarAcertoArmazem('${r.id}')">Rejeitar</button>`:"—"}</td></tr>`).join("")||'<tr><td colspan="7" style="color:#94a3b8;">Nenhuma solicitação.</td></tr>';
+  if(ac)ac.innerHTML=solicitacoesAcertoArmazem.map(r=>`<tr><td><small>${armData(r.data)}</small></td><td>${r.nomeUsuario||r.usuario||"-"}</td><td><b>${r.identificadorLote||r.loteId||"-"}</b></td><td>${armFmtValor(r.valor,r.moeda)}</td><td>${armNomeConta(r.contaPagamento)}</td><td>${r.incorporarAoCusto?"📦 SIM":"💸 NÃO"}</td><td>${armBadgeEstado(r.estado)}</td><td>${admin&&r.estado==="PENDENTE_APROVACAO"?`<button class="btn-success btn-acao" onclick="aprovarAcertoArmazem('${r.id}')">Aprovar</button> <button class="btn-danger btn-acao" onclick="rejeitarAcertoArmazem('${r.id}')">Rejeitar</button>`:"—"}</td></tr>`).join("")||'<tr><td colspan="8" style="color:#94a3b8;">Nenhuma solicitação.</td></tr>';
 }
 function armEsc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
 function armQtdHistorico(h){return String(h.tipo||"").startsWith("ACERTO")?"—":(Number(h.quantidade)||0);}
@@ -10132,6 +10189,36 @@ aplicarSegurancaInterface64 = function(){
   _aplicarSegurancaInterface64Arm();
   if(usuarioRole==="estoque") document.getElementById("cardHistorico")?.classList.add("hidden");
 };
+
+// ===== FASE 6.4.4 — CENTRAL DE NOTIFICAÇÕES ADMIN =====
+function construirNotificacoesAdmin(){
+  if(usuarioRole!=="admin")return [];
+  const n=[];
+  const add=(tipo,modulo,titulo,mensagem,pagina,ref="")=>n.push({tipo,modulo,titulo,mensagem,pagina,ref});
+  (solicitacoesCompraArmazem||[]).filter(x=>x.estado==="PENDENTE_APROVACAO").forEach(x=>add("ACAO","Armazém","Compra aguardando aprovação",`${x.quantidade||0} × ${x.nome||"artigo"} — ${armFmtValor(x.total,x.moeda)}`,"paginaArmazemPT",x.id));
+  (solicitacoesDespachoArmazem||[]).filter(x=>x.estado==="PENDENTE_APROVACAO").forEach(x=>add("ACAO","Armazém","Despacho aguardando aprovação",`${x.identificador||"Lote"} — frete ${armFmtValor(x.freteValor,x.freteMoeda)}`,"paginaArmazemPT",x.id));
+  (solicitacoesAcertoArmazem||[]).filter(x=>x.estado==="PENDENTE_APROVACAO").forEach(x=>add("ACAO","Armazém","Acerto aguardando aprovação",`${x.identificadorLote||"Lote"} — ${armFmtValor(x.valor,x.moeda)} — incorporar: ${x.incorporarAoCusto?"SIM":"NÃO"}`,"paginaArmazemPT",x.id));
+  (todasTransferencias||[]).filter(x=>String(x.status||x.estado||"").toUpperCase().includes("PENDENTE")).forEach(x=>add("ACAO","Transferências","Transferência aguardando decisão",`${x.nomeCliente||x.cliente||"Cliente"} — ${Number(x.valorEUR||x.valorEuro||0).toLocaleString('pt-PT')} €`,"paginaTransferencias",x.id));
+  (todasEncomendas||[]).filter(x=>String(x.estado||x.status||"").toUpperCase().includes("PENDENTE_APROVACAO")).forEach(x=>add("ACAO","Encomendas","Encomenda aguardando aprovação",`${x.cliente||"Cliente"} — ${x.produto||"Produto"}`,"paginaEncomendas",x.id));
+  (todosCaixasAuditoria||[]).filter(x=>String(x.status||x.estado||"").toUpperCase().includes("PREST")||String(x.status||x.estado||"").toUpperCase().includes("PENDENTE")).forEach(x=>add("ACAO","Caixa","Prestação/turno requer atenção",`${x.nomeUsuario||x.usuario||"Operador"}`,"paginaCaixa",x.id));
+  (todosProdutos||[]).filter(p=>(Number(p.estoque)||0)<=(Number(p.minimo)||0)).slice(0,20).forEach(p=>add("ALERTA","Estoque","Estoque crítico",`${p.nome}: ${Number(p.estoque)||0} un (mín. ${Number(p.minimo)||0})`,"paginaPrincipal",p.id));
+  return n;
+}
+function atualizarCentralNotificacoes(){
+  const btn=document.getElementById("btnCentralNotificacoes"),badge=document.getElementById("notifBadge"); if(!btn)return;
+  if(usuarioRole!=="admin"){btn.classList.add("hidden");return;} btn.classList.remove("hidden");
+  const qtd=construirNotificacoesAdmin().filter(x=>x.tipo==="ACAO"||x.tipo==="ALERTA").length; if(badge){badge.textContent=qtd>99?"99+":qtd;badge.style.display=qtd?"block":"none";}
+}
+function abrirCentralNotificacoes(){if(usuarioRole!=="admin")return;renderizarCentralNotificacoes();document.getElementById("modalCentralNotificacoes")?.classList.remove("hidden");}
+function fecharCentralNotificacoes(){document.getElementById("modalCentralNotificacoes")?.classList.add("hidden");}
+function abrirNotificacaoPagina(p){fecharCentralNotificacoes();if(p)navegarPara(p);}
+function renderizarCentralNotificacoes(){
+  const box=document.getElementById("listaCentralNotificacoes");if(!box)return;const filtro=document.getElementById("notifFiltro")?.value||"";let lista=construirNotificacoesAdmin();if(filtro)lista=lista.filter(x=>x.tipo===filtro);
+  const ordem={ACAO:0,ALERTA:1,INFO:2};lista.sort((a,b)=>(ordem[a.tipo]??9)-(ordem[b.tipo]??9));
+  document.getElementById("notifResumo").textContent=`${lista.length} item(ns) • ${construirNotificacoesAdmin().filter(x=>x.tipo==="ACAO").length} ação(ões) necessária(s)`;
+  box.innerHTML=lista.length?lista.map(x=>`<div style="border:1px solid #e2e8f0;border-left:5px solid ${x.tipo==='ACAO'?'#dc2626':x.tipo==='ALERTA'?'#f59e0b':'#2563eb'};padding:12px;border-radius:9px;margin-bottom:8px;background:#fff;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;"><div><small style="font-weight:800;color:#64748b;">${x.tipo==='ACAO'?'AÇÃO NECESSÁRIA':x.tipo} • ${x.modulo}</small><div style="font-weight:800;margin:3px 0;">${armEsc(x.titulo)}</div><div style="font-size:12px;color:#475569;">${armEsc(x.mensagem)}</div></div><button class="btn-primary btn-acao" onclick="abrirNotificacaoPagina('${x.pagina}')">Abrir</button></div></div>`).join(""):'<div style="padding:30px;text-align:center;color:#64748b;">✅ Nenhuma pendência administrativa neste momento.</div>';
+}
+setInterval(()=>{try{atualizarCentralNotificacoes();}catch(e){}},5000);
 </script>
 
 </body>
