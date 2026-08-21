@@ -2048,8 +2048,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <select id="recebimentoPagamentoMoeda" onchange="atualizarPagamentoAcertoArmazemUI()" style="margin:4px 0 8px;">
         <option value="STN">STN / Db</option><option value="EUR">EUR (€)</option>
       </select>
-      <label style="font-size:12px;font-weight:600;">Conta de pagamento:</label>
-      <select id="recebimentoPagamentoConta" style="margin:4px 0 8px;"></select>
+      <label id="recebimentoContaLabel" style="font-size:12px;font-weight:600;">Conta de pagamento:</label>
+      <select id="recebimentoPagamentoConta" style="margin:4px 0 4px;"></select>
+      <small id="recebimentoContaAjuda" style="display:block;color:#64748b;margin-bottom:8px;">No perfil ESTOQUE esta conta é apenas uma sugestão; o ADMIN valida a origem financeira na aprovação.</small>
       <label style="font-size:12px;font-weight:600;">Observação:</label>
       <input type="text" id="recebimentoPagamentoObs" placeholder="Ex.: alfândega / transporte local / acerto da fábrica" style="margin-bottom:8px;">
       <div id="blocoIncorporarCusto" style="background:#fff7ed;border:1px solid #fdba74;padding:10px;border-radius:8px;">
@@ -2068,7 +2069,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
-<!-- FASE 6.4.4 — CENTRAL DE NOTIFICAÇÕES ADMIN -->
+<!-- FASE 6.4.5 — RECEBIMENTO FÍSICO SEPARADO DO FINANCEIRO + CENTRAL DE NOTIFICAÇÕES ADMIN -->
 <div id="modalCentralNotificacoes" class="modal-overlay hidden no-print">
   <div class="modal-content large" style="max-width:900px;">
     <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f1f5f9;padding-bottom:8px;">
@@ -10033,7 +10034,15 @@ async function rejeitarDespachoArmazem(id){
 function abrirModalRecebimentoLoteST(loteId){
   if(!usuarioPodeArmazemPT())return alert("Acesso restrito ao Administrador / Estoque."); const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote)return alert("Lote não encontrado."); if(lote.estado==="RECEBIDO")return alert("Este lote já foi recebido."); recebimentoLoteId.value=loteId; recebimentoLoteTitulo.innerText=`Receber lote: ${lote.identificador||loteId}`; recebimentoTaxaCambio.value="26.0"; recebimentoPagamentoValor.value="0"; recebimentoPagamentoMoeda.value="STN"; recebimentoPagamentoObs.value=""; if(document.getElementById("recebimentoIncorporarCusto"))document.getElementById("recebimentoIncorporarCusto").value="SIM"; atualizarPagamentoAcertoArmazemUI(); modalRecebimentoLoteST.classList.remove("hidden");
 }
-function atualizarPagamentoAcertoArmazemUI(){const moeda=document.getElementById("recebimentoPagamentoMoeda")?.value||"STN"; armPreencherConta("recebimentoPagamentoConta",moeda);}
+function atualizarPagamentoAcertoArmazemUI(){
+  const moeda=document.getElementById("recebimentoPagamentoMoeda")?.value||"STN";
+  armPreencherConta("recebimentoPagamentoConta",moeda);
+  const lbl=document.getElementById("recebimentoContaLabel"), ajuda=document.getElementById("recebimentoContaAjuda");
+  if(lbl) lbl.innerText=usuarioRole==="estoque"?"Conta sugerida (ADMIN valida):":"Conta de pagamento:";
+  if(ajuda) ajuda.innerText=usuarioRole==="estoque"
+    ?"Você não movimenta esta conta. A seleção é apenas uma proposta para o ADMIN; nenhum débito ocorre nesta etapa."
+    :"Como ADMIN, esta conta será debitada somente após a confirmação desta operação.";
+}
 async function confirmarRecebimentoLoteST(){
   if(!usuarioPodeArmazemPT())return alert("Acesso restrito ao Administrador / Estoque."); const loteId=recebimentoLoteId.value, taxa=Number(recebimentoTaxaCambio.value)||0, valorPag=Number(recebimentoPagamentoValor.value)||0, moedaPag=recebimentoPagamentoMoeda.value, contaPag=recebimentoPagamentoConta.value, obs=recebimentoPagamentoObs.value.trim(), incorporarAoCusto=(valorPag>0 && document.getElementById("recebimentoIncorporarCusto")?.value==="SIM"); if(taxa<=0||valorPag<0)return alert("Informe valores válidos."); const lote=todosLotesPT.find(l=>l.id===loteId); if(!lote)return alert("Lote não encontrado."); if(valorPag>0&&!contaPag)return alert("Selecione a conta do acerto."); if(usuarioRole==="admin"&&valorPag>0&&!armSaldoSuficiente(contaPag,valorPag))return alert(`Saldo insuficiente em ${armNomeConta(contaPag)}.`); if(!confirm(`Confirmar recebimento físico do lote ${lote.identificador}?${valorPag>0?`\nAcerto: ${armFmtValor(valorPag,moedaPag)} — ${usuarioRole==="estoque"?"será enviado para aprovação":"será debitado agora"}`:""}`))return;
   const btn=document.getElementById("btnConfirmarRecebimentoLoteST"); if(btn)btn.disabled=true;
@@ -10072,7 +10081,14 @@ async function confirmarRecebimentoLoteST(){
       if(tesRef){tx.set(tesRef,armMovTesPayload("acerto_armazem",contaPag,moedaPag,valorPag,loteId,`Acerto recebimento lote ${ld.identificador||loteId}`)); tx.set(pagRef,{loteId,identificadorLote:ld.identificador||loteId,valor:valorPag,moeda:moedaPag,contaPagamento:contaPag,formaPagamento:"Tesouraria",observacao:obs,incorporarAoCusto,taxaCambioRecebimento:taxa,usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora});}
     });
     fecharModalRecebimentoLoteST(); alert(valorPag>0&&usuarioRole==="estoque"?"Lote recebido fisicamente. O acerto financeiro foi enviado para aprovação do Administrador.":"Lote recebido no estoque de São Tomé com sucesso.");
-  }catch(e){alert("Erro ao receber lote: "+(e.message||e));}finally{if(btn)btn.disabled=false;}
+  }catch(e){
+    const msg=(e&&e.message)||String(e||"");
+    if(/permission|insufficient/i.test(msg)) {
+      alert("Recebimento bloqueado pelas regras de segurança.\n\nO perfil ESTOQUE não tentou movimentar a Tesouraria; a operação física foi recusada porque as Firestore Rules publicadas ainda não autorizam todos os campos/coleções desta versão.\n\nPublique o arquivo firestore_rules_Fase6_4_5_Recebimento_Seguro.rules e tente novamente.");
+    } else {
+      alert("Erro ao receber lote: "+msg);
+    }
+  }finally{if(btn)btn.disabled=false;}
 }
 async function aprovarAcertoArmazem(id){
   if(usuarioRole!=="admin")return alert("Apenas ADMIN pode aprovar.");
