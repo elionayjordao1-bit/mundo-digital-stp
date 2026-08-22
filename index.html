@@ -2556,8 +2556,23 @@ auth.onAuthStateChanged(async u => {
     // Isso elimina o rasto da última página do utilizador anterior.
     navegarPara("paginaPrincipal");
 
-    // Só agora carrega dados e revela a interface já autorizada.
-    carregar();
+    // Só agora carrega dados. IMPORTANTE: falha num módulo secundário
+    // nunca pode invalidar uma sessão que já foi autenticada e autorizada.
+    try {
+      carregar();
+    } catch (erroCargaInicial) {
+      console.error("Falha parcial ao iniciar módulos:", erroCargaInicial);
+
+      // Faz uma única nova tentativa após a interface estar estável.
+      // Não termina a sessão e não exige F5/limpeza do navegador.
+      setTimeout(() => {
+        try {
+          carregar();
+        } catch (erroNovaTentativa) {
+          console.error("Segunda tentativa de carregamento parcial falhou:", erroNovaTentativa);
+        }
+      }, 1200);
+    }
 
     mostrarGateAutenticacao64(false);
     userInfoHeader.classList.remove("hidden");
@@ -6970,8 +6985,19 @@ function iniciarListenerTesouraria() {
 
   listenerTesouraria = db.collection("tesouraria_movimentos").orderBy("data","desc").onSnapshot(s => {
     movimentosTesouraria = [];
-    s.forEach(d => movimentosTesouraria.push({id:d.id, ...d.data()}));
-    recalcularSaldosTesouraria();
+    s.forEach(d => {
+      try {
+        const dadosMov = d.data() || {};
+        movimentosTesouraria.push({id:d.id, ...dadosMov});
+      } catch(e) {
+        console.warn("Movimento de Tesouraria ignorado por estar inválido:", d.id, e);
+      }
+    });
+    try {
+      recalcularSaldosTesouraria();
+    } catch(e) {
+      console.warn("Falha ao recalcular Tesouraria; sessão mantida ativa:", e);
+    }
     renderizarTesouraria();
   }, e => console.warn("Tesouraria:", e));
 }
@@ -6995,14 +7021,18 @@ function recalcularSaldosTesouraria() {
   // FASE 6.8 — saldo-resumo seguro usado somente para financiar abertura de Caixa.
   // VENDA1/VENDA2 conseguem ler apenas este número; o razão completo continua privado do ADMIN.
   if(usuarioRole === "admin" && auth.currentUser) {
-    db.collection("tesouraria_saldos").doc("responsavel_stp").set({
-      saldo: Number(saldos.responsavel_stp) || 0,
-      moeda: "STN",
-      atualizadoEm: new Date(),
-      atualizadoPorUid: auth.currentUser.uid,
-      atualizadoPorUsuario: auth.currentUser.email || "",
-      origemCalculo: "ledger_tesouraria"
-    }, { merge: true }).catch(e => console.warn("Não foi possível sincronizar saldo-resumo da Reserva:", e));
+    try {
+      db.collection("tesouraria_saldos").doc("responsavel_stp").set({
+        saldo: Number(saldos.responsavel_stp) || 0,
+        moeda: "STN",
+        atualizadoEm: new Date(),
+        atualizadoPorUid: auth.currentUser.uid,
+        atualizadoPorUsuario: auth.currentUser.email || "",
+        origemCalculo: "ledger_tesouraria"
+      }, { merge: true }).catch(e => console.warn("Não foi possível sincronizar saldo-resumo da Reserva; sessão mantida ativa:", e));
+    } catch(e) {
+      console.warn("Falha local ao preparar saldo-resumo da Reserva; sessão mantida ativa:", e);
+    }
   }
 }
 
@@ -7584,8 +7614,19 @@ function iniciarListenerTesouraria() {
 
   listenerTesouraria = db.collection("tesouraria_movimentos").orderBy("data","desc").onSnapshot(s => {
     movimentosTesouraria = [];
-    s.forEach(d => movimentosTesouraria.push({id:d.id, ...d.data()}));
-    recalcularSaldosTesouraria();
+    s.forEach(d => {
+      try {
+        const dadosMov = d.data() || {};
+        movimentosTesouraria.push({id:d.id, ...dadosMov});
+      } catch(e) {
+        console.warn("Movimento de Tesouraria ignorado por estar inválido:", d.id, e);
+      }
+    });
+    try {
+      recalcularSaldosTesouraria();
+    } catch(e) {
+      console.warn("Falha ao recalcular Tesouraria; sessão mantida ativa:", e);
+    }
     renderizarTesouraria();
     processarFinanceiro();
   }, e => console.warn("Tesouraria:", e));
