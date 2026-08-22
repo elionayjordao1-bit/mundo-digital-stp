@@ -2490,7 +2490,17 @@ auth.onAuthStateChanged(async u => {
       return;
     }
 
-    usuarioRole = String(dados.role || "venda1").toLowerCase();
+    usuarioRole = String(dados.role || "").toLowerCase();
+    const rolesPermitidas64 = ["admin","venda1","venda2","estoque"];
+    if(!rolesPermitidas64.includes(usuarioRole)) {
+      const erroCampo = document.getElementById("erro");
+      await auth.signOut();
+      limparEstadoVisualSessao64();
+      mostrarGateAutenticacao64(false);
+      loginBox.classList.remove("hidden");
+      if(erroCampo) erroCampo.innerText = "Perfil de acesso inválido. Contacte o Administrador.";
+      return;
+    }
     usuarioNome = String(dados.nome || "").trim();
 
     userEmailSpan.innerText = u.email || "";
@@ -4125,42 +4135,52 @@ function salvarDespesa() {
 }
 
 function salvarProduto() {
+  const admin = usuarioRole === "admin";
+  const estoqueRole = usuarioRole === "estoque";
+  if(!admin && !estoqueRole) return alert("Acesso negado: este perfil não pode cadastrar produtos.");
+
   let n = nome.value.trim();
   let bc = barcodeInput.value.trim();
   let cat = categoriaInput.value.trim() || "Geral";
   let est = Number(estoque.value) || 0;
   let min = Number(minimo.value) || 0;
-  let comp = Number(compra.value) || 0;
+  let comp = admin ? (Number(compra.value) || 0) : 0;
   let vend = Number(venda.value) || 0;
   let imgBase64 = fotoBase64.value || "";
 
   if(!n || vend <= 0) return alert("Preencha o nome do produto e o preço de venda!");
+  if(est < 0 || min < 0 || comp < 0) return alert("Estoque, mínimo e custo não podem ser negativos.");
 
+  // ESTOQUE pode cadastrar produto operacional, mas nunca gravar/alterar o custo de compra.
+  // O custo real é definido pelo ADMIN nos fluxos financeiros/Armazém.
   let payload = {
     nome: n,
     barcode: bc,
     categoria: cat,
     estoque: est,
     minimo: min,
-    compra: comp,
     venda: vend,
     foto: imgBase64
   };
+  if(admin) payload.compra = comp;
+  else if(!editandoProdutoId) payload.compra = 0;
 
   if(editandoProdutoId) {
+    if(!admin) return alert("Apenas o Administrador pode editar o cadastro completo de um produto existente.");
     db.collection("produtos").doc(editandoProdutoId).update(payload).then(() => {
       cancelarEdicaoProduto();
       alert("Produto atualizado com sucesso!");
-    });
+    }).catch(err => alert("Erro ao atualizar produto: " + err.message));
   } else {
     db.collection("produtos").add(payload).then(() => {
       cancelarEdicaoProduto();
-      alert("Produto cadastrado com sucesso!");
-    });
+      alert(estoqueRole ? "Produto cadastrado sem custo de compra. O custo financeiro fica sob controlo do Administrador." : "Produto cadastrado com sucesso!");
+    }).catch(err => alert("Erro ao cadastrar produto: " + err.message));
   }
 }
 
 function editarProduto(id) {
+  if(usuarioRole !== "admin") return alert("Apenas o Administrador pode editar o cadastro completo do produto.");
   let p = todosProdutos.find(item => item.id === id);
   if(!p) return;
 
@@ -4199,6 +4219,7 @@ function cancelarEdicaoProduto() {
 }
 
 function apagarProduto(id) {
+  if(usuarioRole !== "admin") return alert("Apenas o Administrador pode excluir produtos.");
   if(confirm("Tens a certeza que desejas excluir este produto do estoque?")) {
     db.collection("produtos").doc(id).delete().then(() => alert("Produto excluído."));
   }
@@ -4281,6 +4302,7 @@ function paginaAnterior() { if(paginaAtual > 1) { paginaAtual--; renderizarTabel
 function proximaPagina() { paginaAtual++; renderizarTabelaEstoque(); }
 
 function adicionarEstoqueRapido(id) {
+  if(!(usuarioRole === "admin" || usuarioRole === "estoque")) return alert("Acesso negado: perfil sem permissão para ajustar estoque.");
   let qtdAdd = prompt("Quantas unidades deseja adicionar ao estoque?", "1");
   if(!qtdAdd) return;
 
@@ -4573,6 +4595,7 @@ function carregarFuncionarios() {
 }
 
 function salvarFuncionario() {
+  if(usuarioRole !== "admin") return alert("Acesso negado: Gestão de Funcionários é exclusiva do Administrador.");
   let nomeVal = funcNome.value.trim();
   let emailVal = funcEmail.value.trim();
   let senhaVal = funcSenha.value.trim();
@@ -4646,7 +4669,11 @@ function cancelarEdicaoFunc() {
 }
 
 function alterarStatusFunc(id, novoStatus) {
-  db.collection("usuarios").doc(id).update({ status: novoStatus });
+  if(usuarioRole !== "admin") return alert("Acesso negado: somente o Administrador pode alterar o estado de uma conta.");
+  if(id === auth.currentUser?.uid) return alert("Ação negada: você não pode desativar a própria conta.");
+  if(!["ativo","desativado"].includes(novoStatus)) return alert("Estado de conta inválido.");
+  db.collection("usuarios").doc(id).update({ status: novoStatus })
+    .catch(e => alert("Erro ao alterar status: " + e.message));
 }
 
 function exportarEstoque() {
@@ -4847,7 +4874,9 @@ function editarFuncionario(id, nome, email, role) {
 }
 
 function alterarStatusFunc(id, novoStatus) {
+  if(usuarioRole !== "admin") return alert("Acesso negado: somente o Administrador pode alterar o estado de uma conta.");
   if(id === auth.currentUser?.uid) return alert("Ação negada: você não pode desativar a própria conta.");
+  if(!["ativo","desativado"].includes(novoStatus)) return alert("Estado de conta inválido.");
   db.collection("usuarios").doc(id).update({status: novoStatus})
     .then(() => carregarFuncionarios())
     .catch(e => alert("Erro ao alterar status: " + e.message));
@@ -8836,6 +8865,14 @@ function aplicarSegurancaInterface64() {
   mostrar("btnPageDespesas", admin);
   mostrar("btnPageTesouraria", admin);
   mostrar("btnPageArmazem", admin || estoque);
+
+  // Dados financeiros do produto: custo de compra é informação exclusiva do ADMIN.
+  const campoCompraProduto = document.getElementById("compra");
+  if(campoCompraProduto) {
+    campoCompraProduto.classList.toggle("hidden", !admin);
+    campoCompraProduto.disabled = !admin;
+    if(!admin) campoCompraProduto.value = "";
+  }
 
   // Gestão sensível
   mostrar("btnToggleFunc", admin);
