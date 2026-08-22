@@ -1106,10 +1106,21 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <!-- FORMULÁRIO DE ABERTURA -->
       <div id="formAberturaCaixa" class="hidden">
         <h4 style="margin-top:0; color:#1e293b;">🟢 Abertura de Caixa / Turno</h4>
-        <div class="form-grid" style="max-width: 500px;">
+        <div class="form-grid" style="max-width: 620px;">
           <label style="font-size: 13px; font-weight: 600;">Valor Inicial (Troco em Dinheiro):</label>
-          <input type="number" id="aberturaValorInicial" placeholder="Ex: 500 Db" value="0" min="0">
-          <button onclick="abrirCaixa()" class="btn-success" style="padding: 12px; font-size: 14px;">🔓 Abrir Caixa Agora</button>
+          <input type="number" id="aberturaValorInicial" placeholder="Ex: 500 Db" value="0" min="0" step="0.01">
+
+          <label style="font-size: 13px; font-weight: 600;">Origem do Dinheiro Inicial:</label>
+          <select id="aberturaOrigemFundos">
+            <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+          </select>
+
+          <div style="grid-column:1/-1;background:#eff6ff;border:1px solid #bfdbfe;padding:10px 12px;border-radius:8px;font-size:12px;color:#1e3a8a;line-height:1.45;">
+            <b>Regra de controlo:</b> se o valor inicial for maior que 0 Db, o sistema retira exatamente esse valor de
+            <b>Responsável / Reserva</b> e coloca-o no Caixa/Turno. Se for 0 Db, nenhuma movimentação de Tesouraria é criada.
+          </div>
+
+          <button onclick="abrirCaixa()" class="btn-success" style="padding: 12px; font-size: 14px; grid-column:1/-1;">🔓 Abrir Caixa Agora</button>
         </div>
       </div>
 
@@ -2602,6 +2613,9 @@ function carregar(){
     carregarFuncionarios(); 
     carregarDespesas(); 
     carregarAuditoriaCaixasAdmin();
+
+    // Mantém o saldo-resumo da Reserva sincronizado mesmo sem abrir manualmente a aba Tesouraria.
+    iniciarListenerTesouraria();
   }
 
   carregarEncomendas();
@@ -2784,43 +2798,138 @@ function atualizarKpiCaixaAbertoLocal() {
   kpiCaixaDinheiroEsperado.innerText = dinheiroEsperado.toLocaleString('pt-PT') + " Db";
 }
 
-function abrirCaixa() {
+async function garantirSnapshotReservaAberturaAdmin() {
+  if(usuarioRole !== "admin") return;
+
+  const saldoRef = db.collection("tesouraria_saldos").doc("responsavel_stp");
+  const saldoReal = await obterSaldoTesourariaContaFirestore651("responsavel_stp");
+
+  await saldoRef.set({
+    saldo: Number(saldoReal) || 0,
+    moeda: "STN",
+    atualizadoEm: new Date(),
+    atualizadoPorUid: auth.currentUser?.uid || null,
+    atualizadoPorUsuario: auth.currentUser?.email || "",
+    origemCalculo: "ledger_tesouraria"
+  }, { merge: true });
+}
+
+async function abrirCaixa() {
   if(!(usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2")) {
     return alert("Acesso restrito: apenas Administrador e Vendedores podem abrir Caixa/Turno.");
   }
-  if(!navigator.onLine) return alert("Erro de conexão: É necessária internet ativa para abrir o caixa de forma segura.");
+  if(!navigator.onLine) {
+    return alert("Erro de conexão: É necessária internet ativa para abrir o caixa de forma segura.");
+  }
 
-  let u = auth.currentUser;
-  if(!u) return;
+  const u = auth.currentUser;
+  if(!u) return alert("Sessão expirada.");
 
-  let valInicial = Number(aberturaValorInicial.value) || 0;
-  if(valInicial < 0) return alert("Por favor, informe um valor inicial válido!");
+  const valInicial = Number(document.getElementById("aberturaValorInicial")?.value) || 0;
+  const origemFundos = document.getElementById("aberturaOrigemFundos")?.value || "responsavel_stp";
 
-  db.collection("caixas")
-    .where("uid", "==", u.uid)
-    .where("estado", "==", "aberto")
-    .get()
-    .then(snap => {
-      if(!snap.empty) {
-        alert("Já possui um caixa aberto! Feche o caixa atual antes de abrir um novo.");
-        return;
+  if(valInicial < 0) return alert("Por favor, informe um valor inicial válido.");
+  if(valInicial > 0 && origemFundos !== "responsavel_stp") {
+    return alert("O troco inicial do Caixa deve sair de Responsável / Reserva.");
+  }
+
+  try {
+    // Evita dois turnos simultâneos do mesmo utilizador.
+    const snapAberto = await db.collection("caixas")
+      .where("uid", "==", u.uid)
+      .where("estado", "==", "aberto")
+      .get();
+
+    if(!snapAberto.empty) {
+      return alert("Já possui um caixa aberto! Feche o caixa atual antes de abrir um novo.");
+    }
+
+    // ADMIN mantém o saldo-resumo sincronizado com o razão completo.
+    // VENDA1/VENDA2 leem apenas este saldo-resumo, nunca o histórico da Tesouraria.
+    if(valInicial > 0 && usuarioRole === "admin") {
+      await garantirSnapshotReservaAberturaAdmin();
+    }
+
+    const caixaRef = db.collection("caixas").doc();
+    const saldoRef = db.collection("tesouraria_saldos").doc("responsavel_stp");
+    // O ID do movimento é o próprio ID do caixa: impede duplicar o débito de abertura.
+    const movTesRef = db.collection("tesouraria_movimentos").doc(caixaRef.id);
+    const agora = new Date();
+
+    await db.runTransaction(async tx => {
+      let saldoAntes = 0;
+
+      // REGRA FIRESTORE: todas as leituras da transação vêm antes das escritas.
+      if(valInicial > 0) {
+        const saldoDoc = await tx.get(saldoRef);
+        if(!saldoDoc.exists) {
+          throw new Error(
+            "Saldo da Reserva ainda não foi sincronizado. Entre uma vez como ADMIN para inicializar a posição financeira."
+          );
+        }
+        saldoAntes = Number(saldoDoc.data().saldo) || 0;
+        if(saldoAntes < valInicial) {
+          throw new Error(
+            `Saldo insuficiente em Responsável / Reserva. Disponível: ${saldoAntes.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db.`
+          );
+        }
       }
 
-      let payload = {
+      tx.set(caixaRef, {
         uid: u.uid,
         usuario: u.email,
+        nomeUsuario: usuarioNome || "",
         role: usuarioRole,
-        dataAbertura: new Date(),
+        dataAbertura: agora,
         valorInicial: valInicial,
+        origemValorInicial: valInicial > 0 ? "responsavel_stp" : "sem_fundo",
         estado: "aberto"
-      };
-
-      return db.collection("caixas").add(payload).then(() => {
-        aberturaValorInicial.value = "0";
-        alert("Caixa / Turno aberto com sucesso!");
       });
-    })
-    .catch(e => alert("Erro ao abrir caixa: " + e.message));
+
+      if(valInicial > 0) {
+        const saldoDepois = saldoAntes - valInicial;
+
+        tx.set(movTesRef, {
+          tipo: "abertura_caixa",
+          natureza: "movimento_interno",
+          origem: "responsavel_stp",
+          destino: "caixa_stp",
+          moedaOrigem: "STN",
+          moedaDestino: "STN",
+          valorOrigem: valInicial,
+          valorDestino: valInicial,
+          taxaReferencia: null,
+          taxaAplicada: null,
+          margemDb: 0,
+          caixaId: caixaRef.id,
+          observacao: `Troco inicial do Caixa/Turno — ${u.email || "utilizador"}`,
+          usuario: u.email,
+          nomeUsuario: usuarioNome || "",
+          uid: u.uid,
+          role: usuarioRole,
+          data: agora
+        });
+
+        tx.update(saldoRef, {
+          saldo: saldoDepois,
+          moeda: "STN",
+          atualizadoEm: agora,
+          ultimoCaixaId: caixaRef.id,
+          ultimoUid: u.uid,
+          ultimaOperacao: "abertura_caixa"
+        });
+      }
+    });
+
+    document.getElementById("aberturaValorInicial").value = "0";
+    alert(
+      valInicial > 0
+        ? `Caixa / Turno aberto com sucesso.\n\n${valInicial.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db foram transferidos de Responsável / Reserva para o Caixa.`
+        : "Caixa / Turno aberto com sucesso, sem fundo inicial."
+    );
+  } catch(e) {
+    alert("Erro ao abrir caixa: " + (e.message || e));
+  }
 }
 
 function abrirModalFecharCaixa() {
@@ -6619,6 +6728,7 @@ function ehContaTesourariaInterna(id) {
 
 function rotuloTipoTesouraria(tipo) {
   return ({
+    abertura_caixa: "ABERTURA CAIXA",
     saldo_inicial: "SALDO INICIAL",
     transferencia_cliente: "TRANSF. CLIENTE",
     aporte_socio: "APORTE SÓCIO",
@@ -6881,6 +6991,19 @@ function recalcularSaldosTesouraria() {
   });
   contasTesouraria = saldos;
   atualizarKpisCapitalTesouraria();
+
+  // FASE 6.8 — saldo-resumo seguro usado somente para financiar abertura de Caixa.
+  // VENDA1/VENDA2 conseguem ler apenas este número; o razão completo continua privado do ADMIN.
+  if(usuarioRole === "admin" && auth.currentUser) {
+    db.collection("tesouraria_saldos").doc("responsavel_stp").set({
+      saldo: Number(saldos.responsavel_stp) || 0,
+      moeda: "STN",
+      atualizadoEm: new Date(),
+      atualizadoPorUid: auth.currentUser.uid,
+      atualizadoPorUsuario: auth.currentUser.email || "",
+      origemCalculo: "ledger_tesouraria"
+    }, { merge: true }).catch(e => console.warn("Não foi possível sincronizar saldo-resumo da Reserva:", e));
+  }
 }
 
 function atualizarResumoMovTesouraria() {
@@ -8678,6 +8801,7 @@ async function confirmarPrestacaoContas() {
 /* Rótulos da Tesouraria para a nova operação. */
 function rotuloTipoTesouraria(tipo) {
   return ({
+    abertura_caixa: "ABERTURA CAIXA",
     saldo_inicial: "SALDO INICIAL",
     transferencia_cliente: "TRANSF. CLIENTE",
     aporte_socio: "APORTE SÓCIO",
