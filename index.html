@@ -1375,12 +1375,20 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <option value="Taxas/Impostos">Taxas / Impostos</option>
           <option value="Outros">Outros</option>
         </select>
-        <input id="desp52Valor" type="number" min="0.01" step="0.01" placeholder="Valor (Db)">
-        <select id="desp52FormaPagamento">
-          <option value="Dinheiro">💵 Dinheiro (Caixa)</option>
-          <option value="Transferencia">🏦 Transferência / DobraPay</option>
+        <select id="desp52ContaPagamento" onchange="atualizarResumoDespesaFase52()">
+          <option value="caixa_stp">🏪 Caixa Loja (Db)</option>
+          <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+          <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+          <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
         </select>
+        <input id="desp52Valor" type="number" min="0.01" step="0.01" placeholder="Valor (Db)" oninput="atualizarResumoDespesaFase52()">
+        <div id="desp52TaxaWrap" class="hidden">
+          <input id="desp52TaxaReferencia" type="number" min="0.01" step="0.01" value="26" placeholder="Taxa referência Db/€" oninput="atualizarResumoDespesaFase52()" style="width:100%;">
+        </div>
         <input id="desp52Observacao" placeholder="Observação / referência (opcional)">
+        <div id="desp52ResumoConta" style="grid-column:1/-1;padding:10px 12px;border-radius:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;line-height:1.55;">
+          A despesa sairá do <b>Caixa Loja</b>. Para pagamento em dinheiro físico é necessário um turno aberto e saldo suficiente.
+        </div>
         <button onclick="registrarDespesaFase52()" class="btn-danger" style="grid-column:1/-1;">💸 Registar Despesa</button>
       </div>
     </div>
@@ -1392,14 +1400,14 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <span class="kpi-sub" style="color:#b91c1c;">Total financeiro</span>
       </div>
       <div class="kpi-card orange">
-        <span class="kpi-title">Pagas em Dinheiro</span>
+        <span class="kpi-title">Pagas pelo Caixa Loja</span>
         <span id="desp52KpiDinheiro" class="kpi-value">0 Db</span>
         <span class="kpi-sub" style="color:#d97706;">Saída física da loja</span>
       </div>
       <div class="kpi-card blue">
-        <span class="kpi-title">Transferência / DobraPay</span>
+        <span class="kpi-title">Pagas por outras contas</span>
         <span id="desp52KpiTransferencia" class="kpi-value">0 Db</span>
-        <span class="kpi-sub" style="color:#2563eb;">Sem saída da gaveta</span>
+        <span class="kpi-sub" style="color:#2563eb;">Reserva · Banco · Portugal/EUR</span>
       </div>
       <div class="kpi-card purple">
         <span class="kpi-title">Maior Categoria</span>
@@ -1427,9 +1435,11 @@ tr:nth-child(even) { background-color: #f8fafc; }
             <option value="Outros">Outros</option>
           </select>
           <select id="desp52FiltroForma" style="width:auto;min-height:38px;padding:5px 8px;">
-            <option value="">Todas as formas</option>
-            <option value="Dinheiro">Dinheiro</option>
-            <option value="Transferencia">Transferência</option>
+            <option value="">Todas as origens</option>
+            <option value="caixa_stp">Caixa Loja</option>
+            <option value="responsavel_stp">Responsável / Reserva</option>
+            <option value="banco_stp">Banco STP / DobraPay</option>
+            <option value="portugal_eur">Portugal / EUR</option>
           </select>
           <button onclick="renderizarDespesasFase52()" class="btn-secondary" style="min-height:38px;padding:5px 10px;">Filtrar</button>
           <button onclick="limparFiltrosDespesasFase52()" class="btn-secondary" style="min-height:38px;padding:5px 10px;">Limpar Filtros</button>
@@ -1441,7 +1451,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <thead>
             <tr>
               <th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th>
-              <th>Pagamento</th><th>Responsável</th><th>Observação</th><th>Estado</th>
+              <th>Origem do pagamento</th><th>Responsável</th><th>Observação</th><th>Estado</th>
             </tr>
           </thead>
           <tbody id="listaDespesasFase52"></tbody>
@@ -1452,8 +1462,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div class="card" style="background:#f8fafc;">
       <h4 style="margin-top:0;">ℹ️ Lógica financeira</h4>
       <ul style="margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;">
-        <li>Despesa paga em <b>Dinheiro</b> exige caixa aberto e saldo físico suficiente.</li>
-        <li>Despesa por <b>Transferência / DobraPay</b> é registada, mas não altera a gaveta.</li>
+        <li>Despesa paga pelo <b>Caixa Loja</b> exige turno aberto e saldo físico suficiente.</li>
+        <li>Despesa paga pela <b>Responsável / Reserva</b>, <b>Banco STP / DobraPay</b> ou <b>Portugal / EUR</b> cria uma saída correspondente na Tesouraria.</li>
+        <li>Pagamento em <b>Portugal / EUR</b> guarda o valor em euros e o equivalente em Db pela taxa de referência informada.</li>
         <li>Uma despesa registada fica no histórico; não há botão de apagar.</li>
         <li>Suprimentos e sangrias continuam sendo movimentos de caixa, não despesas.</li>
       </ul>
@@ -6457,6 +6468,40 @@ function iniciarListenerDespesasFase52() {
   }, e => console.warn("Erro ao carregar despesas:", e));
 }
 
+function contaPagamentoDespesaFase52(d) {
+  if(d?.contaPagamento) return d.contaPagamento;
+  // Compatibilidade com despesas antigas.
+  if(d?.formaPagamento === "Dinheiro") return "caixa_stp";
+  if(d?.formaPagamento === "Transferencia") return "banco_stp";
+  return "";
+}
+
+function atualizarResumoDespesaFase52() {
+  const conta = document.getElementById("desp52ContaPagamento")?.value || "caixa_stp";
+  const valor = Number(document.getElementById("desp52Valor")?.value) || 0;
+  const taxa = Number(document.getElementById("desp52TaxaReferencia")?.value) || 0;
+  const wrap = document.getElementById("desp52TaxaWrap");
+  const input = document.getElementById("desp52Valor");
+  const box = document.getElementById("desp52ResumoConta");
+  const eur = conta === "portugal_eur";
+
+  if(wrap) wrap.classList.toggle("hidden", !eur);
+  if(input) input.placeholder = eur ? "Valor pago (€)" : "Valor pago (Db)";
+  if(!box) return;
+
+  if(eur) {
+    const equiv = valor > 0 && taxa > 0 ? valor * taxa : 0;
+    box.innerHTML = `A despesa sairá de <b>${nomeContaTes(conta)}</b>. ` +
+      (equiv > 0
+        ? `${valor.toLocaleString("pt-PT",{maximumFractionDigits:2})} € × ${taxa.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db/€ = <b>${equiv.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db</b> de despesa operacional.`
+        : `Informe o valor em euros e a taxa de referência para calcular o equivalente em Db.`);
+  } else if(conta === "caixa_stp") {
+    box.innerHTML = `A despesa sairá do <b>Caixa Loja</b>. É necessário turno aberto e saldo físico suficiente.`;
+  } else {
+    box.innerHTML = `A despesa sairá de <b>${nomeContaTes(conta)}</b> e será registada também na Tesouraria.`;
+  }
+}
+
 async function registrarDespesaFase52() {
   if(!usuarioPodeDespesasFase52()) return alert("Acesso restrito: apenas o Administrador pode registar despesas operacionais.");
   if(!navigator.onLine) return alert("O registo de despesas exige ligação à internet.");
@@ -6466,59 +6511,95 @@ async function registrarDespesaFase52() {
 
   const descricao = document.getElementById("desp52Descricao").value.trim();
   const categoria = document.getElementById("desp52Categoria").value;
-  const valor = Number(document.getElementById("desp52Valor").value) || 0;
-  const forma = document.getElementById("desp52FormaPagamento").value;
+  const conta = document.getElementById("desp52ContaPagamento")?.value || "caixa_stp";
+  const valorPagamento = Number(document.getElementById("desp52Valor").value) || 0;
   const observacao = document.getElementById("desp52Observacao").value.trim();
+  const moedaPagamento = moedaContaTes(conta);
+  const taxaReferencia = conta === "portugal_eur"
+    ? (Number(document.getElementById("desp52TaxaReferencia")?.value) || 0)
+    : null;
+  const valorDb = conta === "portugal_eur" ? valorPagamento * taxaReferencia : valorPagamento;
+  const formaLegada = conta === "caixa_stp" ? "Dinheiro" : "Transferencia";
 
   if(!descricao) return alert("Informe a descrição da despesa.");
-  if(valor <= 0) return alert("Informe um valor válido.");
+  if(valorPagamento <= 0) return alert("Informe um valor válido.");
+  if(conta === "portugal_eur" && taxaReferencia <= 0) return alert("Informe uma taxa de referência válida para a despesa paga em euros.");
+  if(!ehContaTesourariaInterna(conta)) return alert("Conta de pagamento inválida.");
 
-  if(forma === "Dinheiro") {
+  if(conta === "caixa_stp") {
     if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") {
-      return alert("Esta despesa será paga em dinheiro. Abra primeiro o Caixa/Turno.");
+      return alert("Esta despesa sairá do Caixa Loja. Abra primeiro o Caixa/Turno.");
     }
     const saldo = saldoFisicoAtualFase52();
-    if(saldo < valor) {
-      const falta = valor - saldo;
+    if(saldo < valorPagamento) {
+      const falta = valorPagamento - saldo;
       return alert(
         "Saldo físico insuficiente para pagar esta despesa.\n\n" +
         `Disponível: ${saldo.toLocaleString("pt-PT")} Db\n` +
-        `Despesa: ${valor.toLocaleString("pt-PT")} Db\n` +
+        `Despesa: ${valorPagamento.toLocaleString("pt-PT")} Db\n` +
         `Falta: ${falta.toLocaleString("pt-PT")} Db\n\n` +
         "Registe primeiro um Suprimento de Caixa."
       );
     }
+  } else {
+    const saldo = saldoContaTes(conta);
+    if(saldo < valorPagamento) {
+      const simbolo = moedaPagamento === "EUR" ? "€" : "Db";
+      return alert(
+        `Saldo insuficiente em ${nomeContaTes(conta)}.\n\n` +
+        `Disponível: ${saldo.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${simbolo}\n` +
+        `Despesa: ${valorPagamento.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${simbolo}`
+      );
+    }
   }
+
+  const simbolo = moedaPagamento === "EUR" ? "€" : "Db";
+  const detalheConversao = conta === "portugal_eur"
+    ? `\nEquivalente financeiro: ${valorDb.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db\nTaxa: ${taxaReferencia.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db/€`
+    : "";
 
   if(!confirm(
     `Confirmar despesa?\n\n${descricao}\nCategoria: ${categoria}\n` +
-    `Valor: ${valor.toLocaleString("pt-PT")} Db\nPagamento: ${forma}`
+    `Origem: ${nomeContaTes(conta)}\n` +
+    `Valor pago: ${valorPagamento.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${simbolo}` +
+    detalheConversao
   )) return;
 
   const despRef = db.collection("despesas").doc();
-  const movRef = db.collection("movimentacoes").doc();
+  const movCaixaRef = conta === "caixa_stp" ? db.collection("movimentacoes").doc() : null;
+  const movTesRef = conta !== "caixa_stp" ? db.collection("tesouraria_movimentos").doc() : null;
   const agora = new Date();
 
   try {
     await db.runTransaction(async tx => {
       tx.set(despRef, {
-        descricao, categoria, valor, formaPagamento: forma, observacao,
+        descricao,
+        categoria,
+        // `valor` continua em Db para preservar Dashboard/Financeiro e histórico antigo.
+        valor: valorDb,
+        valorDb,
+        valorPagamento,
+        moedaPagamento,
+        contaPagamento: conta,
+        taxaReferencia,
+        formaPagamento: formaLegada,
+        observacao,
         estado: "REGISTADA",
         usuario: user.email,
         nomeUsuario: usuarioNome || "",
         uid: user.uid,
         role: usuarioRole,
         data: agora,
-        ...(forma === "Dinheiro" ? {caixaId: caixaAtualObj.id} : {})
+        ...(conta === "caixa_stp" ? {caixaId: caixaAtualObj.id} : {})
       });
 
-      if(forma === "Dinheiro") {
-        tx.set(movRef, {
+      if(conta === "caixa_stp" && movCaixaRef) {
+        tx.set(movCaixaRef, {
           produto: `Despesa Operacional: ${descricao}`,
           tipo: "despesa_caixa",
           origem: "despesa_operacional",
           quantidade: 1,
-          valor,
+          valor: valorPagamento,
           formaPagamento: "Dinheiro - Despesa Operacional",
           categoria,
           observacao,
@@ -6531,12 +6612,37 @@ async function registrarDespesaFase52() {
           despesaId: despRef.id
         });
       }
+
+      if(conta !== "caixa_stp" && movTesRef) {
+        tx.set(movTesRef, {
+          tipo: "despesa_operacional",
+          natureza: "despesa_operacional",
+          origem: conta,
+          destino: "despesa_externa",
+          moedaOrigem: moedaPagamento,
+          moedaDestino: moedaPagamento,
+          valorOrigem: valorPagamento,
+          valorDestino: 0,
+          taxaReferencia,
+          taxaAplicada: null,
+          margemDb: 0,
+          observacao: `Despesa operacional — ${descricao}${observacao ? " — " + observacao : ""}`,
+          categoria,
+          despesaId: despRef.id,
+          usuario: user.email,
+          nomeUsuario: usuarioNome || "",
+          uid: user.uid,
+          role: usuarioRole,
+          data: agora
+        });
+      }
     });
 
     document.getElementById("desp52Descricao").value = "";
     document.getElementById("desp52Valor").value = "";
     document.getElementById("desp52Observacao").value = "";
-    alert("Despesa registada com sucesso.");
+    atualizarResumoDespesaFase52();
+    alert("Despesa registada com sucesso e origem financeira atualizada.");
   } catch(e) {
     alert("Erro ao registar despesa: " + (e.message || e));
   }
@@ -6559,7 +6665,7 @@ function renderizarDespesasFase52() {
     if(ini && dt < ini) return false;
     if(fim && dt > fim) return false;
     if(cat && d.categoria !== cat) return false;
-    if(forma && d.formaPagamento !== forma) return false;
+    if(forma && contaPagamentoDespesaFase52(d) !== forma) return false;
     return true;
   });
 
@@ -6568,8 +6674,8 @@ function renderizarDespesasFase52() {
   lista.forEach(d => {
     const v = Number(d.valor)||0;
     total += v;
-    if(d.formaPagamento === "Dinheiro") dinheiro += v;
-    if(d.formaPagamento === "Transferencia") transferencia += v;
+    if(contaPagamentoDespesaFase52(d) === "caixa_stp") dinheiro += v;
+    if(contaPagamentoDespesaFase52(d) !== "caixa_stp") transferencia += v;
     categorias[d.categoria || "Outros"] = (categorias[d.categoria || "Outros"] || 0) + v;
   });
 
@@ -6588,7 +6694,14 @@ function renderizarDespesasFase52() {
       <td><b>${d.descricao || "-"}</b></td>
       <td>${d.categoria || "-"}</td>
       <td style="font-weight:bold;color:#b91c1c;">${(Number(d.valor)||0).toLocaleString("pt-PT")} Db</td>
-      <td>${d.formaPagamento === "Dinheiro" ? "💵 Dinheiro" : "🏦 Transferência"}</td>
+      <td>${(() => {
+        const c = contaPagamentoDespesaFase52(d);
+        if(c === "caixa_stp") return "🏪 Caixa Loja";
+        if(c === "responsavel_stp") return "👤 Responsável / Reserva";
+        if(c === "banco_stp") return "🏦 Banco STP / DobraPay";
+        if(c === "portugal_eur") return `🇵🇹 Portugal / EUR${d.valorPagamento ? ` (${Number(d.valorPagamento).toLocaleString("pt-PT",{maximumFractionDigits:2})} €)` : ""}`;
+        return d.formaPagamento || "-";
+      })()}</td>
       <td>${resp}</td>
       <td>${d.observacao || "-"}</td>
       <td><span style="color:#15803d;font-weight:700;">${d.estado || "REGISTADA"}</span></td>
@@ -6751,7 +6864,8 @@ function rotuloTipoTesouraria(tipo) {
     emprestimo_banco: "EMPRÉSTIMO BANCO",
     retirada_socio: "RETIRADA SÓCIO",
     amortizacao_socio: "AMORTIZAÇÃO SÓCIO",
-    amortizacao_banco: "AMORTIZAÇÃO BANCO"
+    amortizacao_banco: "AMORTIZAÇÃO BANCO",
+    despesa_operacional: "DESPESA OPERACIONAL"
   })[tipo] || "MOV. INTERNO";
 }
 
@@ -6760,7 +6874,8 @@ function nomeParteTesouraria(id) {
     saldo_inicial: "Saldo Inicial",
     cliente_externo: "Cliente / Exterior",
     externo_socio: "Proprietário / Sócio",
-    externo_banco: "Banco / Financiador"
+    externo_banco: "Banco / Financiador",
+    despesa_externa: "Fornecedor / Despesa Externa"
   };
   return especiais[id] || nomeContaTes(id);
 }
@@ -8009,7 +8124,7 @@ function executarAuditoriaIntegridade() {
   // =========================================================
   let problemasTes = 0;
   const contasValidas = new Set(["caixa_stp","responsavel_stp","banco_stp","portugal_eur"]);
-  const tiposExternos = new Set(["saldo_inicial","externo_socio","externo_banco","cliente_externo"]);
+  const tiposExternos = new Set(["saldo_inicial","externo_socio","externo_banco","cliente_externo","despesa_externa"]);
 
   (movimentosTesouraria || []).forEach(m => {
     const ref = audRef("TES",m.id);
@@ -8851,6 +8966,7 @@ function rotuloTipoTesouraria(tipo) {
     retirada_socio: "RETIRADA SÓCIO",
     amortizacao_socio: "AMORTIZAÇÃO SÓCIO",
     amortizacao_banco: "AMORTIZAÇÃO BANCO",
+    despesa_operacional: "DESPESA OPERACIONAL",
     prestacao_contas: "PRESTAÇÃO CONTAS"
   })[tipo] || "MOV. INTERNO";
 }
@@ -8861,6 +8977,7 @@ function nomeParteTesouraria(id) {
     cliente_externo: "Cliente / Exterior",
     externo_socio: "Proprietário / Sócio",
     externo_banco: "Banco / Financiador",
+    despesa_externa: "Fornecedor / Despesa Externa",
     prestacao_turno: "Turno / Prestação de Contas"
   };
   return especiais[id] || nomeContaTes(id);
