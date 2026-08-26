@@ -465,6 +465,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <option value="venda1">Venda 1 (Apenas POS)</option>
           <option value="venda2">Venda 2 (Apenas POS)</option>
           <option value="estoque">Estoque (Gestão de Produtos)</option>
+          <option value="gerente">Gerente (Gestão Operacional)</option>
           <option value="admin">Administrador (Acesso Total)</option>
         </select>
         <button id="btnSalvarFunc" onclick="salvarFuncionario()" class="btn-success">Criar Funcionário</button>
@@ -2513,7 +2514,7 @@ auth.onAuthStateChanged(async u => {
     }
 
     usuarioRole = String(dados.role || "").toLowerCase();
-    const rolesPermitidas64 = ["admin","venda1","venda2","estoque"];
+    const rolesPermitidas64 = ["admin","gerente","venda1","venda2","estoque"];
     if(!rolesPermitidas64.includes(usuarioRole)) {
       const erroCampo = document.getElementById("erro");
       await auth.signOut();
@@ -8125,6 +8126,7 @@ function executarAuditoriaIntegridade() {
   let problemasTes = 0;
   const contasValidas = new Set(["caixa_stp","responsavel_stp","banco_stp","portugal_eur"]);
   const tiposExternos = new Set(["saldo_inicial","externo_socio","externo_banco","cliente_externo","despesa_externa"]);
+  const fornecedoresArmazem = new Set(["fornecedor_externo","fornecedor_portugal"]);
 
   (movimentosTesouraria || []).forEach(m => {
     const ref = audRef("TES",m.id);
@@ -8147,12 +8149,20 @@ function executarAuditoriaIntegridade() {
       audAdicionar("CRITICO","Tesouraria",ref,"Valor negativo",
         `Valor origem: ${vo} | Valor destino: ${vd}.`,m);
     }
-    const origemConhecida = contasValidas.has(m.origem) || tiposExternos.has(m.origem);
-    const destinoConhecido = contasValidas.has(m.destino) || tiposExternos.has(m.destino);
+    const usaFornecedorArmazem = fornecedoresArmazem.has(m.origem) || fornecedoresArmazem.has(m.destino);
+    const rastroArmazem = usaFornecedorArmazem &&
+      String(m.natureza || "") === "armazem" &&
+      String(m.referenciaArmazem || "").trim() !== "" &&
+      (historicoArmazem || []).some(h => {
+        const refMov = String(m.referenciaArmazem || "");
+        return String(h.referencia || "") === refMov || String(h.loteId || "") === refMov || String(h.itemId || "") === refMov;
+      });
+    const origemConhecida = contasValidas.has(m.origem) || tiposExternos.has(m.origem) || (fornecedoresArmazem.has(m.origem) && rastroArmazem);
+    const destinoConhecido = contasValidas.has(m.destino) || tiposExternos.has(m.destino) || (fornecedoresArmazem.has(m.destino) && rastroArmazem);
     if(!origemConhecida || !destinoConhecido) {
       problemasTes++;
-      audAdicionar("ALERTA","Tesouraria",ref,"Conta/origem não reconhecida",
-        `Origem: ${m.origem || "-"} | Destino: ${m.destino || "-"}.`,m);
+      audAdicionar("ALERTA","Tesouraria",ref, usaFornecedorArmazem ? "Fornecedor externo sem rastro válido do Armazém" : "Conta/origem não reconhecida",
+        `Origem: ${m.origem || "-"} | Destino: ${m.destino || "-"}${usaFornecedorArmazem ? ` | Referência Armazém: ${m.referenciaArmazem || "-"}` : ""}.`,m);
     }
     if(m.moedaOrigem !== m.moedaDestino) {
       if(audNum(m.taxaAplicada) <= 0 || audNum(m.taxaReferencia) <= 0) {
@@ -10226,7 +10236,7 @@ async function cadastrarItemSoltoPT(){
     return;
   }
 
-  if(usuarioRole!=="admin") return alert("Perfil sem permissão.");
+  if(!(usuarioRole==="admin"||usuarioRole==="gerente")) return alert("Perfil sem permissão.");
   if(!armSaldoSuficiente(contaPagamento,total)) return alert(`Saldo insuficiente em ${armNomeConta(contaPagamento)} para pagar ${armFmtValor(total,moeda)}.`);
   if(!confirm(`Confirmar compra administrativa?\n\n${quantidade} × ${nome}\nTotal: ${armFmtValor(total,moeda)}\nSerá debitado de ${armNomeConta(contaPagamento)}.`)) return;
   const itemRef=db.collection("armazem_pt").doc();
@@ -10337,7 +10347,7 @@ async function despacharLotePT(){
     return;
   }
 
-  if(usuarioRole!=="admin") return alert("Perfil sem permissão.");
+  if(!(usuarioRole==="admin"||usuarioRole==="gerente")) return alert("Perfil sem permissão.");
   if(freteValor>0&&!armSaldoSuficiente(contaPagamento,freteValor)) return alert(`Saldo insuficiente em ${armNomeConta(contaPagamento)} para o frete.`);
   if(!confirm(`Confirmar despacho administrativo do lote ${identificador}?${freteValor>0?`\nFrete: ${armFmtValor(freteValor,freteMoeda)} — ${armNomeConta(contaPagamento)}`:""}`))return;
   try{ await armExecutarDespachoAdmin({identificador,idsItens,freteValor,freteMoeda,freteEuro,contaPagamento,taxaCambioFrete:freteMoeda==="STN"?taxaCambio:null,transportador,observacao},null); alert("Lote despachado e custos financeiros registados."); }catch(e){alert("Erro ao despachar: "+(e.message||e));}
@@ -10365,7 +10375,7 @@ async function armExecutarDespachoAdmin(dados, solicitacaoId){
 }
 
 async function aprovarCompraArmazem(id){
-  if(usuarioRole!=="admin")return alert("Apenas ADMIN pode aprovar.");
+  if(!(usuarioRole==="admin"||usuarioRole==="gerente"))return alert("Apenas ADMIN/GERENTE pode aprovar.");
   const r=solicitacoesCompraArmazem.find(x=>x.id===id); if(!r)return alert("Solicitação não encontrada.");
   if(r.estado!=="PENDENTE_APROVACAO")return alert("Solicitação já decidida.");
   if(!armSaldoSuficiente(r.contaPagamento,r.total))return alert(`Saldo insuficiente em ${armNomeConta(r.contaPagamento)}. A aprovação foi bloqueada.`);
@@ -10377,7 +10387,7 @@ async function rejeitarCompraArmazem(id){
   if(usuarioRole!=="admin")return; const r=solicitacoesCompraArmazem.find(x=>x.id===id); if(!r)return; const motivo=prompt("Motivo da rejeição (obrigatório):",""); if(!motivo?.trim())return alert("Informe o motivo."); const reqRef=db.collection("armazem_compra_solicitacoes").doc(id), histRef=db.collection("armazem_movimentos").doc(); try{await db.runTransaction(async tx=>{const d=await tx.get(reqRef); if(!d.exists||d.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida."); const agora=new Date(); tx.update(reqRef,{estado:"REJEITADA",motivoRejeicao:motivo.trim(),rejeitadoPorUid:auth.currentUser.uid,rejeitadoPorUsuario:auth.currentUser.email,dataRejeicao:agora}); tx.set(histRef,{...armHistoricoPayload("COMPRA_REJEITADA",{referencia:r.nome,compraSolicitacaoId:id,quantidade:r.quantidade,valor:r.total,moeda:r.moeda,contaPagamento:r.contaPagamento,fornecedor:r.fornecedor,estado:"REJEITADA",observacao:motivo.trim()}),data:agora});});}catch(e){alert("Erro: "+(e.message||e));}
 }
 async function aprovarDespachoArmazem(id){
-  if(usuarioRole!=="admin")return alert("Apenas ADMIN pode aprovar."); const r=solicitacoesDespachoArmazem.find(x=>x.id===id); if(!r)return alert("Solicitação não encontrada."); if(Number(r.freteValor)>0&&!armSaldoSuficiente(r.contaPagamento,r.freteValor))return alert(`Saldo insuficiente em ${armNomeConta(r.contaPagamento)} para o frete.`); if(!confirm(`Aprovar despacho ${r.identificador}?`))return; try{await armExecutarDespachoAdmin(r,id); alert("Despacho aprovado. Lote em trânsito.");}catch(e){alert("Erro ao aprovar despacho: "+(e.message||e));}
+  if(!(usuarioRole==="admin"||usuarioRole==="gerente"))return alert("Apenas ADMIN/GERENTE pode aprovar."); const r=solicitacoesDespachoArmazem.find(x=>x.id===id); if(!r)return alert("Solicitação não encontrada."); if(Number(r.freteValor)>0&&!armSaldoSuficiente(r.contaPagamento,r.freteValor))return alert(`Saldo insuficiente em ${armNomeConta(r.contaPagamento)} para o frete.`); if(!confirm(`Aprovar despacho ${r.identificador}?`))return; try{await armExecutarDespachoAdmin(r,id); alert("Despacho aprovado. Lote em trânsito.");}catch(e){alert("Erro ao aprovar despacho: "+(e.message||e));}
 }
 async function rejeitarDespachoArmazem(id){
   if(usuarioRole!=="admin")return; const r=solicitacoesDespachoArmazem.find(x=>x.id===id); if(!r)return; const motivo=prompt("Motivo da rejeição (obrigatório):",""); if(!motivo?.trim())return alert("Informe o motivo."); const reqRef=db.collection("armazem_despacho_solicitacoes").doc(id), histRef=db.collection("armazem_movimentos").doc(); try{await db.runTransaction(async tx=>{const d=await tx.get(reqRef); if(!d.exists||d.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida."); const agora=new Date(); tx.update(reqRef,{estado:"REJEITADA",motivoRejeicao:motivo.trim(),rejeitadoPorUid:auth.currentUser.uid,rejeitadoPorUsuario:auth.currentUser.email,dataRejeicao:agora}); tx.set(histRef,{...armHistoricoPayload("DESPACHO_REJEITADO",{referencia:r.identificador,despachoSolicitacaoId:id,quantidade:(r.itensSnapshot||[]).reduce((s,i)=>s+(Number(i.quantidade)||0),0),valor:r.freteValor,moeda:r.freteMoeda,contaPagamento:r.contaPagamento,fornecedor:r.transportador,estado:"REJEITADA",observacao:motivo.trim()}),data:agora});});}catch(e){alert("Erro: "+(e.message||e));}
@@ -10385,7 +10395,7 @@ async function rejeitarDespachoArmazem(id){
 
 function abrirModalRecebimentoLoteST(loteId){
   // FASE 6.4.7 — receção e consolidação final são exclusivas do ADMIN.
-  if(usuarioRole!=="admin") return alert("Recebimento em São Tomé é exclusivo do Administrador. O perfil ESTOQUE acompanha o lote, mas não consolida estoque, custo ou Tesouraria.");
+  if(!(usuarioRole==="admin"||usuarioRole==="gerente")) return alert("Recebimento em São Tomé é exclusivo do ADMIN/GERENTE. O perfil ESTOQUE acompanha o lote, mas não consolida estoque, custo ou Tesouraria.");
   const lote=todosLotesPT.find(l=>l.id===loteId);
   if(!lote) return alert("Lote não encontrado.");
   if(lote.estado==="RECEBIDO") return alert("Este lote já foi recebido.");
@@ -10410,7 +10420,7 @@ function atualizarPagamentoAcertoArmazemUI(){
 }
 
 async function confirmarRecebimentoLoteST(){
-  if(usuarioRole!=="admin") return alert("Ação bloqueada: somente o Administrador pode receber e consolidar lotes em São Tomé.");
+  if(!(usuarioRole==="admin"||usuarioRole==="gerente")) return alert("Ação bloqueada: somente ADMIN/GERENTE pode receber e consolidar lotes em São Tomé.");
   if(!navigator.onLine) return alert("O recebimento final exige conexão com a internet.");
 
   const loteId=recebimentoLoteId.value;
@@ -10642,7 +10652,7 @@ async function rejeitarAcertoArmazem(id){
 
 function armBadgeEstado(e){const s=String(e||""); const cor=s.includes("REJEIT")?"#fee2e2;color:#991b1b":s.includes("PENDENTE")?"#fef3c7;color:#92400e":"#dcfce7;color:#166534"; return `<span style="background:${cor};padding:3px 8px;border-radius:12px;font-weight:700;font-size:11px;">${s||"-"}</span>`;}
 function renderizarSolicitacoesArmazem(){
-  const admin=usuarioRole==="admin";
+  const admin=usuarioRole==="admin"||usuarioRole==="gerente";
   const compra=document.getElementById("listaSolicitacoesCompraArmazem"),desp=document.getElementById("listaSolicitacoesDespachoArmazem"),ac=document.getElementById("listaSolicitacoesAcertoArmazem");
   if(compra)compra.innerHTML=solicitacoesCompraArmazem.map(r=>`<tr><td><small>${armData(r.data)}</small></td><td>${r.nomeUsuario||r.usuario||"-"}</td><td><b>${r.nome}</b></td><td>${r.quantidade}</td><td>${armFmtValor(r.total,r.moeda)}</td><td>${armNomeConta(r.contaPagamento)}</td><td>${armBadgeEstado(r.estado)}</td><td>${admin&&r.estado==="PENDENTE_APROVACAO"?`<button class="btn-success btn-acao" onclick="aprovarCompraArmazem('${r.id}')">Aprovar</button> <button class="btn-danger btn-acao" onclick="rejeitarCompraArmazem('${r.id}')">Rejeitar</button>`:"—"}</td></tr>`).join("")||'<tr><td colspan="8" style="color:#94a3b8;">Nenhuma solicitação.</td></tr>';
   if(desp)desp.innerHTML=solicitacoesDespachoArmazem.map(r=>`<tr><td><small>${armData(r.data)}</small></td><td>${r.nomeUsuario||r.usuario||"-"}</td><td><b>${r.identificador}</b></td><td>${(r.itensSnapshot||[]).length}</td><td>${armFmtValor(r.freteValor,r.freteMoeda)}</td><td>${Number(r.freteValor)>0?armNomeConta(r.contaPagamento):"Sem custo"}</td><td>${armBadgeEstado(r.estado)}</td><td>${admin&&r.estado==="PENDENTE_APROVACAO"?`<button class="btn-success btn-acao" onclick="aprovarDespachoArmazem('${r.id}')">Aprovar</button> <button class="btn-danger btn-acao" onclick="rejeitarDespachoArmazem('${r.id}')">Rejeitar</button>`:"—"}</td></tr>`).join("")||'<tr><td colspan="8" style="color:#94a3b8;">Nenhuma solicitação.</td></tr>';
@@ -10695,7 +10705,7 @@ function armIniciarListenersSolicitacoes(){
   ["listenerArmCompraSolic","listenerArmDespachoSolic","listenerArmAcertoSolic"].forEach(()=>{});
   if(listenerArmCompraSolic)listenerArmCompraSolic(); if(listenerArmDespachoSolic)listenerArmDespachoSolic(); if(listenerArmAcertoSolic)listenerArmAcertoSolic();
   const uid=auth.currentUser?.uid; if(!uid)return;
-  const build=(col,assign)=>{let q=db.collection(col); if(usuarioRole!=="admin")q=q.where("uid","==",uid); return q.onSnapshot(s=>{const arr=[]; s.forEach(d=>arr.push({id:d.id,...d.data()})); arr.sort((a,b)=>obterDataSegura(b.data)-obterDataSegura(a.data)); assign(arr); renderizarSolicitacoesArmazem();},e=>console.warn(col,e));};
+  const build=(col,assign)=>{let q=db.collection(col); if(!(usuarioRole==="admin"||usuarioRole==="gerente"))q=q.where("uid","==",uid); return q.onSnapshot(s=>{const arr=[]; s.forEach(d=>arr.push({id:d.id,...d.data()})); arr.sort((a,b)=>obterDataSegura(b.data)-obterDataSegura(a.data)); assign(arr); renderizarSolicitacoesArmazem();},e=>console.warn(col,e));};
   listenerArmCompraSolic=build("armazem_compra_solicitacoes",a=>solicitacoesCompraArmazem=a);
   listenerArmDespachoSolic=build("armazem_despacho_solicitacoes",a=>{solicitacoesDespachoArmazem=a; armRenderSelecaoDespachoPT();});
   listenerArmAcertoSolic=build("armazem_acerto_solicitacoes",a=>solicitacoesAcertoArmazem=a);
@@ -10708,13 +10718,13 @@ function carregarArmazemPTTresPassos(){
   if(!usuarioPodeArmazemPT())return;
   if(listenerArmazemPT)listenerArmazemPT(); if(listenerLotesPT)listenerLotesPT();
   listenerArmazemPT=db.collection("armazem_pt").orderBy("dataRegisto","desc").onSnapshot(s=>{todosItensSoltosPT=[]; let h=""; s.forEach(d=>{const i={id:d.id,...d.data()}; if(i.estado!=="EM_LISBOA")return; todosItensSoltosPT.push(i); const eur=Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0; const subtotalEur=(Number(i.quantidade)||0)*eur; const original=Number(i.custoUnitarioOriginal)||eur; const moeda=i.moedaCompra||"EUR"; h+=`<tr><td><b>${i.nome}</b></td><td>${i.categoria||"Geral"}</td><td><b>${i.quantidade} un</b></td><td>${armFmtValor(original,moeda)}</td><td>${subtotalEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${i.fornecedor||"-"}</td><td><small>${armData(i.dataRegisto)}</small></td></tr>`;}); listaItensSoltosPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo oficial aguardando lote.</td></tr>'; armRenderSelecaoDespachoPT();},e=>console.warn("Armazém PT",e));
-  listenerLotesPT=db.collection("lotes_pt").orderBy("dataEnvio","desc").onSnapshot(s=>{todosLotesPT=[];let h="";s.forEach(d=>{const l={id:d.id,...d.data()};todosLotesPT.push(l);const st=l.estado==="EM_TRANSITO"?'<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>':'<span class="badge-concluido">RECEBIDO</span>'; const btn=l.estado==="EM_TRANSITO"?(usuarioRole==="admin"?`<button class="btn-success btn-acao" onclick="abrirModalRecebimentoLoteST('${l.id}')">🛬 Receber e consolidar</button>`:`<span style="color:#92400e;font-weight:700;font-size:11px;">⏳ Aguardando receção pelo ADMIN</span>`):"—"; const nomes=(l.itens||[]).map(i=>`${i.nome} (${i.quantidade}un)`).join(", "); const compra=Number(l.custoTotalItensEuro)||0; const frete=Number(l.custoFreteEuro)||0; const taxaRec=Number(l.taxaCambioRecebimento)||0; const acertoSTN=Number(l.acertoIncorporadoSTN)||0; const acertoEUR=taxaRec>0?acertoSTN/taxaRec:0; const custoFinal=compra+frete+acertoEUR; h+=`<tr><td><b>${l.identificador}</b></td><td><small>${nomes}</small></td><td>${compra.toFixed(2)} €</td><td>${frete.toFixed(2)} €</td><td>${l.estado==="RECEBIDO"?acertoEUR.toFixed(2)+" €":"—"}</td><td><b>${custoFinal.toFixed(2)} €</b></td><td>${st}</td><td><small>${armData(l.dataEnvio)}</small></td><td>${btn}</td></tr>`;});listaLotesEmTransitoPT.innerHTML=h||'<tr><td colspan="9" style="color:#94a3b8;">Nenhum lote enviado.</td></tr>';},e=>console.warn("Lotes PT",e));
+  listenerLotesPT=db.collection("lotes_pt").orderBy("dataEnvio","desc").onSnapshot(s=>{todosLotesPT=[];let h="";s.forEach(d=>{const l={id:d.id,...d.data()};todosLotesPT.push(l);const st=l.estado==="EM_TRANSITO"?'<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>':'<span class="badge-concluido">RECEBIDO</span>'; const btn=l.estado==="EM_TRANSITO"?((usuarioRole==="admin"||usuarioRole==="gerente")?`<button class="btn-success btn-acao" onclick="abrirModalRecebimentoLoteST('${l.id}')">🛬 Receber e consolidar</button>`:`<span style="color:#92400e;font-weight:700;font-size:11px;">⏳ Aguardando receção pelo ADMIN/GERENTE</span>`):"—"; const nomes=(l.itens||[]).map(i=>`${i.nome} (${i.quantidade}un)`).join(", "); const compra=Number(l.custoTotalItensEuro)||0; const frete=Number(l.custoFreteEuro)||0; const taxaRec=Number(l.taxaCambioRecebimento)||0; const acertoSTN=Number(l.acertoIncorporadoSTN)||0; const acertoEUR=taxaRec>0?acertoSTN/taxaRec:0; const custoFinal=compra+frete+acertoEUR; h+=`<tr><td><b>${l.identificador}</b></td><td><small>${nomes}</small></td><td>${compra.toFixed(2)} €</td><td>${frete.toFixed(2)} €</td><td>${l.estado==="RECEBIDO"?acertoEUR.toFixed(2)+" €":"—"}</td><td><b>${custoFinal.toFixed(2)} €</b></td><td>${st}</td><td><small>${armData(l.dataEnvio)}</small></td><td>${btn}</td></tr>`;});listaLotesEmTransitoPT.innerHTML=h||'<tr><td colspan="9" style="color:#94a3b8;">Nenhum lote enviado.</td></tr>';},e=>console.warn("Lotes PT",e));
   armIniciarListenersSolicitacoes(); armIniciarListenerHistorico();
   atualizarPagamentoCompraArmazemUI(); atualizarPagamentoFreteArmazemUI(); atualizarPagamentoAcertoArmazemUI();
   const btnC=document.getElementById("btnCadastrarItemPT"),btnD=document.getElementById("btnDespacharLotePT"),aj=document.getElementById("armazemAprovacaoAjuda"),reg=document.getElementById("ptCompraRegraPerfil");
   if(btnC)btnC.innerText=usuarioRole==="estoque"?"📨 Enviar Compra para Aprovação":"📥 Registar Compra & Debitar Tesouraria";
   if(btnD)btnD.innerText=usuarioRole==="estoque"?"📨 Enviar Despacho para Aprovação":"✈️ Despachar Lote & Registar Custos";
-  if(aj)aj.innerText=usuarioRole==="admin"?"ADMIN: aprove/rejeite solicitações do perfil ESTOQUE.":"As suas solicitações aparecem aqui. Somente o ADMIN pode aprovar/rejeitar.";
+  if(aj)aj.innerText=(usuarioRole==="admin"||usuarioRole==="gerente")?"ADMIN/GERENTE: aprove/rejeite solicitações do perfil ESTOQUE.":"As suas solicitações aparecem aqui. Somente ADMIN/GERENTE pode aprovar/rejeitar.";
   if(reg)reg.innerText=usuarioRole==="estoque"?"Prepare a compra e envie para aprovação. Nenhum saldo ou estoque muda antes da decisão do ADMIN.":"ADMIN pode registar a compra diretamente; o saldo é validado antes do débito.";
 }
 
@@ -10758,6 +10768,179 @@ setInterval(()=>{try{atualizarCentralNotificacoes();}catch(e){}},5000);
 </script>
 
 <!-- FASE 6.4.7: recebimento final e consolidação de custo exclusivos do ADMIN; transaction com todas as leituras antes das escritas. -->
+
+
+<script>
+/* =========================================================================
+   FASE 6.10 — GOVERNANÇA, GERENTE E RASTREABILIDADE RADICAL DE PRODUTOS
+   Camada aditiva sobre a Fase 6.9. Não apaga histórico e não altera fórmulas.
+   ========================================================================= */
+
+function f610EhGestor(){ return usuarioRole === "admin" || usuarioRole === "gerente"; }
+function f610Esc(v){ return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function f610Data(v){ try{ const d=v?.toDate?v.toDate():(v instanceof Date?v:new Date(v)); return isNaN(d?.getTime())?"-":d.toLocaleString("pt-PT"); }catch(e){return "-";} }
+
+// Matriz operacional GERENTE. Segurança efetiva continua reforçada nas Firestore Rules 6.10.
+usuarioPodeTransferencias = function(){ return f610EhGestor() || usuarioRole === "venda1" || usuarioRole === "venda2"; };
+usuarioPodeEncomendasFase5 = function(){ return f610EhGestor() || usuarioRole === "venda1" || usuarioRole === "venda2"; };
+usuarioPodeDespesasFase52 = function(){ return f610EhGestor(); };
+usuarioPodeTesouraria = function(){ return f610EhGestor(); };
+usuarioPodeFinanceiro = function(){ return f610EhGestor(); };
+usuarioPodeAuditoria61 = function(){ return f610EhGestor(); };
+usuarioPodeArmazemPT = function(){ return f610EhGestor() || usuarioRole === "estoque"; };
+usuarioPodeCaixa64 = function(){ return f610EhGestor() || usuarioRole === "venda1" || usuarioRole === "venda2"; };
+
+// Capital, saldo inicial e estrutura crítica continuam exclusivos do ADMIN.
+const _f610RegistrarCapital = typeof registrarCapitalFinanciamento === "function" ? registrarCapitalFinanciamento : null;
+if(_f610RegistrarCapital) registrarCapitalFinanciamento = function(){ if(usuarioRole!=="admin") return alert("Ação crítica: capital/financiamentos são exclusivos do ADMIN."); return _f610RegistrarCapital.apply(this,arguments); };
+const _f610RegistrarSaldoInicial = typeof registrarSaldoInicialTesouraria === "function" ? registrarSaldoInicialTesouraria : null;
+if(_f610RegistrarSaldoInicial) registrarSaldoInicialTesouraria = function(){ if(usuarioRole!=="admin") return alert("Ação crítica: Saldo Inicial é exclusivo do ADMIN."); return _f610RegistrarSaldoInicial.apply(this,arguments); };
+
+let rastreabilidadeProdutos610=[];
+let listenerRastreabilidade610=null;
+let movimentosRastreabilidade610=[];
+let listenerMovRastreabilidade610=null;
+
+function f610SnapshotProduto(p){
+  if(!p) return null;
+  return {nome:p.nome||"",barcode:p.barcode||"",categoria:p.categoria||"Geral",estoque:Number(p.estoque)||0,minimo:Number(p.minimo)||0,compra:Number(p.compra)||0,venda:Number(p.venda)||0,foto:p.foto||""};
+}
+function f610RastroPayload(produtoId,produtoNome,acao,antes,depois,extra={}){
+  const u=auth.currentUser;
+  return {produtoId:String(produtoId||""),produtoNome:String(produtoNome||"Produto"),acao:String(acao||"ACAO"),antes:antes||null,depois:depois||null,
+    quantidadeAntes:antes?Number(antes.estoque)||0:null,quantidadeDepois:depois?Number(depois.estoque)||0:null,
+    custoAntes:antes?Number(antes.compra)||0:null,custoDepois:depois?Number(depois.compra)||0:null,
+    vendaAntes:antes?Number(antes.venda)||0:null,vendaDepois:depois?Number(depois.venda)||0:null,
+    usuario:u?.email||"",nomeUsuario:usuarioNome||"",uid:u?.uid||"",role:usuarioRole||"",origemModulo:extra.origemModulo||"Estoque",
+    motivo:extra.motivo||"",referenciaId:extra.referenciaId||null,tipoOrigem:extra.tipoOrigem||"",data:new Date(),...extra};
+}
+
+function f610InjetarUI(){
+  if(document.getElementById("btnPageRastreabilidade")) return;
+  const navRef=document.getElementById("btnPageAuditoria")||document.getElementById("btnPageFinanceiro")||document.getElementById("btnPageMain");
+  if(navRef?.parentElement){
+    const b=document.createElement("button"); b.id="btnPageRastreabilidade"; b.className="nav-btn hidden"; b.innerHTML="📋 Rastreabilidade"; b.onclick=()=>navegarPara("paginaRastreabilidade");
+    navRef.parentElement.insertBefore(b,navRef.nextSibling);
+  }
+  const appEl=document.getElementById("app"); if(!appEl) return;
+  const sec=document.createElement("section"); sec.id="paginaRastreabilidade"; sec.className="hidden";
+  sec.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;"><div><h2 style="margin:0;">📋 Rastreabilidade de Produtos</h2><small>Criação, edição, exclusão, inventário e movimentos de estoque/venda com responsável, data/hora e antes/depois.</small></div><button id="btnInventarioInicial610" class="btn-warning hidden" onclick="confirmarInventarioInicial610()">✅ Confirmar Inventário Inicial</button></div>
+  <div class="form-grid" style="margin-top:14px;"><input id="rastBusca610" placeholder="Pesquisar produto, ação ou responsável..." oninput="renderizarRastreabilidade610()"><select id="rastAcao610" onchange="renderizarRastreabilidade610()"><option value="">Todas as ações</option><option>INVENTARIO_INICIAL_CONFIRMADO</option><option>PRODUTO_CRIADO</option><option>PRODUTO_EDITADO</option><option>PRODUTO_EXCLUIDO</option><option>ESTOQUE_ENTRADA</option><option>VENDA_SAIDA</option></select></div>
+  <div style="overflow-x:auto;"><table><thead><tr><th>Data/Hora</th><th>Produto</th><th>Ação</th><th>Antes → Depois</th><th>Responsável</th><th>Perfil</th><th>Origem</th><th>Detalhes</th></tr></thead><tbody id="listaRastreabilidade610"></tbody></table></div></div>`;
+  appEl.appendChild(sec);
+}
+
+const _f610Navegar=navegarPara;
+navegarPara=function(paginaId){
+  if(paginaId!=="paginaRastreabilidade") return _f610Navegar(paginaId);
+  if(!(f610EhGestor()||usuarioRole==="estoque")) return alert("Acesso restrito à Rastreabilidade de Produtos.");
+  document.querySelectorAll('[id^="pagina"]').forEach(el=>{ if(el.id!=="paginaRastreabilidade") el.classList.add("hidden"); });
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById("paginaRastreabilidade")?.classList.remove("hidden");
+  document.getElementById("btnPageRastreabilidade")?.classList.add("active");
+  iniciarRastreabilidade610();
+};
+
+function iniciarRastreabilidade610(){
+  if(!(f610EhGestor()||usuarioRole==="estoque")) return;
+  if(listenerRastreabilidade610) listenerRastreabilidade610();
+  let q=db.collection("produto_rastreabilidade");
+  if(usuarioRole==="estoque") q=q.where("uid","==",auth.currentUser.uid);
+  listenerRastreabilidade610=q.onSnapshot(s=>{rastreabilidadeProdutos610=[];s.forEach(d=>rastreabilidadeProdutos610.push({id:d.id,...d.data()}));rastreabilidadeProdutos610.sort((a,b)=>(b.data?.seconds||0)-(a.data?.seconds||0));renderizarRastreabilidade610();},e=>console.warn("Rastreabilidade",e));
+  if(f610EhGestor()){
+    if(listenerMovRastreabilidade610) listenerMovRastreabilidade610();
+    listenerMovRastreabilidade610=db.collection("movimentacoes").onSnapshot(s=>{movimentosRastreabilidade610=[];s.forEach(d=>movimentosRastreabilidade610.push({id:d.id,...d.data()}));renderizarRastreabilidade610();},e=>console.warn("Movimentos/rastreabilidade",e));
+  }else movimentosRastreabilidade610=[];
+}
+
+function f610MovParaRastro(m){
+  const tipo=String(m.tipo||"");
+  let acao="";
+  if(tipo==="saida" && !(typeof ehTransferenciaLegacy==="function"&&ehTransferenciaLegacy(m))) acao="VENDA_SAIDA";
+  else if(tipo==="entrada") acao="ESTOQUE_ENTRADA";
+  else if(tipo==="estorno_venda") acao="ESTORNO_VENDA";
+  else return null;
+  return {id:"mov_"+m.id,produtoId:m.produtoId||"",produtoNome:m.produto||"Produto",acao,data:m.data,usuario:m.usuario||"",nomeUsuario:m.nomeUsuario||"",uid:m.uid||"",role:m.role||"",origemModulo:m.loteId?"Armazém Portugal":(acao==="VENDA_SAIDA"?"Venda/POS":"Movimentações"),motivo:m.formaPagamento||"",referenciaId:m.id,
+    quantidadeMov:Number(m.quantidade)||0,valorMov:Number(m.valor)||0,custoUnitarioVenda:Number(m.custoUnitarioVenda)||0,precoUnitarioVenda:Number(m.precoUnitarioVenda)||0};
+}
+function renderizarRastreabilidade610(){
+  const tb=document.getElementById("listaRastreabilidade610"); if(!tb)return;
+  const b=String(document.getElementById("rastBusca610")?.value||"").toLowerCase(); const fa=document.getElementById("rastAcao610")?.value||"";
+  let all=[...rastreabilidadeProdutos610]; if(f610EhGestor()) all.push(...movimentosRastreabilidade610.map(f610MovParaRastro).filter(Boolean));
+  all.sort((a,b)=>{const da=a.data?.toMillis?a.data.toMillis():new Date(a.data||0).getTime();const dbb=b.data?.toMillis?b.data.toMillis():new Date(b.data||0).getTime();return dbb-da;});
+  all=all.filter(r=>(!fa||r.acao===fa)&&(!b||[r.produtoNome,r.acao,r.nomeUsuario,r.usuario,r.role,r.origemModulo,r.motivo].join(" ").toLowerCase().includes(b)));
+  tb.innerHTML=all.slice(0,800).map(r=>{let delta="—";if(r.antes||r.depois){const a=r.antes||{},d=r.depois||{};delta=`Qtd ${a.estoque??"—"} → ${d.estoque??"—"}<br><small>Custo ${Number(a.compra||0).toLocaleString('pt-PT')} → ${Number(d.compra||0).toLocaleString('pt-PT')} Db · Venda ${Number(a.venda||0).toLocaleString('pt-PT')} → ${Number(d.venda||0).toLocaleString('pt-PT')} Db</small>`;}else if(r.quantidadeMov){delta=`${r.acao==="VENDA_SAIDA"?"−":"+"}${r.quantidadeMov} un · ${Number(r.valorMov||0).toLocaleString('pt-PT')} Db`;}
+  return `<tr><td><small>${f610Data(r.data)}</small></td><td><b>${f610Esc(r.produtoNome)}</b><br><small style="font-family:monospace">${f610Esc(r.produtoId||"")}</small></td><td><b>${f610Esc(r.acao)}</b></td><td style="text-align:left">${delta}</td><td>${f610Esc(r.nomeUsuario||r.usuario||"-")}</td><td>${f610Esc(String(r.role||"").toUpperCase())}</td><td>${f610Esc(r.origemModulo||"-")}</td><td style="text-align:left"><small>${f610Esc(r.motivo||r.tipoOrigem||r.referenciaId||"-")}</small></td></tr>`;}).join("")||'<tr><td colspan="8" style="color:#94a3b8;">Nenhum evento de rastreabilidade.</td></tr>';
+}
+
+// Produto: criação/edição com rastro atómico.
+salvarProduto=async function(){
+  const gestor=f610EhGestor(), estq=usuarioRole==="estoque"; if(!gestor&&!estq)return alert("Acesso negado: perfil sem permissão para cadastrar produtos.");
+  const n=nome.value.trim(),bc=barcodeInput.value.trim(),cat=categoriaInput.value.trim()||"Geral",est=Number(estoque.value)||0,min=Number(minimo.value)||0,comp=gestor?(Number(compra.value)||0):0,vend=Number(venda.value)||0,img=fotoBase64.value||"";
+  if(!n||vend<=0)return alert("Preencha o nome do produto e o preço de venda."); if(est<0||min<0||comp<0)return alert("Estoque, mínimo e custo não podem ser negativos.");
+  const user=auth.currentUser;if(!user)return alert("Sessão expirada.");
+  try{
+    if(editandoProdutoId){
+      if(!gestor)return alert("Apenas ADMIN/GERENTE pode editar produto existente.");
+      const ref=db.collection("produtos").doc(editandoProdutoId), rast=db.collection("produto_rastreabilidade").doc();
+      await db.runTransaction(async tx=>{const d=await tx.get(ref);if(!d.exists)throw new Error("Produto não encontrado.");const antes=f610SnapshotProduto(d.data());const depois={nome:n,barcode:bc,categoria:cat,estoque:est,minimo:min,compra:comp,venda:vend,foto:img};tx.update(ref,depois);tx.set(rast,f610RastroPayload(ref.id,n,"PRODUTO_EDITADO",antes,depois,{motivo:"Edição manual de cadastro",origemModulo:"Estoque/Cadastro"}));});
+      cancelarEdicaoProduto();alert("Produto atualizado e rastreado com sucesso.");
+    }else{
+      const ref=db.collection("produtos").doc(),rast=db.collection("produto_rastreabilidade").doc();const depois={nome:n,barcode:bc,categoria:cat,estoque:est,minimo:min,compra:comp,venda:vend,foto:img};const batch=db.batch();batch.set(ref,depois);batch.set(rast,f610RastroPayload(ref.id,n,"PRODUTO_CRIADO",null,depois,{motivo:estq?"Cadastro pelo perfil ESTOQUE — custo inicial bloqueado em 0":"Cadastro manual",origemModulo:"Estoque/Cadastro"}));await batch.commit();cancelarEdicaoProduto();alert("Produto cadastrado e rastreado com sucesso.");
+    }
+  }catch(e){alert("Erro ao guardar produto: "+(e.message||e));}
+};
+
+editarProduto=function(id){if(!f610EhGestor())return alert("Apenas ADMIN/GERENTE pode editar o cadastro do produto.");const p=todosProdutos.find(x=>x.id===id);if(!p)return;editandoProdutoId=id;tituloFormProduto.innerText="✏️ Editar Produto";nome.value=p.nome||"";barcodeInput.value=p.barcode||"";categoriaInput.value=p.categoria||"";estoque.value=p.estoque;minimo.value=p.minimo;compra.value=p.compra;venda.value=p.venda;fotoBase64.value=p.foto||"";if(p.foto){previewFoto.src=p.foto;previewFoto.classList.remove("hidden");}else previewFoto.classList.add("hidden");btnSalvarProduto.innerText="Atualizar Produto";btnCancelarProduto.classList.remove("hidden");cardNovoProduto.scrollIntoView({behavior:"smooth"});};
+
+apagarProduto=async function(id){if(usuarioRole!=="admin")return alert("Ação crítica: somente o ADMIN pode excluir produtos.");const p=todosProdutos.find(x=>x.id===id);if(!p)return alert("Produto não encontrado.");const motivo=prompt(`Motivo obrigatório para excluir ${p.nome}:`,"");if(!motivo?.trim())return alert("Exclusão cancelada: informe o motivo.");if(!confirm("Confirmar exclusão? O produto sai do catálogo, mas o snapshot e a autoria ficam preservados na Rastreabilidade."))return;try{const pref=db.collection("produtos").doc(id),rref=db.collection("produto_rastreabilidade").doc();const b=db.batch();b.set(rref,f610RastroPayload(id,p.nome,"PRODUTO_EXCLUIDO",f610SnapshotProduto(p),null,{motivo:motivo.trim(),origemModulo:"Estoque/Cadastro",snapshotFinal:f610SnapshotProduto(p)}));b.delete(pref);await b.commit();alert("Produto excluído. Rastro preservado de forma imutável.");}catch(e){alert("Erro ao excluir: "+(e.message||e));}};
+
+adicionarEstoqueRapido=async function(id){if(!(f610EhGestor()||usuarioRole==="estoque"))return alert("Acesso negado.");const txt=prompt("Quantas unidades deseja adicionar ao estoque?","1");if(!txt)return;const qtd=Number(txt);if(!Number.isFinite(qtd)||qtd<=0)return alert("Quantidade inválida.");const motivo=prompt("Origem/motivo da entrada (obrigatório):","Reposição / entrada manual");if(!motivo?.trim())return alert("Entrada cancelada: informe a origem/motivo.");const ref=db.collection("produtos").doc(id);try{await db.runTransaction(async tx=>{const d=await tx.get(ref);if(!d.exists)throw new Error("Produto não encontrado.");const p=d.data(),antes=f610SnapshotProduto(p),depois={...antes,estoque:(Number(p.estoque)||0)+qtd};tx.update(ref,{estoque:depois.estoque});const mov=db.collection("movimentacoes").doc(),rast=db.collection("produto_rastreabilidade").doc();tx.set(mov,{produto:p.nome||"Produto",produtoId:id,tipo:"entrada",quantidade:qtd,valor:(Number(p.compra)||0)*qtd,formaPagamento:"Entrada Rápida Estoque",usuario:auth.currentUser.email,nomeUsuario:usuarioNome||"",uid:auth.currentUser.uid,role:usuarioRole,data:new Date()});tx.set(rast,f610RastroPayload(id,p.nome,"ESTOQUE_ENTRADA",antes,depois,{motivo:motivo.trim(),origemModulo:"Estoque/Entrada Rápida",referenciaId:mov.id}));});}catch(e){alert("Erro ao adicionar estoque: "+(e.message||e));}};
+
+// Tabela: GERENTE opera como gestor, mas botão apagar permanece exclusivo do ADMIN.
+const _f610RenderTabela=renderizarTabelaEstoque;
+renderizarTabelaEstoque=function(){
+  const busca=inputBusca.value.toLowerCase().trim(),catSel=selectCategoriaFiltro.value;let filtrados=todosProdutos.filter(p=>(String(p.nome||"").toLowerCase().includes(busca)||(p.barcode&&String(p.barcode).toLowerCase().includes(busca)))&&(catSel===""||p.categoria===catSel)&&(!filtrarApenasBaixoEstoque||((Number(p.estoque)||0)<=(Number(p.minimo)||0))));
+  let totalPaginas=Math.ceil(filtrados.length/itensPorPagina)||1;if(paginaAtual>totalPaginas)paginaAtual=totalPaginas;const itens=filtrados.slice((paginaAtual-1)*itensPorPagina,paginaAtual*itensPorPagina);const gestor=f610EhGestor(),estq=usuarioRole==="estoque",podeAdd=gestor||estq,podeVender=gestor||usuarioRole==="venda1"||usuarioRole==="venda2";
+  cabecalhoTabela.innerHTML=`<tr><th>Foto</th><th>Produto</th><th>Cód. Barras</th><th>Categoria</th><th>Qtd</th><th>Min</th>${gestor?'<th>Compra</th>':''}<th>Venda</th>${gestor?'<th>Lucro</th>':''}<th>Total</th>${podeAdd?'<th>+</th>':''}${podeVender?'<th>Vender</th>':''}${gestor?'<th>Ações</th>':''}</tr>`;
+  lista.innerHTML=itens.map(p=>{const q=Number(p.estoque)||0,m=Number(p.minimo)||0,c=Number(p.compra)||0,v=Number(p.venda)||0,l=v-c,t=q*v;return `<tr class="${q<=m?'baixo':''}"><td>${p.foto?`<img src="${p.foto}" class="img-thumb" alt="Foto">`:'📷'}</td><td><b>${f610Esc(p.nome)}</b></td><td>${p.barcode?`<span class="barcode-badge">${f610Esc(p.barcode)}</span>`:'-'}</td><td><small>${f610Esc(p.categoria||'Geral')}</small></td><td><b>${q}</b></td><td><small>${m}</small></td>${gestor?`<td>${c.toLocaleString('pt-PT')} Db</td>`:''}<td><b>${v.toLocaleString('pt-PT')} Db</b></td>${gestor?`<td style="font-weight:bold;">${l.toLocaleString('pt-PT')} Db</td>`:''}<td><b>${t.toLocaleString('pt-PT')} Db</b></td>${podeAdd?`<td><button class="btn-success btn-acao" onclick="adicionarEstoqueRapido('${p.id}')">＋</button></td>`:''}${podeVender?`<td><button class="btn-success btn-acao" onclick="abrirModalVenda('${p.id}')">🛒 Vender</button></td>`:''}${gestor?`<td><div class="acoes-cell"><button class="btn-secondary btn-acao" onclick="editarProduto('${p.id}')">✏️</button>${usuarioRole==='admin'?`<button class="btn-danger btn-acao" onclick="apagarProduto('${p.id}')">🗑️</button>`:''}</div></td>`:''}</tr>`;}).join('')||'<tr><td colspan="12" style="color:#94a3b8;">Nenhum produto encontrado.</td></tr>';
+  infoPaginacao.innerText=`Página ${paginaAtual} de ${totalPaginas} (${filtrados.length} produtos)`;btnPagAnt.disabled=paginaAtual===1;btnPagProx.disabled=paginaAtual===totalPaginas;
+};
+
+// GERENTE pode vender e abrir caixa como operador; exclusões/estrutura seguem ADMIN.
+const _f610AbrirVenda=abrirModalVenda;
+abrirModalVenda=function(id){ if(!(f610EhGestor()||usuarioRole==="venda1"||usuarioRole==="venda2"))return alert("Perfil sem permissão para venda."); return _f610AbrirVenda(id); };
+
+async function confirmarInventarioInicial610(){
+  if(usuarioRole!=="admin")return alert("Somente ADMIN confirma o Inventário Inicial.");
+  if(!todosProdutos.length)return alert("Nenhum produto carregado.");
+  const marcoRef=db.collection("sistema_marcos").doc("inventario_inicial");const existe=await marcoRef.get();if(existe.exists)return alert("O Inventário Inicial já foi confirmado e é imutável.");
+  const conferidoPor=prompt("Nome de quem fez a contagem física em São Tomé (obrigatório):","");if(!conferidoPor?.trim())return;
+  const obs=prompt("Observação do inventário:","Inventário físico de abertura do GO LIVE 01/09/2026");
+  if(!confirm(`CONFIRMAR INVENTÁRIO INICIAL?\n\n${todosProdutos.length} produtos serão marcados com o snapshot atual.\nEsta ação não altera quantidades e não pode ser apagada.`))return;
+  try{const batch=db.batch(),agora=new Date();batch.set(marcoRef,{tipo:"INVENTARIO_INICIAL",estado:"CONFIRMADO",data:agora,uid:auth.currentUser.uid,usuario:auth.currentUser.email,nomeUsuario:usuarioNome||"",role:usuarioRole,conferidoFisicamentePor:conferidoPor.trim(),observacao:obs||""});todosProdutos.forEach(p=>{const r=db.collection("produto_rastreabilidade").doc();const snap=f610SnapshotProduto(p);batch.set(r,{...f610RastroPayload(p.id,p.nome,"INVENTARIO_INICIAL_CONFIRMADO",null,snap,{motivo:obs||"Inventário inicial",origemModulo:"GO LIVE / Inventário",conferidoFisicamentePor:conferidoPor.trim()}),data:agora});});await batch.commit();alert("Inventário Inicial confirmado. Nenhuma quantidade foi alterada; o snapshot ficou preservado.");}catch(e){alert("Erro ao confirmar inventário: "+(e.message||e));}
+}
+
+function f610AplicarInterfaceGerente(){
+  f610InjetarUI();const btnR=document.getElementById("btnPageRastreabilidade");if(btnR)btnR.classList.toggle("hidden",!(f610EhGestor()||usuarioRole==="estoque"));const bi=document.getElementById("btnInventarioInicial610");if(bi)bi.classList.toggle("hidden",usuarioRole!=="admin");
+  if(usuarioRole==="gerente"){
+    ["cardRelatorio","cardCompras","btnPageTransferencias","btnPageEncomendas","btnPageDespesas","btnPageTesouraria","btnPageFinanceiro","btnPageAuditoria","cardNovoProduto","btnExportarEstoque","cardAuditoriaCaixas","btnPageArmazem"].forEach(id=>document.getElementById(id)?.classList.remove("hidden"));
+    document.getElementById("btnToggleFunc")?.classList.add("hidden");
+    document.getElementById("btnExportarHistorico")?.classList.remove("hidden");
+    document.getElementById("cardHistorico")?.classList.remove("hidden");
+    try{iniciarListenerTesouraria();iniciarListenerDespesasFase52();carregarAuditoriaCaixasAdmin();carregarArmazemPTTresPassos();}catch(e){console.warn("Fase 6.10 gerente:",e);}
+  }
+  if(usuarioRole==="estoque"){document.getElementById("btnPageRastreabilidade")?.classList.remove("hidden");}
+}
+
+auth.onAuthStateChanged(u=>{if(!u)return;setTimeout(()=>{f610AplicarInterfaceGerente();if(f610EhGestor()||usuarioRole==="estoque")iniciarRastreabilidade610();},700);});
+document.addEventListener("DOMContentLoaded",f610InjetarUI);
+setTimeout(f610InjetarUI,0);
+
+// Notificações: ADMIN vê ações sensíveis recentes da GERENTE/ESTOQUE na rastreabilidade.
+const _f610ConstruirNotif=typeof construirNotificacoesAdmin==="function"?construirNotificacoesAdmin:null;
+if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610ConstruirNotif();if(usuarioRole!=="admin")return n;const sens=(rastreabilidadeProdutos610||[]).filter(r=>r.uid!==auth.currentUser?.uid && ["PRODUTO_EDITADO","ESTOQUE_ENTRADA","PRODUTO_CRIADO"].includes(r.acao)).slice(0,12);sens.forEach(r=>n.push({tipo:r.acao==="PRODUTO_EDITADO"?"ALERTA":"INFO",modulo:"Estoque",titulo:r.acao.replaceAll("_"," "),mensagem:`${r.produtoNome||"Produto"} — ${r.nomeUsuario||r.usuario||"Utilizador"}`,pagina:"paginaRastreabilidade",ref:r.id}));return n;};
+</script>
 
 </body>
 </html>
