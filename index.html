@@ -4920,6 +4920,8 @@ function carregar() {
   if(listenerEncomendas) listenerEncomendas();
 
   const isAdmin = usuarioRole === "admin";
+  const isGerente = usuarioRole === "gerente";
+  const isGestorSupervisao = isAdmin || isGerente;
   const isEstoque = usuarioRole === "estoque";
   const podeAdicionarEstoque = isAdmin || isEstoque;
   const podeVender = isAdmin || usuarioRole === "venda1" || usuarioRole === "venda2";
@@ -4932,6 +4934,10 @@ function carregar() {
 
   if(isAdmin) {
     carregarFuncionarios();
+  }
+  // ADMIN e GERENTE partilham VISIBILIDADE GLOBAL de supervisão.
+  // Isto não concede à GERENTE ações estruturais exclusivas do ADMIN.
+  if(isGestorSupervisao) {
     carregarDespesas();
     carregarAuditoriaCaixasAdmin();
   }
@@ -9265,6 +9271,8 @@ function carregarEncomendas() {
     // A interface oficial da Fase 5 usa esta lista.
     if(typeof f5RenderizarLista === "function") f5RenderizarLista();
     if(typeof f5AtualizarResumoPagina === "function") f5AtualizarResumoPagina();
+    // Mantém o Resumo Operacional & Comercial sincronizado também para a GERENTE.
+    if(typeof processarDashboard === "function") processarDashboard();
   }, err => console.warn("Encomendas: acesso/erro", err));
 }
 
@@ -10071,7 +10079,9 @@ abrirModalFecharCaixa = function() {
 
 <script>
 function abrirDetalheCaixaLojaGlobal() {
-  if(usuarioRole !== "admin") return;
+  // Detalhamento é consulta/supervisão: ADMIN e GERENTE podem visualizar.
+  // Nenhuma ação financeira é criada por este modal.
+  if(usuarioRole !== "admin" && usuarioRole !== "gerente") return;
   const modal = document.getElementById("modalDetalheCaixaLojaGlobal");
   const resumoEl = document.getElementById("resumoDetalheCaixaLojaGlobal");
   const listaEl = document.getElementById("listaDetalheCaixaLojaGlobal");
@@ -11985,5 +11995,56 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 })();
 </script>
 
+
+<script>
+/* =========================================================================
+   FASE 6.14 — SUPERVISÃO GLOBAL DA GERENTE
+   Objetivo: equiparar ADMIN e GERENTE na VISIBILIDADE operacional, mantendo
+   intactas as ações estruturais e poderes exclusivos do ADMIN.
+   ========================================================================= */
+(function(){
+  function ehGerente614(){ return String(typeof usuarioRole!=="undefined"?usuarioRole:"").toLowerCase()==="gerente"; }
+
+  function sincronizarDashboardGerente614(){
+    if(!ehGerente614()) return;
+    const card=document.getElementById("cardRelatorio");
+    if(card) card.classList.remove("hidden");
+    try { if(typeof processarDashboard==="function") processarDashboard(); } catch(e){ console.warn("Dashboard GERENTE 6.14:",e); }
+  }
+
+  // Ao entrar no Dashboard, garante atualização com todos os datasets já carregados.
+  if(typeof navegarPara==="function"){
+    const anterior614=navegarPara;
+    navegarPara=function(paginaId){
+      const r=anterior614.apply(this,arguments);
+      if(paginaId==="paginaPrincipal" && ehGerente614()) setTimeout(sincronizarDashboardGerente614,0);
+      return r;
+    };
+  }
+
+  // A GERENTE tem a mesma leitura detalhada da composição do Caixa Loja do ADMIN.
+  // O modal permanece estritamente informativo/auditoria.
+  if(typeof abrirDetalheCaixaLojaGlobal==="function"){
+    const detalhe614=abrirDetalheCaixaLojaGlobal;
+    abrirDetalheCaixaLojaGlobal=function(){
+      if(!(String(usuarioRole||"").toLowerCase()==="admin" || ehGerente614())) return;
+      return detalhe614.apply(this,arguments);
+    };
+  }
+
+  auth.onAuthStateChanged(u=>{
+    if(!u) return;
+    setTimeout(()=>{
+      if(!ehGerente614()) return;
+      // O card já existia; apenas garantimos que a supervisora o vê preenchido.
+      sincronizarDashboardGerente614();
+      // Reaproveita listeners existentes; as funções desligam o listener anterior antes de recriar.
+      try { if(typeof carregarDespesas==="function") carregarDespesas(); } catch(e){ console.warn("Despesas GERENTE 6.14:",e); }
+      try { if(typeof carregarEncomendas==="function") carregarEncomendas(); } catch(e){ console.warn("Encomendas GERENTE 6.14:",e); }
+      setTimeout(sincronizarDashboardGerente614,350);
+    },900);
+  });
+})();
+</script>
 </body>
 </html>
