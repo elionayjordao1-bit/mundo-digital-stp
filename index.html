@@ -10959,6 +10959,194 @@ setTimeout(f610InjetarUI,0);
 const _f610ConstruirNotif=typeof construirNotificacoesAdmin==="function"?construirNotificacoesAdmin:null;
 if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610ConstruirNotif();if(usuarioRole!=="admin")return n;const sens=(rastreabilidadeProdutos610||[]).filter(r=>r.uid!==auth.currentUser?.uid && ["PRODUTO_EDITADO","ESTOQUE_ENTRADA","PRODUTO_CRIADO"].includes(r.acao)).slice(0,12);sens.forEach(r=>n.push({tipo:r.acao==="PRODUTO_EDITADO"?"ALERTA":"INFO",modulo:"Estoque",titulo:r.acao.replaceAll("_"," "),mensagem:`${r.produtoNome||"Produto"} — ${r.nomeUsuario||r.usuario||"Utilizador"}`,pagina:"paginaRastreabilidade",ref:r.id}));return n;};
 </script>
+<script>
+/* ==========================================================================\n   GOVERNANÇA DE INTERFACE — GERENTE — 01/09/2026\n   Objetivo: a interface reflete a permissão ANTES do utilizador preencher.\n   Backend/Rules continuam como segunda camada de segurança.\n   ========================================================================== */
+(function(){
+  const GID = "mdstp-gerente-policy-note";
 
-\n<script>\n/* ==========================================================================\n   GOVERNANÇA FINAL — MARCO OPERACIONAL 01/09/2026 — PATCH GERENTE/CAIXA\n   Interface coerente com RBAC. As validações internas continuam ativas.\n   ========================================================================== */\n(function(){\n  function role(){ return String(window.usuarioRole||"").toLowerCase(); }\n  function gerente(){ return role()==="gerente"; }\n  function admin(){ return role()==="admin"; }\n  function setVisible(id,yes){ const e=document.getElementById(id); if(e)e.classList.toggle("hidden",!yes); }\n  function removeOption(selectId,value){ const e=document.getElementById(selectId); if(!e)return; [...e.options].forEach(o=>{if(o.value===value)o.remove();}); }\n  function nota(id,text){ const e=document.getElementById(id); if(e)e.innerText=text; }\n\n  window.aplicarGovernancaFinal0109=function(){\n    const r=role();\n    if(!r)return;\n    if(gerente()){\n      // GERENTE: visão global e supervisão, sem operar Caixa/Turno.\n      setVisible("btnPageCaixa",true);\n      setVisible("btnPageTransferencias",true);\n      setVisible("btnPageEncomendas",true);\n      setVisible("btnPageDespesas",true);\n      setVisible("btnPageTesouraria",true);\n      setVisible("btnPageArmazem",true);\n      // Caixa Loja não é origem/destino operacional do GERENTE.\n      ["desp52ContaPagamento","tesOrigem","tesDestino","f5EncFormaSinal","transfFormaSTP"].forEach(id=>{\n        if(id==="desp52ContaPagamento"||id==="tesOrigem"||id==="tesDestino") removeOption(id,"caixa_stp");\n      });\n      // Ações estruturais permanecem visíveis apenas quando já desenhadas como consulta; botões ficam bloqueados.\n      const ids=["btnTesSaldoInicial","btnRegistrarSaldoInicialTesouraria","btnTesCapital","btnRegistrarCapitalFinanciamento"];\n      ids.forEach(id=>{const e=document.getElementById(id);if(e){e.disabled=true;e.title="Exclusivo do ADMIN";}});\n      nota("armazemAprovacaoAjuda","GERENTE: supervisiona e aprova/rejeita solicitações do ESTOQUE. Recebimento físico é executado pelo ESTOQUE; ações estruturais e acertos financeiros ficam no ADMIN.");\n    }\n    if(r==="estoque"){\n      nota("armazemAprovacaoAjuda","ESTOQUE: prepara compras e despachos e executa o recebimento físico em São Tomé. Aprovações são do GERENTE/ADMIN; acertos financeiros são do ADMIN.");\n    }\n  };\n\n  // Defesa de interface: gerente nunca executa operação que exija caixa físico.\n  if(typeof window.registrarTransferencia==="function"){\n    const f=window.registrarTransferencia; window.registrarTransferencia=async function(){\n      if(gerente() && document.getElementById("transfFormaSTP")?.value==="Dinheiro") return alert("GERENTE não movimenta Caixa Loja. Para operação em dinheiro físico, utilize um perfil operacional de venda com turno aberto.");\n      return f.apply(this,arguments);\n    };\n  }\n  if(typeof window.registrarDespesaFase52==="function"){\n    const f=window.registrarDespesaFase52; window.registrarDespesaFase52=async function(){\n      if(gerente() && document.getElementById("desp52ContaPagamento")?.value==="caixa_stp") return alert("GERENTE não movimenta Caixa Loja. Selecione Reserva/Banco/Portugal ou utilize o operador de caixa.");\n      return f.apply(this,arguments);\n    };\n  }\n  if(typeof window.registrarMovimentoTesouraria==="function"){\n    const f=window.registrarMovimentoTesouraria; window.registrarMovimentoTesouraria=async function(){\n      if(gerente()){const o=document.getElementById("tesOrigem")?.value,d=document.getElementById("tesDestino")?.value;if(o==="caixa_stp"||d==="caixa_stp")return alert("GERENTE não movimenta Caixa Loja. A operação física deve ser feita por perfil de caixa.");}\n      return f.apply(this,arguments);\n    };\n  }\n  // Reforço explícito das ações críticas.\n  if(typeof window.registrarSaldoInicialTesouraria==="function"){const f=window.registrarSaldoInicialTesouraria;window.registrarSaldoInicialTesouraria=function(){if(!admin())return alert("Saldo Inicial é exclusivo do ADMIN.");return f.apply(this,arguments);};}\n  if(typeof window.registrarCapitalFinanciamento==="function"){const f=window.registrarCapitalFinanciamento;window.registrarCapitalFinanciamento=function(){if(!admin())return alert("Capital, financiamentos e retiradas são exclusivos do ADMIN.");return f.apply(this,arguments);};}\n\n  // Aplicar após renderizações e mudanças de página sem remover proteções de backend.\n  document.addEventListener("click",()=>setTimeout(window.aplicarGovernancaFinal0109,0),true);\n  setInterval(window.aplicarGovernancaFinal0109,1500);\n})();\n</script>\n</body>
+  function roleAtual(){
+    try { return String(typeof usuarioRole !== "undefined" ? usuarioRole : "").toLowerCase(); }
+    catch(e) { return ""; }
+  }
+  function ehGerente(){ return roleAtual() === "gerente"; }
+  function ehAdmin(){ return roleAtual() === "admin"; }
+
+  function visivel(id, sim){
+    const e=document.getElementById(id);
+    if(e) e.classList.toggle("hidden", !sim);
+  }
+
+  function removerOpcao(selectId, value){
+    const sel=document.getElementById(selectId);
+    if(!sel) return;
+    [...sel.options].forEach(o=>{ if(String(o.value)===String(value)) o.remove(); });
+  }
+
+  function selecionarSeExiste(selectId, value){
+    const sel=document.getElementById(selectId);
+    if(!sel) return;
+    if([...sel.options].some(o=>String(o.value)===String(value))) sel.value=value;
+  }
+
+  function inserirNota(container, key, html, cor="#1d4ed8", bg="#eff6ff", borda="#bfdbfe"){
+    if(!container) return;
+    const id=GID+"-"+key;
+    let n=document.getElementById(id);
+    if(!n){
+      n=document.createElement("div");
+      n.id=id;
+      n.style.cssText=`margin:10px 0;padding:11px 13px;border-radius:9px;border:1px solid ${borda};background:${bg};color:${cor};font-size:12.5px;line-height:1.55;`;
+      const h=container.querySelector("h3,p");
+      if(h && h.nextSibling) h.parentNode.insertBefore(n,h.nextSibling); else container.prepend(n);
+    }
+    n.innerHTML=html;
+  }
+
+  function bloquearFormularioCardPorTitulo(titulo, key, mensagem, manterKpis){
+    const cards=[...document.querySelectorAll("#paginaTesouraria .card")];
+    const card=cards.find(c=>[...c.querySelectorAll("h3")].some(h=>h.textContent.includes(titulo)));
+    if(!card) return;
+    inserirNota(card,key,`🔒 <b>${mensagem}</b><br>O GERENTE pode consultar os valores e o histórico, mas esta operação estrutural só pode ser executada pelo ADMIN.`,"#92400e","#fffbeb","#fde68a");
+    card.querySelectorAll("input,select,button,textarea").forEach(el=>{
+      // filtros/KPIs não existem nestes dois cards; todos os controlos são operacionais
+      el.disabled=true;
+      el.title="Exclusivo do ADMIN";
+      el.style.cursor="not-allowed";
+    });
+    if(!manterKpis){
+      // saldo inicial: mantém a função visível, mas sem aparência de formulário operacional
+      const fg=card.querySelector(".form-grid");
+      if(fg){ fg.style.opacity="0.45"; fg.style.pointerEvents="none"; }
+    } else {
+      // capital: KPIs continuam legíveis; apenas a zona operacional fica bloqueada
+      const fg=card.querySelector(".form-grid");
+      if(fg){ fg.style.opacity="0.45"; fg.style.pointerEvents="none"; }
+      const resumo=card.querySelector("#tesCapResumo");
+      if(resumo){ resumo.innerHTML="🔒 Operação exclusiva do ADMIN. Os indicadores acima permanecem disponíveis para supervisão."; }
+    }
+  }
+
+  function governarTransferenciasGerente(){
+    const pagina=document.getElementById("paginaTransferencias");
+    if(!pagina) return;
+    removerOpcao("transfFormaSTP","Dinheiro");
+    selecionarSeExiste("transfFormaSTP","Transferencia");
+    const card=pagina.querySelector(".card");
+    inserirNota(card,"transferencias",`👁️ <b>Perfil GERENTE:</b> pode registar transferências sem movimentar dinheiro físico do Caixa Loja. A opção <b>Dinheiro no caixa</b> foi retirada desta interface. Operações físicas devem ser realizadas por um perfil operacional com turno aberto.`,"#5b21b6","#f5f3ff","#ddd6fe");
+    try{ if(typeof calcularTransferencia==="function") calcularTransferencia(); }catch(e){}
+  }
+
+  function governarEncomendasGerente(){
+    const pagina=document.getElementById("paginaEncomendas");
+    if(!pagina) return;
+    removerOpcao("f5EncFormaSinal","Dinheiro");
+    selecionarSeExiste("f5EncFormaSinal","Transferencia");
+    const card=pagina.querySelector(".card");
+    inserirNota(card,"encomendas",`👁️ <b>Perfil GERENTE:</b> pode gerir encomendas, mas não recebe sinal em dinheiro pelo Caixa Loja. Para este perfil, o sinal disponível é <b>Transferência / DobraPay</b>. Recebimento físico deve ser feito por um operador com turno aberto.`,"#0f766e","#ecfeff","#99f6e4");
+  }
+
+  function governarDespesasGerente(){
+    const pagina=document.getElementById("paginaDespesas");
+    if(!pagina) return;
+    removerOpcao("desp52ContaPagamento","caixa_stp");
+    const sel=document.getElementById("desp52ContaPagamento");
+    if(sel && !sel.value) selecionarSeExiste("desp52ContaPagamento","responsavel_stp");
+    const card=pagina.querySelector(".card");
+    inserirNota(card,"despesas",`👁️ <b>Perfil GERENTE:</b> pode registar despesas por <b>Responsável / Reserva, Banco STP / DobraPay ou Portugal / EUR</b>. A origem <b>Caixa Loja</b> não aparece porque exige operação física de caixa.`,"#9a3412","#fff7ed","#fed7aa");
+    try{ if(typeof atualizarResumoDespesaFase52==="function") atualizarResumoDespesaFase52(); }catch(e){}
+  }
+
+  function governarTesourariaGerente(){
+    const pagina=document.getElementById("paginaTesouraria");
+    if(!pagina) return;
+
+    bloquearFormularioCardPorTitulo("Saldo Inicial / Abertura da Tesouraria","saldo-inicial","Saldo Inicial / Abertura da Tesouraria — exclusivo do ADMIN.",false);
+    bloquearFormularioCardPorTitulo("Capital, Financiamentos & Retiradas","capital","Capital, financiamentos, retiradas e amortizações — exclusivos do ADMIN.",true);
+
+    removerOpcao("tesOrigem","caixa_stp");
+    removerOpcao("tesDestino","caixa_stp");
+    const origem=document.getElementById("tesOrigem"), destino=document.getElementById("tesDestino");
+    if(origem && !origem.value) selecionarSeExiste("tesOrigem","responsavel_stp");
+    if(destino && !destino.value) selecionarSeExiste("tesDestino","banco_stp");
+
+    const cards=[...pagina.querySelectorAll(".card")];
+    const cardMov=cards.find(c=>[...c.querySelectorAll("h3")].some(h=>h.textContent.includes("Transferir entre Contas")));
+    inserirNota(cardMov,"tesouraria-mov",`👁️ <b>Perfil GERENTE:</b> pode movimentar apenas contas não físicas: <b>Responsável / Reserva, Banco STP / DobraPay e Portugal / EUR</b>. O <b>Caixa Loja</b> foi retirado da origem e do destino para evitar operações que este perfil não pode concluir.`,"#0f766e","#f0fdfa","#99f6e4");
+    try{ if(typeof atualizarResumoMovTesouraria==="function") atualizarResumoMovTesouraria(); }catch(e){}
+  }
+
+  function governarCaixaGerente(){
+    visivel("btnPageCaixa",true);
+    document.getElementById("cardPainelTurnoAtual")?.classList.add("hidden");
+    document.getElementById("cardPrestacaoContasTurnos")?.classList.add("hidden");
+    document.getElementById("cardAuditoriaCaixas")?.classList.remove("hidden");
+    const card=document.getElementById("cardAuditoriaCaixas");
+    if(card){
+      const h=card.querySelector("h3");
+      if(h && h.textContent.includes("(Administração)")) h.textContent="📜 Auditoria de Caixas & Turnos (Supervisão)";
+      const p=card.querySelector("p");
+      if(p) p.textContent="Visão global para supervisão: consulte turnos abertos e fechados por funcionário. O perfil GERENTE não abre, fecha nem movimenta Caixa/Turno.";
+    }
+  }
+
+  function aplicar(){
+    if(!ehGerente()) return;
+    ["btnPageCaixa","btnPageTransferencias","btnPageEncomendas","btnPageDespesas","btnPageTesouraria","btnPageArmazem","btnPageFinanceiro","btnPageAuditoria"].forEach(id=>visivel(id,true));
+    governarCaixaGerente();
+    governarTransferenciasGerente();
+    governarEncomendasGerente();
+    governarDespesasGerente();
+    governarTesourariaGerente();
+  }
+
+  // Segunda camada na interface: mesmo que algum controlo seja recriado, a ação física continua bloqueada.
+  if(typeof registrarTransferencia==="function"){
+    const original=registrarTransferencia;
+    registrarTransferencia=async function(){
+      if(ehGerente() && document.getElementById("transfFormaSTP")?.value==="Dinheiro") return alert("Operação física de Caixa Loja indisponível para GERENTE.");
+      return original.apply(this,arguments);
+    };
+  }
+  if(typeof f5RegistrarEncomenda==="function"){
+    const original=f5RegistrarEncomenda;
+    f5RegistrarEncomenda=async function(){
+      if(ehGerente() && document.getElementById("f5EncFormaSinal")?.value==="Dinheiro") return alert("Recebimento de sinal em dinheiro exige perfil operacional com Caixa/Turno.");
+      return original.apply(this,arguments);
+    };
+  }
+  if(typeof registrarDespesaFase52==="function"){
+    const original=registrarDespesaFase52;
+    registrarDespesaFase52=async function(){
+      if(ehGerente() && document.getElementById("desp52ContaPagamento")?.value==="caixa_stp") return alert("Caixa Loja não é uma origem disponível para o perfil GERENTE.");
+      return original.apply(this,arguments);
+    };
+  }
+  if(typeof registrarMovimentoTesouraria==="function"){
+    const original=registrarMovimentoTesouraria;
+    registrarMovimentoTesouraria=async function(){
+      if(ehGerente()){
+        const o=document.getElementById("tesOrigem")?.value, d=document.getElementById("tesDestino")?.value;
+        if(o==="caixa_stp"||d==="caixa_stp") return alert("Movimentos com Caixa Loja exigem perfil operacional de caixa.");
+      }
+      return original.apply(this,arguments);
+    };
+  }
+  if(typeof registrarSaldoInicialTesouraria==="function"){
+    const original=registrarSaldoInicialTesouraria;
+    registrarSaldoInicialTesouraria=function(){ if(!ehAdmin()) return alert("Saldo Inicial é exclusivo do ADMIN."); return original.apply(this,arguments); };
+  }
+  if(typeof registrarCapitalFinanciamento==="function"){
+    const original=registrarCapitalFinanciamento;
+    registrarCapitalFinanciamento=function(){ if(!ehAdmin()) return alert("Capital, financiamentos, retiradas e amortizações são exclusivos do ADMIN."); return original.apply(this,arguments); };
+  }
+
+  // A role é carregada do Firestore após o login; reaplica de forma idempotente durante a inicialização
+  // e sempre que o utilizador muda de módulo.
+  let tentativas=0;
+  const boot=setInterval(()=>{ aplicar(); if(++tentativas>=20) clearInterval(boot); },350);
+  document.addEventListener("click",()=>setTimeout(aplicar,0),true);
+  if(typeof auth!=="undefined" && auth?.onAuthStateChanged){ auth.onAuthStateChanged(u=>{ if(u) setTimeout(aplicar,500); }); }
+})();
+</script>
+</body>
 </html>
