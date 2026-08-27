@@ -11793,5 +11793,197 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 <!-- FASE 6.12.2 — Correção de coerência: GERENTE + Substituição Operacional = contexto operacional de Caixa.
      Mantém role real GERENTE, separação ADMIN e isolamento de sessão já homologado. -->
+
+<script>
+/* =========================================================================
+   FASE 6.13 — GOVERNANÇA FINAL DE CAIXA
+   - VENDA1/VENDA2 e GERENTE em substituição solicitam Suprimento/Sangria.
+   - ADMIN executa diretamente no próprio turno, sem auto-solicitação.
+   - GERENTE nunca decide pedido criado por ADMIN.
+   - GERENTE pode receber prestação de contas de VENDA1/VENDA2, nunca a própria.
+   - Mensagens de Transferências/Encomendas/Despesas refletem a exceção da
+     Substituição Operacional.
+   ========================================================================= */
+(function(){
+  const f613Conta = id => ({caixa_stp:'Caixa Loja',responsavel_stp:'Responsável / Reserva',banco_stp:'Banco STP / DobraPay'})[id] || id || '-';
+  const f613Fmt = v => (Number(v)||0).toLocaleString('pt-PT',{maximumFractionDigits:2})+' Db';
+  const f613EmSub = () => usuarioRole==='gerente' && window.f611SubAtiva===true;
+  const f613Operador = () => usuarioRole==='admin'||usuarioRole==='venda1'||usuarioRole==='venda2'||f613EmSub();
+
+  function f613AjustarMensagensGerente(){
+    const t=document.getElementById('mdstp-gerente-policy-note-transferencias');
+    if(t) t.innerHTML=`👁️ <b>Perfil GERENTE:</b> fora da Substituição Operacional, pode registar transferências sem movimentar dinheiro físico do Caixa Loja. <b>Quando estiver em Substituição Operacional, com o seu próprio Caixa/Turno aberto, também pode executar as operações físicas autorizadas em dinheiro.</b>`;
+    const e=document.getElementById('mdstp-gerente-policy-note-encomendas');
+    if(e) e.innerHTML=`👁️ <b>Perfil GERENTE:</b> fora da Substituição Operacional, gere encomendas sem receber sinal em dinheiro pelo Caixa Loja. <b>Quando estiver em Substituição Operacional, com o seu próprio Caixa/Turno aberto, pode receber fisicamente os valores autorizados pelo seu Caixa.</b>`;
+    const d=document.getElementById('mdstp-gerente-policy-note-despesas');
+    if(d) d.innerHTML=`👁️ <b>Perfil GERENTE:</b> pode registar despesas por <b>Responsável / Reserva, Banco STP / DobraPay ou Portugal / EUR</b>. Fora da Substituição, o Caixa Loja não é uma origem disponível. <b>Em Substituição Operacional, com o seu próprio Caixa/Turno aberto, o Caixa Loja pode ser usado nas despesas físicas autorizadas.</b>`;
+  }
+
+
+  function f613AjustarTabelaAprovacoes(){
+    const tbody=document.getElementById('listaAprovacoesCaixa612'); if(!tbody) return;
+    const lista=[...(window.f612SolicitacoesCaixa||[])].sort((a,b)=>{const da=a.dataSolicitacao?.toMillis?a.dataSolicitacao.toMillis():new Date(a.dataSolicitacao||0).getTime();const dbb=b.dataSolicitacao?.toMillis?b.dataSolicitacao.toMillis():new Date(b.dataSolicitacao||0).getTime();return dbb-da;});
+    [...tbody.querySelectorAll('tr')].forEach((tr,i)=>{const p=lista[i];if(!p)return;const td=tr.querySelectorAll('td');if(p.execucaoDiretaAdmin===true){if(td[1])td[1].innerHTML=`<b>${p.tipo}</b><br><small>EXECUÇÃO DIRETA ADMIN</small>`;if(td[9])td[9].innerHTML='—';}if(usuarioRole==='gerente'&&String(p.solicitanteRole||'').toLowerCase()==='admin'&&td[9])td[9].innerHTML='<span style="font-size:11px;color:#92400e;font-weight:700;">Somente ADMIN</span>';});
+  }
+  function f613AjustarInterfaceCaixa(){
+    const bloco=document.getElementById('blocoSangriaCaixa');
+    if(bloco) bloco.classList.toggle('hidden', !f613Operador());
+    const painel=document.getElementById('painelCaixaAberto');
+    if(!painel || painel.classList.contains('hidden')) return;
+    const btnSup=painel.querySelector('button[onclick="registrarSuprimentoCaixa()"]');
+    const btnSan=painel.querySelector('button[onclick="registrarSangriaCaixa()"]');
+    const p=painel.querySelector('.card p');
+    if(usuarioRole==='admin'){
+      if(btnSup) btnSup.innerHTML='⚡ Executar Suprimento';
+      if(btnSan) btnSan.innerHTML='⚡ Executar Sangria';
+      if(p) p.innerHTML='Como <b>ADMIN</b>, Suprimento e Sangria no seu próprio turno são <b>executados diretamente</b>, com confirmação, validação de saldo, Caixa + Tesouraria atómicos e auditoria. Não é criada uma solicitação pendente para autoaprovação.';
+    }else{
+      if(btnSup) btnSup.innerHTML='📨 Solicitar Suprimento';
+      if(btnSan) btnSan.innerHTML='📨 Solicitar Sangria';
+      if(p) p.innerHTML='Suprimento e Sangria são <b>solicitações</b>. Enquanto estiverem pendentes, <b>não alteram o dinheiro esperado</b>. O movimento físico e a Tesouraria só são executados após aprovação autorizada.';
+    }
+  }
+
+  async function f613ResumoCaixa(caixaId,valorInicial){
+    const s=await db.collection('movimentacoes').where('caixaId','==',caixaId).get();
+    const movs=[]; s.forEach(d=>movs.push({id:d.id,...d.data()}));
+    return calcularResumoCaixaFisico(movs,caixaId,valorInicial);
+  }
+
+  async function f613ExecutarAdmin(tipo){
+    if(usuarioRole!=='admin') return null;
+    if(!navigator.onLine) return alert('A execução exige ligação à internet.');
+    if(!caixaAtualObj||caixaAtualObj.estado!=='aberto') return alert('Abra primeiro o seu Caixa/Turno.');
+    const u=auth.currentUser; if(!u) return alert('Sessão expirada.');
+    const sup=tipo==='SUPRIMENTO';
+    const valor=Number(document.getElementById(sup?'caixaSuprimentoValor':'caixaSangriaValor')?.value);
+    const conta=sup?document.getElementById('caixaSuprimentoOrigem')?.value:document.getElementById('caixaSangriaDestino')?.value;
+    const texto=(document.getElementById(sup?'caixaSuprimentoObs':'caixaSangriaMotivo')?.value||'').trim();
+    if(!valor||valor<=0) return alert('Informe um valor maior que zero.');
+    if(!conta) return alert(sup?'Selecione a origem do dinheiro.':'Selecione o destino da Sangria.');
+    if(!sup&&!texto) return alert('Informe obrigatoriamente o motivo/destino operacional da Sangria.');
+    const origem=sup?conta:'caixa_stp', destino=sup?'caixa_stp':conta;
+
+    let saldoFisicoAntes=null;
+    if(!sup){
+      try{
+        const r=await f613ResumoCaixa(caixaAtualObj.id,caixaAtualObj.valorInicial);
+        saldoFisicoAntes=Number.isFinite(r.disponivel)?r.disponivel:r.esperado;
+        if(saldoFisicoAntes<valor) return alert(`Saldo físico insuficiente.\n\nDisponível: ${f613Fmt(Math.max(0,saldoFisicoAntes))}\nSangria: ${f613Fmt(valor)}`);
+      }catch(e){ return alert('Não foi possível validar o saldo físico do Caixa: '+(e.message||e)); }
+    }
+
+    if(!confirm(`EXECUTAR ${tipo} — ADMIN?\n\n${f613Conta(origem)} → ${f613Conta(destino)}\nValor: ${f613Fmt(valor)}\n\nA operação será executada imediatamente e de forma atómica em Caixa + Tesouraria, com rastro de auditoria.`)) return;
+
+    const id=db.collection('caixa_movimento_solicitacoes').doc().id;
+    const reqRef=db.collection('caixa_movimento_solicitacoes').doc(id);
+    const caixaRef=db.collection('caixas').doc(caixaAtualObj.id);
+    const movFisRef=db.collection('movimentacoes').doc(id);
+    const tesRef=db.collection('tesouraria_movimentos').doc(id);
+    const saldoId=sup?origem:destino;
+    const saldoRef=db.collection('tesouraria_saldos').doc(saldoId);
+    try{
+      await db.runTransaction(async tx=>{
+        const caixaDoc=await tx.get(caixaRef);
+        const saldoDoc=await tx.get(saldoRef);
+        const movDoc=await tx.get(movFisRef);
+        const tesDoc=await tx.get(tesRef);
+        if(!caixaDoc.exists||caixaDoc.data().estado!=='aberto') throw new Error('O Caixa/Turno já não está aberto.');
+        if(caixaDoc.data().uid!==u.uid) throw new Error('ADMIN só pode executar diretamente no próprio turno aberto.');
+        if(!saldoDoc.exists) throw new Error(`Saldo-resumo de ${f613Conta(saldoId)} não está inicializado.`);
+        if(movDoc.exists||tesDoc.exists) throw new Error('Rastro financeiro já existe. Operação bloqueada para evitar duplicação.');
+        const saldoAntes=Number(saldoDoc.data().saldo)||0;
+        let saldoDepois=sup?saldoAntes-valor:saldoAntes+valor;
+        if(sup&&saldoAntes<valor) throw new Error(`Saldo insuficiente em ${f613Conta(origem)}.`);
+        if(saldoDepois<0) throw new Error('A operação produziria saldo negativo.');
+        const agora=new Date();
+        const motivo=sup?(texto||`Suprimento executado de ${f613Conta(origem)}`):texto;
+
+        tx.set(reqRef,{
+          tipo,estado:'APROVADA_EXECUTADA',valor,moeda:'STN',caixaId:caixaAtualObj.id,origemConta:origem,destinoConta:destino,
+          motivo,observacao:texto,solicitanteUid:u.uid,solicitanteUsuario:u.email||'',solicitanteNome:usuarioNome||'',solicitanteRole:'admin',
+          contexto:'execucao_direta_admin',dataSolicitacao:agora,execucaoDiretaAdmin:true,decididoPorUid:u.uid,decididoPorUsuario:u.email||'',
+          decididoPorNome:usuarioNome||'',decididoPorRole:'admin',dataDecisao:agora,executadoEm:agora,movimentoCaixaId:id,movimentoTesourariaId:id,
+          saldoContaAntes:saldoAntes,saldoContaDepois:saldoDepois,...(saldoFisicoAntes==null?{}:{saldoFisicoAntes})
+        });
+        tx.update(saldoRef,{saldo:saldoDepois,moeda:'STN',atualizadoEm:agora,atualizadoPorUid:u.uid,atualizadoPorUsuario:u.email||'',ultimoPedidoCaixaId:id,ultimoUid:u.uid,ultimoCaixaId:caixaAtualObj.id,ultimaOperacao:sup?'suprimento_caixa_aprovado':'sangria_caixa_aprovada'});
+        tx.set(movFisRef,{
+          produto:sup?`Suprimento ADMIN — ${f613Conta(origem)}`:`Sangria ADMIN — ${f613Conta(destino)}`,
+          tipo:sup?'suprimento_caixa':'sangria_caixa',quantidade:1,valor,formaPagamento:sup?'Dinheiro - Suprimento ADMIN':'Dinheiro - Sangria ADMIN',
+          origemTesouraria:origem,destinoTesouraria:destino,solicitacaoCaixaId:id,observacao:motivo,usuario:u.email||'',nomeUsuario:usuarioNome||'',uid:u.uid,role:'admin',contexto:'execucao_direta_admin',caixaId:caixaAtualObj.id,data:agora,aprovadoPorUid:u.uid,aprovadoPorUsuario:u.email||'',aprovadoPorNome:usuarioNome||'',aprovadoPorRole:'admin'
+        });
+        tx.set(tesRef,{
+          tipo:sup?'suprimento_caixa_aprovado':'sangria_caixa_aprovada',natureza:'movimento_interno',origem,destino,moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:valor,valorDestino:valor,taxaReferencia:null,taxaAplicada:null,margemDb:0,caixaId:caixaAtualObj.id,solicitacaoCaixaId:id,solicitanteUid:u.uid,solicitanteUsuario:u.email||'',solicitanteNome:usuarioNome||'',observacao:motivo,usuario:u.email||'',nomeUsuario:usuarioNome||'',uid:u.uid,role:'admin',data:agora
+        });
+      });
+      const idValor=sup?'caixaSuprimentoValor':'caixaSangriaValor', idObs=sup?'caixaSuprimentoObs':'caixaSangriaMotivo';
+      if(document.getElementById(idValor)) document.getElementById(idValor).value='';
+      if(document.getElementById(idObs)) document.getElementById(idObs).value='';
+      alert(`${sup?'Suprimento':'Sangria'} executado diretamente pelo ADMIN. Caixa e Tesouraria foram atualizados uma única vez.`);
+    }catch(e){ alert('Execução bloqueada: '+(e.message||e)); }
+  }
+
+  const f613SupAnterior=registrarSuprimentoCaixa;
+  const f613SanAnterior=registrarSangriaCaixa;
+  registrarSuprimentoCaixa=async function(){ if(usuarioRole==='admin') return f613ExecutarAdmin('SUPRIMENTO'); return f613SupAnterior.apply(this,arguments); };
+  registrarSangriaCaixa=async function(){ if(usuarioRole==='admin') return f613ExecutarAdmin('SANGRIA'); return f613SanAnterior.apply(this,arguments); };
+
+  // Segurança adicional no cliente: GERENTE nunca decide pedido criado por ADMIN.
+  if(typeof window.f612Decidir==='function'){
+    const f613DecidirAnterior=window.f612Decidir;
+    window.f612Decidir=async function(id,aprovar){
+      const p=(window.f612SolicitacoesCaixa||[]).find(x=>x.id===id);
+      if(usuarioRole==='gerente' && p && String(p.solicitanteRole||'').toLowerCase()==='admin'){
+        return alert('A GERENTE não pode aprovar nem rejeitar movimentos originados pelo ADMIN.');
+      }
+      return f613DecidirAnterior.apply(this,arguments);
+    };
+  }
+
+  function f613PodeGerenteReceber(c){
+    return usuarioRole==='gerente' && c && c.uid!==auth.currentUser?.uid && ['venda1','venda2'].includes(String(c.role||'').toLowerCase());
+  }
+  const f613RenderPrestOriginal=renderizarPrestacoesTurnos63;
+  renderizarPrestacoesTurnos63=function(){
+    if(usuarioRole==='admin') return f613RenderPrestOriginal.apply(this,arguments);
+    const card=document.getElementById('cardPrestacaoContasTurnos'), tbody=document.getElementById('listaPrestacaoContasTurnos');
+    if(!card||!tbody) return;
+    if(usuarioRole!=='gerente'){ card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+    const sujeitos=(todosCaixasAuditoria||[]).filter(turnoSujeitoPrestacao63).sort((a,b)=>{const da=a.dataFechamento?.toDate?a.dataFechamento.toDate():new Date(0);const dbb=b.dataFechamento?.toDate?b.dataFechamento.toDate():new Date(0);return dbb-da;});
+    const pendentes=sujeitos.filter(c=>valorPendenteTurno63(c)>0.0001), prestados=sujeitos.filter(c=>valorPendenteTurno63(c)<=0.0001), total=pendentes.reduce((s,c)=>s+valorPendenteTurno63(c),0);
+    const set=(id,v)=>{const e=document.getElementById(id);if(e)e.innerText=v;}; set('prestKpiTotalPendente',f613Fmt(total));set('prestKpiTurnosPendentes',String(pendentes.length));set('prestKpiTurnosPrestados',String(prestados.length));
+    tbody.innerHTML=sujeitos.map(c=>{const contado=Math.max(0,Number(c.dinheiroContado)||0),prest=valorPrestadoTurno63(c),pend=valorPendenteTurno63(c),dt=c.dataFechamento?.toDate?c.dataFechamento.toDate().toLocaleString('pt-PT'):'-';let acao='<span style="color:#15803d;font-weight:700;">Concluída</span>';if(pend>0.0001){acao=f613PodeGerenteReceber(c)?`<button class="btn-success btn-acao" onclick="abrirModalPrestacaoContas('${c.id}')">💵 Registar Entrega</button>`:(c.uid===auth.currentUser?.uid?'<span style="font-size:11px;color:#92400e;font-weight:700;">ADMIN confirma prestação própria</span>':'<span style="font-size:11px;color:#64748b;">Sem ação para GERENTE</span>');}return `<tr><td><b>#${String(c.id||'').substring(0,6).toUpperCase()}</b></td><td>${c.usuario||'-'}</td><td><small>${dt}</small></td><td><b>${f613Fmt(contado)}</b></td><td>${f613Fmt(prest)}</td><td><b>${f613Fmt(pend)}</b></td><td>${badgePrestacao63(c)}</td><td>${acao}</td></tr>`;}).join('')||'<tr><td colspan="8" style="color:#94a3b8;">Nenhum turno sujeito a prestação.</td></tr>';
+  };
+
+  const f613AbrirPrestOriginal=abrirModalPrestacaoContas;
+  abrirModalPrestacaoContas=function(caixaId){
+    if(usuarioRole==='admin') return f613AbrirPrestOriginal.apply(this,arguments);
+    const c=(todosCaixasAuditoria||[]).find(x=>x.id===caixaId);
+    if(usuarioRole!=='gerente'||!f613PodeGerenteReceber(c)) return alert('A GERENTE só pode registar entrega de turnos fechados de VENDA1/VENDA2 e nunca do próprio turno.');
+    const pendente=valorPendenteTurno63(c); if(pendente<=0.0001)return alert('A prestação deste turno já está concluída.');
+    prestacaoTurnoSelecionado63=c; const resumo=document.getElementById('prestacaoResumoModal'),valor=document.getElementById('prestacaoValorModal'),obs=document.getElementById('prestacaoObsModal');
+    if(resumo) resumo.innerHTML=`<b>Turno:</b> #${c.id.substring(0,8).toUpperCase()}<br><b>Funcionário que entrega:</b> ${c.usuario||'-'}<br><b>Recebido por:</b> ${usuarioNome||auth.currentUser?.email||'GERENTE'} (GERENTE)<br><b>Dinheiro contado:</b> ${f613Fmt(c.dinheiroContado)}<br><b>Já entregue:</b> ${f613Fmt(valorPrestadoTurno63(c))}<br><b>Pendente:</b> <span style="color:#b45309;font-weight:800;">${f613Fmt(pendente)}</span>`;
+    if(valor){valor.value=String(pendente);valor.max=String(pendente);} if(obs)obs.value=''; document.getElementById('modalPrestacaoContas')?.classList.remove('hidden');
+  };
+
+  const f613ConfirmPrestOriginal=confirmarPrestacaoContas;
+  confirmarPrestacaoContas=async function(){
+    if(usuarioRole==='admin') return f613ConfirmPrestOriginal.apply(this,arguments);
+    if(usuarioRole!=='gerente') return alert('Acesso restrito.');
+    if(!navigator.onLine)return alert('A prestação de contas exige ligação à internet.');
+    const user=auth.currentUser,cLocal=prestacaoTurnoSelecionado63;if(!user||!cLocal)return alert('Turno não selecionado.');
+    if(!f613PodeGerenteReceber(cLocal))return alert('A GERENTE não pode confirmar a própria prestação e só recebe turnos de VENDA1/VENDA2.');
+    const valor=Number(document.getElementById('prestacaoValorModal')?.value)||0,obs=document.getElementById('prestacaoObsModal')?.value.trim()||'';if(valor<=0)return alert('Informe um valor entregue maior que zero.');
+    const caixaRef=db.collection('caixas').doc(cLocal.id),movRef=db.collection('tesouraria_movimentos').doc(),agora=new Date(),btn=document.getElementById('btnConfirmarPrestacao');if(btn)btn.disabled=true;
+    try{await db.runTransaction(async tx=>{const snap=await tx.get(caixaRef);if(!snap.exists)throw new Error('Turno não encontrado.');const c=snap.data();if(c.estado!=='fechado'||c.prestacaoObrigatoria!==true)throw new Error('Turno indisponível para prestação.');if(c.uid===user.uid)throw new Error('A GERENTE não pode confirmar a própria prestação.');if(!['venda1','venda2'].includes(String(c.role||'').toLowerCase()))throw new Error('A GERENTE só pode receber prestação de VENDA1/VENDA2.');const contado=Math.max(0,Number(c.dinheiroContado)||0),ja=Math.max(0,Number(c.valorPrestado)||0),pend=Math.max(0,contado-ja);if(pend<=0.0001)throw new Error('Turno já totalmente prestado.');if(valor>pend+0.0001)throw new Error(`O valor informado excede o pendente (${f613Fmt(pend)}).`);const novo=ja+valor,novoPend=Math.max(0,contado-novo),st=novoPend<=0.0001?'PRESTADA':'PARCIAL';tx.update(caixaRef,{valorPrestado:novo,valorPrestacaoPendente:novoPend,estadoPrestacao:st,ultimaPrestacaoData:agora,ultimaPrestacaoUid:user.uid,ultimaPrestacaoUsuario:user.email,ultimaPrestacaoNome:usuarioNome||'',ultimaPrestacaoRole:'gerente',ultimaPrestacaoMovimentoId:movRef.id});tx.set(movRef,{tipo:'prestacao_contas',origem:'prestacao_turno',destino:'responsavel_stp',moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:valor,valorDestino:valor,taxaReferencia:null,taxaAplicada:null,margemDb:0,turnoId:cLocal.id,funcionarioTurnoUid:c.uid||null,funcionarioTurno:c.usuario||'',recebidoPorUid:user.uid,recebidoPorUsuario:user.email||'',recebidoPorNome:usuarioNome||'',recebidoPorRole:'gerente',observacao:obs||`Prestação recebida pela GERENTE — turno #${cLocal.id.substring(0,8).toUpperCase()}`,usuario:user.email||'',nomeUsuario:usuarioNome||'',uid:user.uid,role:'gerente',data:agora});});fecharModalPrestacaoContas();alert('Prestação registada pela GERENTE. O valor passou de Prestação Pendente para Responsável / Reserva, sem gerar receita nem despesa.');}catch(e){alert('Erro ao registar prestação: '+(e.message||e));}finally{if(btn)btn.disabled=false;}
+  };
+
+  // Reaplica a governança após mudanças normais de UI sem criar listeners Firestore.
+  document.addEventListener('click',()=>setTimeout(()=>{f613AjustarInterfaceCaixa();f613AjustarMensagensGerente();f613AjustarTabelaAprovacoes();if(usuarioRole==='gerente')renderizarPrestacoesTurnos63();},30),true);
+  setInterval(()=>{if(auth.currentUser){f613AjustarInterfaceCaixa();f613AjustarMensagensGerente();f613AjustarTabelaAprovacoes();if(usuarioRole==='gerente')renderizarPrestacoesTurnos63();}},1500);
+})();
+</script>
+
 </body>
 </html>
