@@ -2800,7 +2800,12 @@ function renderizarPainelCaixaFechado() {
   formAberturaCaixa.classList.remove("hidden");
   painelCaixaAberto.classList.add("hidden");
 
-  let canOpen = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2");
+  // FASE 6.12.2 — GERENTE em Substituição Operacional é operador de Caixa,
+  // sem alterar o perfil real nem conceder poderes de ADMIN.
+  const gerenteEmSubstituicao = usuarioRole === "gerente" &&
+    typeof window.f611EmSubstituicaoOperacional === "function" &&
+    window.f611EmSubstituicaoOperacional();
+  let canOpen = (usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2" || gerenteEmSubstituicao);
   if(!canOpen) {
     statusTurnoBox.innerHTML = `<p style="margin:0; color:#ef4444; font-weight:bold;">⚠️ A sua função (${usuarioRole.toUpperCase()}) não realiza operações de caixa.</p>`;
     formAberturaCaixa.classList.add("hidden");
@@ -11006,6 +11011,11 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   }
   function ehGerente(){ return roleAtual() === "gerente"; }
   function ehAdmin(){ return roleAtual() === "admin"; }
+  function gerenteEmSubstituicaoUI(){
+    try {
+      return ehGerente() && typeof window.f611EmSubstituicaoOperacional === "function" && window.f611EmSubstituicaoOperacional();
+    } catch(e) { return false; }
+  }
 
   function visivel(id, sim){
     const e=document.getElementById(id);
@@ -11065,6 +11075,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   function governarTransferenciasGerente(){
     const pagina=document.getElementById("paginaTransferencias");
     if(!pagina) return;
+    if(gerenteEmSubstituicaoUI()) return; // contexto operacional: a camada 6.11 repõe Dinheiro e os guards exigem turno aberto.
     removerOpcao("transfFormaSTP","Dinheiro");
     selecionarSeExiste("transfFormaSTP","Transferencia");
     const card=pagina.querySelector(".card");
@@ -11075,6 +11086,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   function governarEncomendasGerente(){
     const pagina=document.getElementById("paginaEncomendas");
     if(!pagina) return;
+    if(gerenteEmSubstituicaoUI()) return; // recebimento físico é permitido apenas no contexto operacional ativo.
     removerOpcao("f5EncFormaSinal","Dinheiro");
     selecionarSeExiste("f5EncFormaSinal","Transferencia");
     const card=pagina.querySelector(".card");
@@ -11084,6 +11096,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   function governarDespesasGerente(){
     const pagina=document.getElementById("paginaDespesas");
     if(!pagina) return;
+    if(gerenteEmSubstituicaoUI()) return; // Caixa Loja volta a ser opção operacional durante a substituição.
     removerOpcao("desp52ContaPagamento","caixa_stp");
     const sel=document.getElementById("desp52ContaPagamento");
     if(sel && !sel.value) selecionarSeExiste("desp52ContaPagamento","responsavel_stp");
@@ -11095,25 +11108,31 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   function governarTesourariaGerente(){
     const pagina=document.getElementById("paginaTesouraria");
     if(!pagina) return;
+    // Mesmo em substituição, Saldo Inicial/Capital continuam exclusivos do ADMIN.
+    // Apenas a participação física do Caixa Loja é reativada pela camada operacional 6.11.
 
     bloquearFormularioCardPorTitulo("Saldo Inicial / Abertura da Tesouraria","saldo-inicial","Saldo Inicial / Abertura da Tesouraria — exclusivo do ADMIN.",false);
     bloquearFormularioCardPorTitulo("Capital, Financiamentos & Retiradas","capital","Capital, financiamentos, retiradas e amortizações — exclusivos do ADMIN.",true);
 
-    removerOpcao("tesOrigem","caixa_stp");
-    removerOpcao("tesDestino","caixa_stp");
-    const origem=document.getElementById("tesOrigem"), destino=document.getElementById("tesDestino");
-    if(origem && !origem.value) selecionarSeExiste("tesOrigem","responsavel_stp");
-    if(destino && !destino.value) selecionarSeExiste("tesDestino","banco_stp");
+    if(!gerenteEmSubstituicaoUI()) {
+      removerOpcao("tesOrigem","caixa_stp");
+      removerOpcao("tesDestino","caixa_stp");
+      const origem=document.getElementById("tesOrigem"), destino=document.getElementById("tesDestino");
+      if(origem && !origem.value) selecionarSeExiste("tesOrigem","responsavel_stp");
+      if(destino && !destino.value) selecionarSeExiste("tesDestino","banco_stp");
 
-    const cards=[...pagina.querySelectorAll(".card")];
-    const cardMov=cards.find(c=>[...c.querySelectorAll("h3")].some(h=>h.textContent.includes("Transferir entre Contas")));
-    inserirNota(cardMov,"tesouraria-mov",`👁️ <b>Perfil GERENTE:</b> pode movimentar apenas contas não físicas: <b>Responsável / Reserva, Banco STP / DobraPay e Portugal / EUR</b>. O <b>Caixa Loja</b> foi retirado da origem e do destino para evitar operações que este perfil não pode concluir.`,"#0f766e","#f0fdfa","#99f6e4");
+      const cards=[...pagina.querySelectorAll(".card")];
+      const cardMov=cards.find(c=>[...c.querySelectorAll("h3")].some(h=>h.textContent.includes("Transferir entre Contas")));
+      inserirNota(cardMov,"tesouraria-mov",`👁️ <b>Perfil GERENTE:</b> pode movimentar apenas contas não físicas: <b>Responsável / Reserva, Banco STP / DobraPay e Portugal / EUR</b>. O <b>Caixa Loja</b> foi retirado da origem e do destino para evitar operações que este perfil não pode concluir.`,"#0f766e","#f0fdfa","#99f6e4");
+    }
     try{ if(typeof atualizarResumoMovTesouraria==="function") atualizarResumoMovTesouraria(); }catch(e){}
   }
 
   function governarCaixaGerente(){
     visivel("btnPageCaixa",true);
-    document.getElementById("cardPainelTurnoAtual")?.classList.add("hidden");
+    const emSub = gerenteEmSubstituicaoUI();
+    document.getElementById("cardPainelTurnoAtual")?.classList.toggle("hidden", !emSub);
+    // Prestação de contas continua fora do contexto operacional da GERENTE; a entrega é tratada na governança própria.
     document.getElementById("cardPrestacaoContasTurnos")?.classList.add("hidden");
     document.getElementById("cardAuditoriaCaixas")?.classList.remove("hidden");
     const card=document.getElementById("cardAuditoriaCaixas");
@@ -11121,7 +11140,12 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       const h=card.querySelector("h3");
       if(h && h.textContent.includes("(Administração)")) h.textContent="📜 Auditoria de Caixas & Turnos (Supervisão)";
       const p=card.querySelector("p");
-      if(p) p.textContent="Visão global para supervisão: consulte turnos abertos e fechados por funcionário. O perfil GERENTE não abre, fecha nem movimenta Caixa/Turno.";
+      if(p) p.textContent = emSub
+        ? "Substituição Operacional ativa: a GERENTE pode abrir, operar e fechar o seu próprio Caixa/Turno. A supervisão global permanece disponível e a identidade real continua GERENTE."
+        : "Visão global para supervisão: consulte turnos abertos e fechados por funcionário. O perfil GERENTE não abre, fecha nem movimenta Caixa/Turno fora da Substituição Operacional.";
+    }
+    if(emSub){
+      try { caixaAtualObj?.estado === "aberto" ? renderizarPainelCaixaAberto() : renderizarPainelCaixaFechado(); } catch(e) {}
     }
   }
 
@@ -11139,30 +11163,30 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   if(typeof registrarTransferencia==="function"){
     const original=registrarTransferencia;
     registrarTransferencia=async function(){
-      if(ehGerente() && document.getElementById("transfFormaSTP")?.value==="Dinheiro") return alert("Operação física de Caixa Loja indisponível para GERENTE.");
+      if(ehGerente() && !gerenteEmSubstituicaoUI() && document.getElementById("transfFormaSTP")?.value==="Dinheiro") return alert("Operação física de Caixa Loja indisponível para GERENTE fora da Substituição Operacional.");
       return original.apply(this,arguments);
     };
   }
   if(typeof f5RegistrarEncomenda==="function"){
     const original=f5RegistrarEncomenda;
     f5RegistrarEncomenda=async function(){
-      if(ehGerente() && document.getElementById("f5EncFormaSinal")?.value==="Dinheiro") return alert("Recebimento de sinal em dinheiro exige perfil operacional com Caixa/Turno.");
+      if(ehGerente() && !gerenteEmSubstituicaoUI() && document.getElementById("f5EncFormaSinal")?.value==="Dinheiro") return alert("Recebimento de sinal em dinheiro exige Substituição Operacional ativa e Caixa/Turno aberto.");
       return original.apply(this,arguments);
     };
   }
   if(typeof registrarDespesaFase52==="function"){
     const original=registrarDespesaFase52;
     registrarDespesaFase52=async function(){
-      if(ehGerente() && document.getElementById("desp52ContaPagamento")?.value==="caixa_stp") return alert("Caixa Loja não é uma origem disponível para o perfil GERENTE.");
+      if(ehGerente() && !gerenteEmSubstituicaoUI() && document.getElementById("desp52ContaPagamento")?.value==="caixa_stp") return alert("Caixa Loja não é uma origem disponível para GERENTE fora da Substituição Operacional.");
       return original.apply(this,arguments);
     };
   }
   if(typeof registrarMovimentoTesouraria==="function"){
     const original=registrarMovimentoTesouraria;
     registrarMovimentoTesouraria=async function(){
-      if(ehGerente()){
+      if(ehGerente() && !gerenteEmSubstituicaoUI()){
         const o=document.getElementById("tesOrigem")?.value, d=document.getElementById("tesDestino")?.value;
-        if(o==="caixa_stp"||d==="caixa_stp") return alert("Movimentos com Caixa Loja exigem perfil operacional de caixa.");
+        if(o==="caixa_stp"||d==="caixa_stp") return alert("Movimentos com Caixa Loja exigem Substituição Operacional ativa.");
       }
       return original.apply(this,arguments);
     };
@@ -11280,6 +11304,8 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
     const painel=document.getElementById('cardPainelTurnoAtual');
     if(emSub611()){
       painel?.classList.remove('hidden');
+      // Unifica também a renderização do Caixa: GERENTE+Substituição é contexto operacional válido.
+      try { caixaAtualObj?.estado === 'aberto' ? renderizarPainelCaixaAberto() : renderizarPainelCaixaFechado(); } catch(e) {}
       // As opções físicas só ficam disponíveis com contexto operacional; as próprias funções ainda exigem turno aberto.
       reporOpcao611('transfFormaSTP','Dinheiro','Dinheiro');
       reporOpcao611('f5EncFormaSinal','Dinheiro','Dinheiro');
@@ -11759,5 +11785,8 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 })();
 </script>
 
+
+<!-- FASE 6.12.2 — Correção de coerência: GERENTE + Substituição Operacional = contexto operacional de Caixa.
+     Mantém role real GERENTE, separação ADMIN e isolamento de sessão já homologado. -->
 </body>
 </html>
