@@ -11377,5 +11377,387 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 })();
 </script>
 
+<script>
+/* =========================================================================
+   FASE 6.12.1 — SUPRIMENTO / SANGRIA COM APROVAÇÃO + TESOURARIA ATÓMICA
+   Preserva toda a arquitetura anterior. Substitui somente os caminhos antigos
+   que criavam dinheiro físico diretamente no Caixa.
+   ========================================================================= */
+(function(){
+  let solicitacoesCaixa612 = [];
+  let listenerSolicitacoesCaixa612 = null;
+  let bootUid612 = null;
+  window.f612SolicitacoesCaixa = solicitacoesCaixa612;
+
+  const esc612 = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const data612 = v => { try { const d=v?.toDate?v.toDate():new Date(v); return isNaN(d.getTime())?"-":d.toLocaleString("pt-PT"); } catch(e){ return "-"; } };
+  const conta612 = id => ({caixa_stp:"Caixa Loja",responsavel_stp:"Responsável / Reserva",banco_stp:"Banco STP / DobraPay"})[id] || id || "-";
+  const fmt612 = v => (Number(v)||0).toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db";
+  const emSub612 = () => usuarioRole === "gerente" && window.f611SubAtiva === true;
+  const operador612 = () => usuarioRole === "admin" || usuarioRole === "venda1" || usuarioRole === "venda2" || emSub612();
+  const gestor612 = () => usuarioRole === "admin" || usuarioRole === "gerente";
+
+  function garantirInterface612(){
+    const blocoFisico = document.querySelector('#painelCaixaAberto .card');
+    if(blocoFisico){
+      const titulo = blocoFisico.querySelector('h4');
+      if(titulo && titulo.textContent.includes('Movimentos físicos do caixa')) titulo.textContent = '💵 Solicitações de movimentos físicos do caixa';
+      const p = blocoFisico.querySelector('p');
+      if(p) p.innerHTML = 'Suprimento e Sangria agora são <b>solicitações</b>. Enquanto estiverem pendentes, <b>não alteram o dinheiro esperado</b>. O movimento físico e a Tesouraria só são executados após aprovação autorizada.';
+
+      const selOrig = document.getElementById('caixaSuprimentoOrigem');
+      if(selOrig && selOrig.dataset.f612 !== '1'){
+        selOrig.innerHTML = '<option value="responsavel_stp">Responsável / Reserva</option><option value="banco_stp">Banco STP / DobraPay — requer ADMIN</option>';
+        selOrig.dataset.f612='1';
+      }
+      const btnSup = blocoFisico.querySelector('button[onclick="registrarSuprimentoCaixa()"]');
+      if(btnSup) btnSup.innerHTML='📨 Solicitar Suprimento';
+
+      const blocoSangria=document.getElementById('blocoSangriaCaixa');
+      if(blocoSangria && !document.getElementById('caixaSangriaDestino')){
+        const sel=document.createElement('select'); sel.id='caixaSangriaDestino';
+        sel.innerHTML='<option value="responsavel_stp">Destino: Responsável / Reserva</option><option value="banco_stp">Destino: Banco STP / DobraPay — requer ADMIN</option>';
+        const motivo=document.getElementById('caixaSangriaMotivo'); blocoSangria.insertBefore(sel,motivo||null);
+      }
+      const btnSan = blocoFisico.querySelector('button[onclick="registrarSangriaCaixa()"]');
+      if(btnSan) btnSan.innerHTML='📨 Solicitar Sangria';
+    }
+
+    const pag=document.getElementById('paginaCaixa');
+    if(pag && !document.getElementById('cardAprovacoesCaixa612')){
+      const card=document.createElement('div');
+      card.id='cardAprovacoesCaixa612'; card.className='card'; card.style.borderLeft='4px solid #0f766e';
+      card.innerHTML=`
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div><h3 style="color:#0f766e;margin-bottom:4px;">✅ Aprovações de Movimentos de Caixa</h3>
+          <p id="textoAprovacoesCaixa612" style="margin:0;color:#64748b;font-size:13px;">Suprimentos e Sangrias pendentes não movimentam dinheiro.</p></div>
+          <span id="badgeAprovacoesCaixa612" class="badge-em-transito">0 pendente(s)</span>
+        </div>
+        <div class="table-responsive" style="margin-top:12px;"><table style="min-width:1100px;">
+          <thead><tr><th>Data</th><th>Tipo</th><th>Solicitante</th><th>Turno</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Motivo</th><th>Estado</th><th>Decisão</th></tr></thead>
+          <tbody id="listaAprovacoesCaixa612"><tr><td colspan="10" style="color:#94a3b8;">A carregar...</td></tr></tbody>
+        </table></div>`;
+      const alvo=document.getElementById('cardAuditoriaCaixas');
+      pag.insertBefore(card,alvo||null);
+    }
+
+    // Corrige a explicação antiga da Tesouraria sem retirar o restante conteúdo.
+    document.querySelectorAll('#paginaTesouraria li').forEach(li=>{
+      if(li.textContent.includes('Para Responsável → Caixa')) li.innerHTML='Para <b>Responsável → Caixa</b>, use a Gestão de Caixa: a operação nasce como solicitação e só movimenta dinheiro após aprovação.';
+      if(li.textContent.includes('Para Caixa → Responsável')) li.innerHTML='Para <b>Caixa → Responsável</b>, use a Gestão de Caixa: a Sangria nasce como solicitação e só movimenta dinheiro após aprovação.';
+    });
+  }
+
+  function badge612(st){
+    if(st==='APROVADA_EXECUTADA') return '<span class="badge-concluido">✅ APROVADA / EXECUTADA</span>';
+    if(st==='REJEITADA') return '<span style="background:#fee2e2;color:#991b1b;padding:4px 8px;border-radius:12px;font-weight:700;font-size:11px;">❌ REJEITADA</span>';
+    return '<span class="badge-em-transito">⏳ PENDENTE</span>';
+  }
+
+  function podeDecidir612(p){
+    const u=auth.currentUser; if(!u || p.estado!=='PENDENTE_APROVACAO') return false;
+    if(usuarioRole==='admin') return true;
+    if(usuarioRole!=='gerente' || p.solicitanteUid===u.uid) return false;
+    return (p.tipo==='SUPRIMENTO' && p.origemConta==='responsavel_stp') ||
+           (p.tipo==='SANGRIA' && p.destinoConta==='responsavel_stp');
+  }
+
+  function renderizarSolicitacoesCaixa612(){
+    garantirInterface612();
+    const tbody=document.getElementById('listaAprovacoesCaixa612'); if(!tbody)return;
+    const lista=[...solicitacoesCaixa612].sort((a,b)=>{
+      const da=a.dataSolicitacao?.toMillis?a.dataSolicitacao.toMillis():new Date(a.dataSolicitacao||0).getTime();
+      const dbb=b.dataSolicitacao?.toMillis?b.dataSolicitacao.toMillis():new Date(b.dataSolicitacao||0).getTime();
+      return dbb-da;
+    });
+    const pend=lista.filter(x=>x.estado==='PENDENTE_APROVACAO').length;
+    const badge=document.getElementById('badgeAprovacoesCaixa612'); if(badge)badge.textContent=`${pend} pendente(s)`;
+    const texto=document.getElementById('textoAprovacoesCaixa612');
+    if(texto) texto.textContent = usuarioRole==='gerente'
+      ? 'GERENTE decide pedidos de terceiros apenas em Responsável / Reserva ↔ Caixa. Pedido próprio e qualquer movimento com Banco exigem ADMIN.'
+      : usuarioRole==='admin'
+        ? 'ADMIN pode decidir pedidos autorizados. A aprovação executa Caixa + Tesouraria numa única transação.'
+        : 'Os seus pedidos aparecem aqui. Enquanto PENDENTES, não alteram o saldo físico do turno.';
+    tbody.innerHTML=lista.map(p=>{
+      const acoes=podeDecidir612(p)?`<button class="btn-success btn-acao" onclick="window.f612Decidir('${p.id}',true)">✅ Aprovar</button> <button class="btn-danger btn-acao" onclick="window.f612Decidir('${p.id}',false)">❌ Rejeitar</button>`:(p.estado==='PENDENTE_APROVACAO'?'<span style="font-size:11px;color:#64748b;">Aguardando autorização</span>':'—');
+      return `<tr><td><small>${data612(p.dataSolicitacao)}</small></td><td><b>${esc612(p.tipo)}</b></td><td>${esc612(p.solicitanteNome||p.solicitanteUsuario||'-')}<br><small>${esc612(String(p.solicitanteRole||'').toUpperCase())}${p.contexto==='substituicao_operacional'?' · SUBSTITUIÇÃO':''}</small></td><td>#${esc612(String(p.caixaId||'').substring(0,8).toUpperCase())}</td><td>${esc612(conta612(p.origemConta))}</td><td>${esc612(conta612(p.destinoConta))}</td><td><b>${fmt612(p.valor)}</b></td><td style="text-align:left;">${esc612(p.motivo||p.observacao||'-')}</td><td>${badge612(p.estado)}</td><td><div class="acoes-cell">${acoes}</div></td></tr>`;
+    }).join('') || '<tr><td colspan="10" style="color:#94a3b8;">Nenhuma solicitação de movimento de caixa.</td></tr>';
+  }
+
+  function pararListener612(){
+    if(listenerSolicitacoesCaixa612){ try{listenerSolicitacoesCaixa612();}catch(e){} listenerSolicitacoesCaixa612=null; }
+    solicitacoesCaixa612=[]; window.f612SolicitacoesCaixa=solicitacoesCaixa612; bootUid612=null;
+    try{document.getElementById('cardAprovacoesCaixa612')?.remove();}catch(e){}
+  }
+  window.f612ResetSessao=pararListener612;
+
+  function iniciarListener612(){
+    pararListener612(); garantirInterface612();
+    const u=auth.currentUser; if(!u||!usuarioRole)return; bootUid612=u.uid;
+    let q=db.collection('caixa_movimento_solicitacoes');
+    if(!gestor612()) q=q.where('solicitanteUid','==',u.uid);
+    listenerSolicitacoesCaixa612=q.onSnapshot(s=>{
+      if(!auth.currentUser||auth.currentUser.uid!==bootUid612)return;
+      solicitacoesCaixa612=[]; s.forEach(d=>solicitacoesCaixa612.push({id:d.id,...d.data()}));
+      window.f612SolicitacoesCaixa=solicitacoesCaixa612; renderizarSolicitacoesCaixa612();
+    },e=>console.warn('Solicitações Caixa 6.12.1:',e));
+  }
+
+  async function criarPedido612(tipo){
+    garantirInterface612();
+    if(!navigator.onLine)return alert('A solicitação exige ligação à internet.');
+    if(!operador612())return alert('Este perfil não está em contexto operacional de Caixa.');
+    if(!caixaAtualObj||caixaAtualObj.estado!=='aberto')return alert('Abra primeiro o seu Caixa/Turno.');
+    const u=auth.currentUser;if(!u)return alert('Sessão expirada.');
+    const sup=tipo==='SUPRIMENTO';
+    const valor=Number(document.getElementById(sup?'caixaSuprimentoValor':'caixaSangriaValor')?.value);
+    const conta=sup?document.getElementById('caixaSuprimentoOrigem')?.value:document.getElementById('caixaSangriaDestino')?.value;
+    const texto=(document.getElementById(sup?'caixaSuprimentoObs':'caixaSangriaMotivo')?.value||'').trim();
+    if(!valor||valor<=0)return alert('Informe um valor maior que zero.');
+    if(!conta)return alert(sup?'Selecione a origem do dinheiro.':'Selecione o destino da Sangria.');
+    if(!sup && !texto)return alert('Informe obrigatoriamente o motivo/destino operacional da Sangria.');
+
+    if(!sup){
+      try{
+        const r=await obterResumoCaixaAtualFirestore();
+        const disponivel=r?(Number.isFinite(r.disponivel)?r.disponivel:r.esperado):0;
+        if(disponivel<valor)return alert(`Saldo físico insuficiente.\n\nDisponível no caixa: ${fmt612(Math.max(0,disponivel))}\nSangria solicitada: ${fmt612(valor)}`);
+      }catch(e){return alert('Não foi possível validar o saldo físico do Caixa: '+(e.message||e));}
+    }
+
+    const origem=sup?conta:'caixa_stp', destino=sup?'caixa_stp':conta;
+    const banco=origem==='banco_stp'||destino==='banco_stp';
+    const msg=`Enviar solicitação de ${tipo}?\n\n${conta612(origem)} → ${conta612(destino)}\nValor: ${fmt612(valor)}${banco?'\n\n⚠ Movimento com Banco exige decisão do ADMIN.':''}\n\nEnquanto estiver PENDENTE, nenhum dinheiro será movimentado.`;
+    if(!confirm(msg))return;
+    const ref=db.collection('caixa_movimento_solicitacoes').doc();
+    const contexto=emSub612()?'substituicao_operacional':'operacao_normal';
+    try{
+      await ref.set({
+        tipo,estado:'PENDENTE_APROVACAO',valor,moeda:'STN',caixaId:caixaAtualObj.id,origemConta:origem,destinoConta:destino,
+        motivo:sup?(texto||`Suprimento solicitado de ${conta612(origem)}`):texto,observacao:texto,
+        solicitanteUid:u.uid,solicitanteUsuario:u.email||'',solicitanteNome:usuarioNome||'',solicitanteRole:usuarioRole,contexto,dataSolicitacao:new Date()
+      });
+      const idValor=sup?'caixaSuprimentoValor':'caixaSangriaValor'; const idObs=sup?'caixaSuprimentoObs':'caixaSangriaMotivo';
+      if(document.getElementById(idValor))document.getElementById(idValor).value=''; if(document.getElementById(idObs))document.getElementById(idObs).value='';
+      alert(`${tipo==='SUPRIMENTO'?'Suprimento':'Sangria'} enviado para aprovação. Nenhum saldo foi alterado.`);
+    }catch(e){alert('Erro ao enviar solicitação: '+(e.message||e));}
+  }
+
+  // Substitui somente as duas funções antigas; o restante do Caixa permanece intacto.
+  registrarSuprimentoCaixa=async function(){ return criarPedido612('SUPRIMENTO'); };
+  registrarSangriaCaixa=async function(){ return criarPedido612('SANGRIA'); };
+
+  async function obterResumoCaixaPorId612(caixaId,valorInicial){
+    const s=await db.collection('movimentacoes').where('caixaId','==',caixaId).get();
+    const movs=[]; s.forEach(d=>movs.push({id:d.id,...d.data()}));
+    return calcularResumoCaixaFisico(movs,caixaId,valorInicial);
+  }
+
+  async function sincronizarBancoResumoAdmin612(){
+    if(usuarioRole!=='admin'||!auth.currentUser)return;
+    // O listener da Tesouraria mantém Responsável sincronizado. Aqui acrescentamos Banco STP.
+    const saldo=typeof obterSaldoTesourariaContaFirestore651==='function'
+      ? await obterSaldoTesourariaContaFirestore651('banco_stp')
+      : (typeof contasTesouraria==='object' ? Number(contasTesouraria.banco_stp)||0 : 0);
+    await db.collection('tesouraria_saldos').doc('banco_stp').set({
+      saldo,moeda:'STN',atualizadoEm:new Date(),atualizadoPorUid:auth.currentUser.uid,
+      atualizadoPorUsuario:auth.currentUser.email||'',origemCalculo:'ledger_tesouraria'
+    },{merge:true});
+  }
+
+  async function decidir612(id,aprovar){
+    const local=solicitacoesCaixa612.find(x=>x.id===id); if(!local)return alert('Solicitação não encontrada. Atualize a página.');
+    if(!podeDecidir612(local))return alert('Este pedido não pode ser decidido por este perfil.');
+    const u=auth.currentUser;if(!u)return alert('Sessão expirada.');
+
+    if(!aprovar){
+      const motivo=(prompt('Motivo obrigatório da rejeição:','')||'').trim(); if(!motivo)return alert('Informe o motivo da rejeição.');
+      if(!confirm(`Rejeitar ${local.tipo} de ${fmt612(local.valor)}?\n\nNenhum dinheiro será movimentado.`))return;
+      try{await db.runTransaction(async tx=>{
+        const ref=db.collection('caixa_movimento_solicitacoes').doc(id); const d=await tx.get(ref);
+        if(!d.exists||d.data().estado!=='PENDENTE_APROVACAO')throw new Error('Solicitação já foi decidida.');
+        const agora=new Date(); tx.update(ref,{estado:'REJEITADA',decididoPorUid:u.uid,decididoPorUsuario:u.email||'',decididoPorNome:usuarioNome||'',decididoPorRole:usuarioRole,dataDecisao:agora,motivoRejeicao:motivo});
+      }); alert('Solicitação rejeitada. Nenhum saldo foi alterado.');}catch(e){alert('Erro ao rejeitar: '+(e.message||e));}
+      return;
+    }
+
+    if((local.origemConta==='banco_stp'||local.destinoConta==='banco_stp')&&usuarioRole!=='admin')return alert('Movimentos com Banco STP / DobraPay exigem ADMIN.');
+    if(usuarioRole==='gerente'&&local.solicitanteUid===u.uid)return alert('A GERENTE não pode aprovar a própria solicitação. É necessário ADMIN.');
+
+    // Validação física fresca da Sangria imediatamente antes da transação.
+    let saldoFisicoAntes=null;
+    if(local.tipo==='SANGRIA'){
+      try{
+        const c=await db.collection('caixas').doc(local.caixaId).get(); if(!c.exists)throw new Error('Caixa não encontrado.');
+        const r=await obterResumoCaixaPorId612(local.caixaId,c.data().valorInicial);
+        saldoFisicoAntes=Number.isFinite(r.disponivel)?r.disponivel:r.esperado;
+        if(saldoFisicoAntes<Number(local.valor))return alert(`Aprovação bloqueada: saldo físico insuficiente.\n\nDisponível: ${fmt612(Math.max(0,saldoFisicoAntes))}\nSolicitado: ${fmt612(local.valor)}`);
+      }catch(e){return alert('Não foi possível validar o Caixa antes da aprovação: '+(e.message||e));}
+    }
+
+    if(local.tipo==='SUPRIMENTO' && typeof obterSaldoTesourariaContaFirestore651==='function'){
+      try{
+        const saldoReal=await obterSaldoTesourariaContaFirestore651(local.origemConta);
+        if((Number(saldoReal)||0)+0.0001<Number(local.valor||0)) return alert(`Aprovação bloqueada: saldo real insuficiente em ${conta612(local.origemConta)}.\n\nDisponível: ${fmt612(saldoReal)}\nSolicitado: ${fmt612(local.valor)}`);
+      }catch(e){return alert('Não foi possível validar o saldo real da Tesouraria: '+(e.message||e));}
+    }
+
+    if(usuarioRole==='admin'){
+      try{await sincronizarBancoResumoAdmin612();}catch(e){console.warn('Banco-resumo 6.12.1:',e);}
+    }
+
+    if(!confirm(`APROVAR E EXECUTAR ${local.tipo}?\n\n${conta612(local.origemConta)} → ${conta612(local.destinoConta)}\nValor: ${fmt612(local.valor)}\nSolicitante: ${local.solicitanteNome||local.solicitanteUsuario||'-'}\n\nA confirmação movimentará Caixa e Tesouraria atomicamente.`))return;
+
+    const reqRef=db.collection('caixa_movimento_solicitacoes').doc(id);
+    const caixaRef=db.collection('caixas').doc(local.caixaId);
+    const movFisRef=db.collection('movimentacoes').doc(id);
+    const tesRef=db.collection('tesouraria_movimentos').doc(id);
+    const contaResumoId=local.tipo==='SUPRIMENTO'?local.origemConta:local.destinoConta;
+    const saldoRef=db.collection('tesouraria_saldos').doc(contaResumoId);
+
+    try{
+      await db.runTransaction(async tx=>{
+        // TODAS AS LEITURAS PRIMEIRO — Firestore pode repetir automaticamente a transaction.
+        const reqDoc=await tx.get(reqRef);
+        const caixaDoc=await tx.get(caixaRef);
+        const saldoDoc=await tx.get(saldoRef);
+        const movFisDoc=await tx.get(movFisRef);
+        const tesDoc=await tx.get(tesRef);
+        if(!reqDoc.exists)throw new Error('Solicitação não encontrada.');
+        const p=reqDoc.data(); if(p.estado!=='PENDENTE_APROVACAO')throw new Error('Solicitação já foi decidida.');
+        if(!caixaDoc.exists||caixaDoc.data().estado!=='aberto')throw new Error('O Caixa/Turno já não está aberto.');
+        if(movFisDoc.exists||tesDoc.exists)throw new Error('Rastro financeiro já existe para esta solicitação. Operação bloqueada para evitar duplicação.');
+        if(!saldoDoc.exists)throw new Error(`Saldo-resumo de ${conta612(contaResumoId)} não está inicializado. Entre como ADMIN para sincronizar a Tesouraria.`);
+        const saldoAntes=Number(saldoDoc.data().saldo)||0, valor=Number(p.valor)||0;
+        let saldoDepois=saldoAntes;
+        if(p.tipo==='SUPRIMENTO'){ if(saldoAntes<valor)throw new Error(`Saldo insuficiente em ${conta612(p.origemConta)}.`); saldoDepois=saldoAntes-valor; }
+        else saldoDepois=saldoAntes+valor;
+        if(saldoDepois<0)throw new Error('A operação produziria saldo negativo.');
+        const agora=new Date();
+
+        tx.update(reqRef,{
+          estado:'APROVADA_EXECUTADA',decididoPorUid:u.uid,decididoPorUsuario:u.email||'',decididoPorNome:usuarioNome||'',decididoPorRole:usuarioRole,
+          dataDecisao:agora,executadoEm:agora,movimentoCaixaId:id,movimentoTesourariaId:id,
+          saldoContaAntes:saldoAntes,saldoContaDepois:saldoDepois,...(saldoFisicoAntes==null?{}:{saldoFisicoAntes})
+        });
+
+        tx.update(saldoRef,{
+          saldo:saldoDepois,moeda:'STN',atualizadoEm:agora,atualizadoPorUid:u.uid,atualizadoPorUsuario:u.email||'',
+          ultimoPedidoCaixaId:id,ultimoUid:u.uid,ultimoCaixaId:p.caixaId,
+          ultimaOperacao:p.tipo==='SUPRIMENTO'?'suprimento_caixa_aprovado':'sangria_caixa_aprovada'
+        });
+
+        tx.set(movFisRef,{
+          produto:p.tipo==='SUPRIMENTO'?`Suprimento aprovado — ${conta612(p.origemConta)}`:`Sangria aprovada — ${conta612(p.destinoConta)}`,
+          tipo:p.tipo==='SUPRIMENTO'?'suprimento_caixa':'sangria_caixa',quantidade:1,valor,
+          formaPagamento:p.tipo==='SUPRIMENTO'?'Dinheiro - Suprimento Aprovado':'Dinheiro - Sangria Aprovada',
+          origemTesouraria:p.origemConta,destinoTesouraria:p.destinoConta,solicitacaoCaixaId:id,
+          observacao:p.observacao||p.motivo||'',usuario:p.solicitanteUsuario||'',nomeUsuario:p.solicitanteNome||'',
+          uid:p.solicitanteUid,role:p.solicitanteRole||'',contexto:p.contexto||'operacao_normal',caixaId:p.caixaId,data:agora,
+          aprovadoPorUid:u.uid,aprovadoPorUsuario:u.email||'',aprovadoPorNome:usuarioNome||'',aprovadoPorRole:usuarioRole
+        });
+
+        tx.set(tesRef,{
+          tipo:p.tipo==='SUPRIMENTO'?'suprimento_caixa_aprovado':'sangria_caixa_aprovada',natureza:'movimento_interno',
+          origem:p.origemConta,destino:p.destinoConta,moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:valor,valorDestino:valor,
+          taxaReferencia:null,taxaAplicada:null,margemDb:0,caixaId:p.caixaId,solicitacaoCaixaId:id,solicitanteUid:p.solicitanteUid,
+          solicitanteUsuario:p.solicitanteUsuario||'',solicitanteNome:p.solicitanteNome||'',observacao:p.observacao||p.motivo||'',
+          usuario:u.email||'',nomeUsuario:usuarioNome||'',uid:u.uid,role:usuarioRole,data:agora
+        });
+      });
+      alert(`${local.tipo==='SUPRIMENTO'?'Suprimento':'Sangria'} aprovado e executado uma única vez. Caixa e Tesouraria foram atualizados na mesma transação.`);
+    }catch(e){alert('Aprovação bloqueada: '+(e.message||e));}
+  }
+  window.f612Decidir=decidir612;
+
+  // Impede o caminho administrativo antigo que contornava as aprovações.
+  if(typeof registrarMovimentoTesouraria==='function'){
+    const originalMovTes612=registrarMovimentoTesouraria;
+    registrarMovimentoTesouraria=async function(){
+      const o=document.getElementById('tesOrigem')?.value, d=document.getElementById('tesDestino')?.value;
+      if(o==='caixa_stp'||d==='caixa_stp'){
+        navegarPara('paginaCaixa'); garantirInterface612();
+        return alert('Movimentos envolvendo Caixa Loja devem ser solicitados na Gestão de Caixa (Suprimento/Sangria) e passar pela aprovação. O atalho direto da Tesouraria foi desativado para preservar saldo e auditoria.');
+      }
+      return originalMovTes612.apply(this,arguments);
+    };
+  }
+
+  // Rótulos da Tesouraria para os novos movimentos.
+  if(typeof rotuloTipoTesouraria==='function'){
+    const rotuloOriginal612=rotuloTipoTesouraria;
+    rotuloTipoTesouraria=function(tipo){
+      if(tipo==='suprimento_caixa_aprovado')return 'SUPRIMENTO CAIXA';
+      if(tipo==='sangria_caixa_aprovada')return 'SANGRIA CAIXA';
+      return rotuloOriginal612(tipo);
+    };
+  }
+
+  // Mantém também o saldo-resumo do Banco sincronizado quando o ADMIN recalcula o razão.
+  if(typeof recalcularSaldosTesouraria==='function'){
+    const recalcularOriginal612=recalcularSaldosTesouraria;
+    recalcularSaldosTesouraria=function(){
+      const r=recalcularOriginal612.apply(this,arguments);
+      if(usuarioRole==='admin'&&auth.currentUser){
+        db.collection('tesouraria_saldos').doc('banco_stp').set({
+          saldo:Number(contasTesouraria?.banco_stp)||0,moeda:'STN',atualizadoEm:new Date(),
+          atualizadoPorUid:auth.currentUser.uid,atualizadoPorUsuario:auth.currentUser.email||'',origemCalculo:'ledger_tesouraria'
+        },{merge:true}).catch(e=>console.warn('Saldo-resumo Banco:',e));
+      }
+      return r;
+    };
+  }
+
+  // Auditoria 6.12.1: pedido pendente/rejeitado não pode ter dinheiro; aprovado deve ter par 1:1.
+  if(typeof executarAuditoriaIntegridade==='function'){
+    const audOriginal612=executarAuditoriaIntegridade;
+    executarAuditoriaIntegridade=function(){
+      const r=audOriginal612.apply(this,arguments);
+      if(usuarioRole!=='admin')return r;
+      let problemas=0;
+      (solicitacoesCaixa612||[]).forEach(p=>{
+        const fis=(todasMovimentacoes||[]).filter(m=>m.solicitacaoCaixaId===p.id);
+        const tes=(movimentosTesouraria||[]).filter(m=>m.solicitacaoCaixaId===p.id);
+        const ref=audRef('CXREQ',p.id);
+        if(p.estado==='PENDENTE_APROVACAO'||p.estado==='REJEITADA'){
+          if(fis.length||tes.length){problemas++;audAdicionar('CRITICO','Caixa/Tesouraria',ref,'Pedido sem execução movimentou dinheiro',`Estado ${p.estado}: ${fis.length} movimento(s) físico(s) e ${tes.length} movimento(s) de Tesouraria encontrados.`,p);}
+          return;
+        }
+        if(p.estado==='APROVADA_EXECUTADA'){
+          if(fis.length!==1||tes.length!==1){problemas++;audAdicionar('CRITICO','Caixa/Tesouraria',ref,'Aprovação sem par financeiro 1:1',`Esperado: 1 movimento físico + 1 Tesouraria. Encontrado: ${fis.length} + ${tes.length}.`,p);return;}
+          const mf=fis[0], mt=tes[0], v=Number(p.valor)||0;
+          if(Number(mf.valor)!==v||Number(mt.valorOrigem)!==v||Number(mt.valorDestino)!==v||mt.origem!==p.origemConta||mt.destino!==p.destinoConta){
+            problemas++;audAdicionar('CRITICO','Caixa/Tesouraria',ref,'Valores/origem/destino divergentes','O pedido aprovado não coincide integralmente com os movimentos físico e patrimonial.',p);
+          }
+        }
+      });
+      audResumoModulo('Caixa/Tesouraria','Suprimento/Sangria com aprovação',problemas,`${(solicitacoesCaixa612||[]).length} solicitação(ões) verificada(s) com execução 1:1 e sem dinheiro em pedidos pendentes/rejeitados.`);
+      renderizarAuditoria(); return r;
+    };
+  }
+
+  // Integra o novo listener ao isolamento de sessão já homologado.
+  if(typeof desligarListenersSessao64==='function'){
+    const desligarOriginal612=desligarListenersSessao64;
+    desligarListenersSessao64=function(){ pararListener612(); return desligarOriginal612.apply(this,arguments); };
+  }
+  if(typeof limparEstadoVisualSessao64==='function'){
+    const limparOriginal612=limparEstadoVisualSessao64;
+    limparEstadoVisualSessao64=function(){ pararListener612(); return limparOriginal612.apply(this,arguments); };
+  }
+
+  document.addEventListener('click',()=>setTimeout(()=>{garantirInterface612(); if(document.getElementById('cardAprovacoesCaixa612'))renderizarSolicitacoesCaixa612();},30),true);
+  auth.onAuthStateChanged(u=>{
+    if(!u){pararListener612();return;}
+    const uid=u.uid; let t=0;
+    const pronto=()=>{
+      if(!auth.currentUser||auth.currentUser.uid!==uid){pararListener612();return;}
+      if(usuarioRole){garantirInterface612();iniciarListener612();return;}
+      if(++t<=15)setTimeout(pronto,100);
+    }; pronto();
+  });
+})();
+</script>
+
 </body>
 </html>
