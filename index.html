@@ -11272,8 +11272,13 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
     let observacao=''; if(motivo==='Outro'){ observacao=(prompt('Descreva obrigatoriamente o motivo:','')||'').trim(); if(!observacao) return alert('A observação é obrigatória quando escolher Outro.'); }
     if(!confirm(`Ativar SUBSTITUIÇÃO OPERACIONAL?\n\nMotivo: ${motivo}${observacao?'\nObservação: '+observacao:''}\n\nA GERENTE poderá abrir o próprio turno e executar funções operacionais de balcão. As funções exclusivas do ADMIN continuarão bloqueadas.`)) return;
     const u=auth.currentUser, agora=new Date();
-    await db.collection('substituicoes_operacionais').doc(u.uid).set({uid:u.uid,usuario:u.email||'',nomeUsuario:usuarioNome||'',roleOriginal:'gerente',contexto:'substituicao_operacional',estado:'ativa',motivo,observacao,iniciadaEm:agora,encerradaEm:null},{merge:false});
-    await log611('SUBSTITUICAO_INICIADA',{motivo,observacao});
+    try {
+      await db.collection('substituicoes_operacionais').doc(u.uid).set({uid:u.uid,usuario:u.email||'',nomeUsuario:usuarioNome||'',roleOriginal:'gerente',contexto:'substituicao_operacional',estado:'ativa',motivo,observacao,iniciadaEm:agora,encerradaEm:null,encerradaPorUid:null,encerradaPorUsuario:null},{merge:false});
+      await log611('SUBSTITUICAO_INICIADA',{motivo,observacao});
+    } catch(e) {
+      console.error('Falha ao iniciar Substituição Operacional:', e);
+      alert('Não foi possível iniciar a Substituição Operacional.\n\n' + (e?.message || e));
+    }
   }
 
   async function encerrarSub611(){
