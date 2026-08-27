@@ -5956,7 +5956,9 @@ async function confirmarEstornoVenda() {
 
 /* Dashboard: vendas reais e margens de transferências separados. */
 function processarDashboard() {
-  if(usuarioRole !== "admin") return;
+  // FASE 6.14.2 — ADMIN e GERENTE partilham a visão global do Dashboard.
+  // A diferença entre perfis permanece apenas nas ações estruturais, não na supervisão.
+  if(usuarioRole !== "admin" && usuarioRole !== "gerente") return;
 
   let totalValorEstoque = 0;
   let totalQtdEstoque = 0;
