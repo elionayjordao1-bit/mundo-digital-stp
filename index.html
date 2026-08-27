@@ -11317,5 +11317,297 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 })();
 </script>
 
+
+<script>
+/* =========================================================================
+   FASE 6.12 — CAIXA GOVERNADO: SUPRIMENTO/SANGRIA COM APROVAÇÃO + TESOURARIA
+   - Corrige vazamento visual da Substituição Operacional entre sessões.
+   - Suprimento deixa de criar dinheiro: passa por pedido -> aprovação ->
+     transferência atómica Tesouraria -> Caixa.
+   - Sangria passa por pedido -> aprovação -> Caixa -> Tesouraria.
+   - GERENTE aprova terceiros apenas quando a contrapartida é Responsável/Reserva.
+   - GERENTE nunca aprova a própria solicitação. ADMIN é autoridade final.
+   ========================================================================= */
+(function(){
+  let unsubSolic612=null;
+  window.f612Solicitacoes=[];
+
+  const esc612 = v => String(v ?? '').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const moeda612 = v => (Number(v)||0).toLocaleString('pt-PT',{maximumFractionDigits:2})+' Db';
+  const dt612 = v => { try { const d=v?.toDate?v.toDate():new Date(v); return isNaN(d.getTime())?'-':d.toLocaleString('pt-PT'); } catch(e){ return '-'; } };
+  const nomeConta612 = id => ({responsavel_stp:'Responsável / Reserva',banco_stp:'Banco STP / DobraPay',caixa_stp:'Caixa Loja'})[id] || id || '-';
+
+  function ehOperadorCaixa612(){
+    return usuarioRole==='admin' || usuarioRole==='venda1' || usuarioRole==='venda2' || (usuarioRole==='gerente' && window.f611SubAtiva===true);
+  }
+
+  function limparVazamentoSubstituicao612(){
+    const card=document.getElementById('cardSubstituicaoOperacional611');
+    if(usuarioRole!=='gerente' && card){ card.remove(); }
+    if(usuarioRole!=='gerente'){
+      window.f611SubAtiva=false;
+      window.f611SubDados=null;
+    }
+  }
+
+  function montarUiMovimentos612(){
+    limparVazamentoSubstituicao612();
+    const campo=document.getElementById('caixaSuprimentoValor');
+    if(!campo) return;
+    const card=campo.closest('.card');
+    if(!card || card.dataset.f612==='1') return;
+    card.dataset.f612='1';
+    card.innerHTML=`
+      <h4 style="margin:0 0 8px;color:#0f172a;">💵 Movimentos físicos do caixa — com aprovação</h4>
+      <p style="margin:0 0 12px;color:#64748b;font-size:12px;line-height:1.55;">
+        <b>Suprimento:</b> dinheiro da empresa entra no Caixa somente depois de aprovado e debitado da conta de origem na Tesouraria.<br>
+        <b>Sangria:</b> dinheiro sai da gaveta somente depois de aprovado e creditado na conta de destino.
+      </p>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#1e40af;line-height:1.5;">
+        Nenhum pedido pendente altera o saldo do Caixa ou da Tesouraria. A execução acontece numa única transação após aprovação.
+      </div>
+
+      <div class="form-grid">
+        <input id="caixaSuprimentoValor" type="number" min="0.01" step="0.01" placeholder="Valor do Suprimento (Db)">
+        <select id="caixaSuprimentoOrigem">
+          <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+          <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+        </select>
+        <input id="caixaSuprimentoObs" placeholder="Motivo / observação obrigatória">
+        <button onclick="solicitarMovimentoCaixa612('SUPRIMENTO')" class="btn-success">📨 Solicitar Suprimento</button>
+      </div>
+
+      <div style="height:1px;background:#e2e8f0;margin:14px 0;"></div>
+      <div class="form-grid" id="blocoSangriaCaixa">
+        <input id="caixaSangriaValor" type="number" min="0.01" step="0.01" placeholder="Valor da Sangria (Db)">
+        <select id="caixaSangriaDestino">
+          <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+          <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+        </select>
+        <input id="caixaSangriaMotivo" placeholder="Motivo / destino obrigatório">
+        <button onclick="solicitarMovimentoCaixa612('SANGRIA')" class="btn-warning">📨 Solicitar Sangria</button>
+      </div>
+
+      <div style="margin-top:16px;">
+        <h4 style="margin:0 0 8px;">🧾 Solicitações deste utilizador</h4>
+        <div class="table-responsive"><table style="min-width:760px;">
+          <thead><tr><th>Data</th><th>Tipo</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Estado</th><th>Decidido por</th></tr></thead>
+          <tbody id="listaMinhasSolicCaixa612"><tr><td colspan="7" style="color:#94a3b8;">Nenhuma solicitação.</td></tr></tbody>
+        </table></div>
+      </div>`;
+  }
+
+  function garantirCardAprovacoes612(){
+    const pag=document.getElementById('paginaCaixa'); if(!pag) return;
+    let card=document.getElementById('cardAprovacoesCaixa612');
+    const pode=usuarioRole==='admin'||usuarioRole==='gerente';
+    if(!pode){ if(card) card.remove(); return; }
+    if(!card){
+      card=document.createElement('div');
+      card.id='cardAprovacoesCaixa612'; card.className='card'; card.style.borderLeft='4px solid #7c3aed';
+      const auditoria=document.getElementById('cardAuditoriaCaixas');
+      if(auditoria) pag.insertBefore(card,auditoria); else pag.appendChild(card);
+    }
+    card.innerHTML=`<h3 style="color:#6d28d9;">✅ Aprovações de Movimentos de Caixa</h3>
+      <p style="font-size:12px;color:#64748b;margin-top:-6px;line-height:1.55;">
+        GERENTE pode decidir solicitações de terceiros quando a contrapartida é <b>Responsável / Reserva</b>.
+        Solicitação própria da GERENTE exige ADMIN. Banco STP/DobraPay exige ADMIN.
+      </p>
+      <div class="table-responsive"><table style="min-width:1000px;">
+        <thead><tr><th>Data</th><th>Solicitante</th><th>Turno</th><th>Tipo</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Motivo</th><th>Estado</th><th>Ação</th></tr></thead>
+        <tbody id="listaAprovacoesCaixa612"><tr><td colspan="10" style="color:#94a3b8;">Nenhuma solicitação pendente.</td></tr></tbody>
+      </table></div>`;
+  }
+
+  function badge612(e){
+    const map={PENDENTE_APROVACAO:['#fef3c7','#92400e','PENDENTE'],APROVADA_EXECUTADA:['#dcfce7','#166534','EXECUTADA'],REJEITADA:['#fee2e2','#991b1b','REJEITADA']};
+    const a=map[e]||['#e2e8f0','#475569',e||'-']; return `<span style="background:${a[0]};color:${a[1]};padding:3px 8px;border-radius:12px;font-size:11px;font-weight:800;">${a[2]}</span>`;
+  }
+
+  function gerentePodeAprovar612(s){
+    if(usuarioRole!=='gerente' || !auth.currentUser) return false;
+    if(s.solicitanteUid===auth.currentUser.uid) return false;
+    return (s.tipo==='SUPRIMENTO' && s.origemConta==='responsavel_stp') || (s.tipo==='SANGRIA' && s.destinoConta==='responsavel_stp');
+  }
+
+  function renderSolic612(){
+    const u=auth.currentUser;
+    const mine=document.getElementById('listaMinhasSolicCaixa612');
+    if(mine && u){
+      const arr=window.f612Solicitacoes.filter(x=>x.solicitanteUid===u.uid).sort((a,b)=>obterDataSegura(b.dataSolicitacao)-obterDataSegura(a.dataSolicitacao));
+      mine.innerHTML=arr.length?arr.map(s=>`<tr><td>${dt612(s.dataSolicitacao)}</td><td><b>${esc612(s.tipo)}</b></td><td>${esc612(nomeConta612(s.origemConta))}</td><td>${esc612(nomeConta612(s.destinoConta))}</td><td>${moeda612(s.valor)}</td><td>${badge612(s.estado)}</td><td>${esc612(s.decididoPorEmail||'-')}</td></tr>`).join(''):'<tr><td colspan="7" style="color:#94a3b8;">Nenhuma solicitação.</td></tr>';
+    }
+    const tb=document.getElementById('listaAprovacoesCaixa612');
+    if(tb){
+      const arr=window.f612Solicitacoes.filter(x=>x.estado==='PENDENTE_APROVACAO').sort((a,b)=>obterDataSegura(a.dataSolicitacao)-obterDataSegura(b.dataSolicitacao));
+      tb.innerHTML=arr.length?arr.map(s=>{
+        const pode=usuarioRole==='admin'||gerentePodeAprovar612(s);
+        let nota='';
+        if(usuarioRole==='gerente'&&s.solicitanteUid===u?.uid) nota='🔒 Própria solicitação: ADMIN';
+        else if(usuarioRole==='gerente'&&!pode) nota='🔒 Requer ADMIN';
+        const acao=pode?`<div class="acoes-cell"><button class="btn-success btn-acao" onclick="aprovarMovimentoCaixa612('${s.id}')">Aprovar</button><button class="btn-danger btn-acao" onclick="rejeitarMovimentoCaixa612('${s.id}')">Rejeitar</button></div>`:`<span style="font-size:11px;color:#64748b;">${nota}</span>`;
+        return `<tr><td>${dt612(s.dataSolicitacao)}</td><td><b>${esc612(s.solicitanteNome||s.solicitanteEmail)}</b><br><small>${esc612(s.solicitanteEmail||'')}</small></td><td>#${esc612(String(s.caixaId||'').slice(0,8).toUpperCase())}</td><td><b>${esc612(s.tipo)}</b></td><td>${esc612(nomeConta612(s.origemConta))}</td><td>${esc612(nomeConta612(s.destinoConta))}</td><td>${moeda612(s.valor)}</td><td>${esc612(s.motivo||'-')}</td><td>${badge612(s.estado)}</td><td>${acao}</td></tr>`;
+      }).join(''):'<tr><td colspan="10" style="color:#94a3b8;">Nenhuma solicitação pendente.</td></tr>';
+    }
+  }
+
+  function ouvirSolic612(){
+    if(unsubSolic612){ try{unsubSolic612();}catch(e){} unsubSolic612=null; }
+    const u=auth.currentUser; if(!u) return;
+    let q=db.collection('caixa_movimento_solicitacoes');
+    if(!(usuarioRole==='admin'||usuarioRole==='gerente')) q=q.where('solicitanteUid','==',u.uid);
+    unsubSolic612=q.onSnapshot(s=>{
+      window.f612Solicitacoes=[]; s.forEach(d=>window.f612Solicitacoes.push({id:d.id,...d.data()})); renderSolic612();
+    },e=>console.warn('Solicitações caixa 6.12:',e));
+  }
+
+  window.solicitarMovimentoCaixa612=async function(tipo){
+    if(!navigator.onLine) return alert('Esta solicitação exige ligação à internet.');
+    const u=auth.currentUser; if(!u) return alert('Sessão expirada.');
+    if(!ehOperadorCaixa612()) return alert('Este perfil não está em contexto operacional de Caixa.');
+    if(!caixaAtualObj || caixaAtualObj.estado!=='aberto') return alert('Abra primeiro o seu Caixa/Turno.');
+    if(usuarioRole!=='admin' && caixaAtualObj.uid!==u.uid) return alert('O Caixa aberto não pertence ao utilizador atual.');
+
+    const supr=tipo==='SUPRIMENTO';
+    const valor=Number(document.getElementById(supr?'caixaSuprimentoValor':'caixaSangriaValor')?.value)||0;
+    const conta=(document.getElementById(supr?'caixaSuprimentoOrigem':'caixaSangriaDestino')?.value)||'responsavel_stp';
+    const motivo=(document.getElementById(supr?'caixaSuprimentoObs':'caixaSangriaMotivo')?.value||'').trim();
+    if(valor<=0) return alert('Informe um valor maior que zero.');
+    if(!motivo) return alert('Informe obrigatoriamente o motivo/observação.');
+    if(!['responsavel_stp','banco_stp'].includes(conta)) return alert('Conta de Tesouraria inválida.');
+
+    if(!supr){
+      try{
+        const caixaDoc=await db.collection('caixas').doc(caixaAtualObj.id).get();
+        const ms=await db.collection('movimentacoes').where('caixaId','==',caixaAtualObj.id).get();
+        const arr=[]; ms.forEach(d=>arr.push(d.data()));
+        const r=calcularResumoCaixaFisico(arr,caixaAtualObj.id,caixaDoc.data()?.valorInicial||0);
+        if(r.esperado<valor) return alert(`Saldo físico insuficiente. Disponível: ${moeda612(Math.max(0,r.esperado))}`);
+      }catch(e){ return alert('Não foi possível validar o saldo físico: '+(e.message||e)); }
+    }
+
+    const origemConta=supr?conta:'caixa_stp', destinoConta=supr?'caixa_stp':conta;
+    if(!confirm(`${supr?'Solicitar suprimento':'Solicitar sangria'} de ${moeda612(valor)}?\n\n${nomeConta612(origemConta)} → ${nomeConta612(destinoConta)}\nMotivo: ${motivo}\n\nNenhum saldo será alterado até a aprovação.`)) return;
+
+    try{
+      const ref=db.collection('caixa_movimento_solicitacoes').doc();
+      await ref.set({
+        tipo, estado:'PENDENTE_APROVACAO', valor, origemConta, destinoConta, moeda:'STN', motivo,
+        caixaId:caixaAtualObj.id, solicitanteUid:u.uid, solicitanteEmail:u.email||'', solicitanteNome:usuarioNome||u.email||'', solicitanteRole:usuarioRole,
+        contexto:(usuarioRole==='gerente'&&window.f611SubAtiva===true)?'substituicao_operacional':'operacao_normal',
+        dataSolicitacao:new Date(), decididoPorUid:null, decididoPorEmail:null, dataDecisao:null
+      });
+      if(supr) { document.getElementById('caixaSuprimentoValor').value=''; document.getElementById('caixaSuprimentoObs').value=''; }
+      else { document.getElementById('caixaSangriaValor').value=''; document.getElementById('caixaSangriaMotivo').value=''; }
+      alert(usuarioRole==='admin'?'Solicitação criada. Como ADMIN, pode aprová-la no painel de Aprovações.':'Solicitação enviada. O Caixa e a Tesouraria ainda não foram alterados.');
+    }catch(e){ alert('Erro ao criar solicitação: '+(e.message||e)); }
+  };
+
+  async function resumoCaixaPorId612(caixaId){
+    const caixaDoc=await db.collection('caixas').doc(caixaId).get();
+    if(!caixaDoc.exists || caixaDoc.data().estado!=='aberto') throw new Error('O turno deixou de estar aberto.');
+    const ms=await db.collection('movimentacoes').where('caixaId','==',caixaId).get();
+    const arr=[]; ms.forEach(d=>arr.push(d.data()));
+    return {caixa:caixaDoc.data(), resumo:calcularResumoCaixaFisico(arr,caixaId,caixaDoc.data().valorInicial||0)};
+  }
+
+  window.aprovarMovimentoCaixa612=async function(id){
+    const u=auth.currentUser; if(!u) return alert('Sessão expirada.');
+    if(!(usuarioRole==='admin'||usuarioRole==='gerente')) return alert('Sem permissão para aprovar.');
+    try{
+      const pre=await db.collection('caixa_movimento_solicitacoes').doc(id).get();
+      if(!pre.exists) throw new Error('Solicitação não encontrada.');
+      const s=pre.data();
+      if(s.estado!=='PENDENTE_APROVACAO') throw new Error('Esta solicitação já foi decidida.');
+      if(usuarioRole==='gerente'){
+        if(s.solicitanteUid===u.uid) throw new Error('GERENTE não pode aprovar a própria solicitação. Requer ADMIN.');
+        if(!gerentePodeAprovar612({...s,id})) throw new Error('Esta origem/destino exige aprovação do ADMIN.');
+      }
+      const {resumo}=await resumoCaixaPorId612(s.caixaId);
+      if(s.tipo==='SANGRIA' && resumo.esperado < Number(s.valor||0)) throw new Error(`Saldo físico insuficiente no turno. Disponível: ${moeda612(Math.max(0,resumo.esperado))}`);
+      if(!confirm(`APROVAR e EXECUTAR?\n\n${nomeConta612(s.origemConta)} → ${nomeConta612(s.destinoConta)}\nValor: ${moeda612(s.valor)}\nSolicitante: ${s.solicitanteNome||s.solicitanteEmail}\n\nA Tesouraria e o Caixa serão alterados na mesma transação.`)) return;
+
+      const reqRef=db.collection('caixa_movimento_solicitacoes').doc(id);
+      const saldoId=s.tipo==='SUPRIMENTO'?s.origemConta:s.destinoConta;
+      const saldoRef=db.collection('tesouraria_saldos').doc(saldoId);
+      const tesRef=db.collection('tesouraria_movimentos').doc(id);
+      const movRef=db.collection('movimentacoes').doc(id);
+      const caixaRef=db.collection('caixas').doc(s.caixaId);
+
+      await db.runTransaction(async tx=>{
+        const reqDoc=await tx.get(reqRef); if(!reqDoc.exists) throw new Error('Solicitação não encontrada.');
+        const cur=reqDoc.data(); if(cur.estado!=='PENDENTE_APROVACAO') throw new Error('Solicitação já decidida.');
+        if(usuarioRole==='gerente' && cur.solicitanteUid===u.uid) throw new Error('Autorização própria não permitida.');
+        const cDoc=await tx.get(caixaRef); if(!cDoc.exists||cDoc.data().estado!=='aberto') throw new Error('Turno fechado ou inexistente.');
+        const saldoDoc=await tx.get(saldoRef); if(!saldoDoc.exists) throw new Error('Saldo da conta de Tesouraria não encontrado: '+nomeConta612(saldoId));
+        const saldoAtual=Number(saldoDoc.data().saldo)||0, valor=Number(cur.valor)||0;
+        let novoSaldo;
+        if(cur.tipo==='SUPRIMENTO'){
+          if(saldoAtual<valor) throw new Error(`Saldo insuficiente em ${nomeConta612(saldoId)}. Disponível: ${moeda612(saldoAtual)}`);
+          novoSaldo=saldoAtual-valor;
+        } else novoSaldo=saldoAtual+valor;
+
+        tx.update(saldoRef,{saldo:novoSaldo,ultimaOperacao:cur.tipo==='SUPRIMENTO'?'suprimento_caixa_aprovado':'sangria_caixa_aprovada',ultimoUid:u.uid,ultimoCaixaId:cur.caixaId,ultimaSolicitacaoCaixaId:id,atualizadoEm:new Date()});
+        tx.set(tesRef,{
+          tipo:cur.tipo==='SUPRIMENTO'?'suprimento_caixa_aprovado':'sangria_caixa_aprovada',
+          origem:cur.origemConta,destino:cur.destinoConta,moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:valor,valorDestino:valor,margem:0,
+          caixaId:cur.caixaId,solicitacaoCaixaId:id,uid:u.uid,usuario:u.email||'',responsavel:usuarioNome||u.email||'',
+          solicitadoPorUid:cur.solicitanteUid,solicitadoPor:cur.solicitanteEmail,observacao:cur.motivo||'',data:new Date()
+        });
+        tx.set(movRef,{
+          produto:cur.tipo==='SUPRIMENTO'?`Suprimento aprovado — ${nomeConta612(cur.origemConta)}`:`Sangria aprovada — ${nomeConta612(cur.destinoConta)}`,
+          tipo:cur.tipo==='SUPRIMENTO'?'suprimento_caixa':'sangria_caixa',quantidade:1,valor,
+          formaPagamento:cur.tipo==='SUPRIMENTO'?'Dinheiro - Suprimento Aprovado':'Dinheiro - Sangria Aprovada',
+          origemSuprimento:cur.tipo==='SUPRIMENTO'?nomeConta612(cur.origemConta):null,destinoSangria:cur.tipo==='SANGRIA'?nomeConta612(cur.destinoConta):null,
+          observacao:cur.motivo||'',usuario:cur.solicitanteEmail||'',uid:cur.solicitanteUid,role:cur.solicitanteRole||'',
+          aprovadoPorUid:u.uid,aprovadoPorUsuario:u.email||'',aprovadoPorRole:usuarioRole,solicitacaoCaixaId:id,data:new Date(),caixaId:cur.caixaId
+        });
+        tx.update(reqRef,{estado:'APROVADA_EXECUTADA',decididoPorUid:u.uid,decididoPorEmail:u.email||'',decididoPorRole:usuarioRole,dataDecisao:new Date(),executadaEm:new Date(),movimentacaoId:id,tesourariaMovimentoId:id});
+      });
+      alert('Movimento aprovado e executado. Caixa e Tesouraria foram atualizados juntos.');
+    }catch(e){ alert('Não foi possível aprovar: '+(e.message||e)); }
+  };
+
+  window.rejeitarMovimentoCaixa612=async function(id){
+    const u=auth.currentUser; if(!u) return alert('Sessão expirada.');
+    if(!(usuarioRole==='admin'||usuarioRole==='gerente')) return alert('Sem permissão.');
+    try{
+      const ref=db.collection('caixa_movimento_solicitacoes').doc(id), d=await ref.get();
+      if(!d.exists) throw new Error('Solicitação não encontrada.'); const s=d.data();
+      if(s.estado!=='PENDENTE_APROVACAO') throw new Error('Solicitação já decidida.');
+      if(usuarioRole==='gerente' && (s.solicitanteUid===u.uid || !gerentePodeAprovar612({...s,id}))) throw new Error('Esta decisão requer ADMIN.');
+      const motivo=prompt('Motivo da rejeição (obrigatório):',''); if(motivo===null) return; if(!motivo.trim()) return alert('Informe o motivo da rejeição.');
+      await ref.update({estado:'REJEITADA',decididoPorUid:u.uid,decididoPorEmail:u.email||'',decididoPorRole:usuarioRole,dataDecisao:new Date(),motivoRejeicao:motivo.trim()});
+      alert('Solicitação rejeitada sem alterar Caixa ou Tesouraria.');
+    }catch(e){ alert('Erro ao rejeitar: '+(e.message||e)); }
+  };
+
+  // Mesmo que uma versão antiga do bloco permaneça momentaneamente no DOM, os handlers antigos
+  // deixam de executar movimentos diretos e passam obrigatoriamente pelo novo workflow.
+  window.registrarSuprimentoCaixa=function(){ return window.solicitarMovimentoCaixa612('SUPRIMENTO'); };
+  window.registrarSangriaCaixa=function(){ return window.solicitarMovimentoCaixa612('SANGRIA'); };
+
+  function aplicar612(){
+    limparVazamentoSubstituicao612();
+    montarUiMovimentos612();
+    garantirCardAprovacoes612();
+    renderSolic612();
+  }
+
+  document.addEventListener('click',()=>setTimeout(aplicar612,30),true);
+  if(typeof auth!=='undefined' && auth?.onAuthStateChanged){
+    auth.onAuthStateChanged(u=>{
+      if(unsubSolic612){try{unsubSolic612();}catch(e){} unsubSolic612=null;}
+      // Remove imediatamente qualquer UI condicional herdada da sessão anterior.
+      const sub=document.getElementById('cardSubstituicaoOperacional611'); if(sub) sub.remove();
+      const apr=document.getElementById('cardAprovacoesCaixa612'); if(apr) apr.remove();
+      window.f612Solicitacoes=[];
+      setTimeout(()=>{ if(u){ aplicar612(); ouvirSolic612(); } },900);
+    });
+  }
+  let boot612=0; const timer612=setInterval(()=>{aplicar612(); if(auth?.currentUser && usuarioRole){ouvirSolic612();clearInterval(timer612);} if(++boot612>30)clearInterval(timer612);},350);
+})();
+</script>
+
 </body>
 </html>
