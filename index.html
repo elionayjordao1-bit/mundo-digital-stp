@@ -3953,7 +3953,9 @@ function processarFotoOtimizada(event) {
 }
 
 function processarDashboard() {
-  if(usuarioRole !== "admin") return;
+  // FASE 6.14.1 — ADMIN e GERENTE têm visibilidade global do resumo operacional.
+  // Isto amplia apenas leitura/supervisão; ações estruturais continuam restritas pelo HTML e pelas Firestore Rules.
+  if(usuarioRole !== "admin" && usuarioRole !== "gerente") return;
 
   let totalValorEstoque = 0;
   let totalQtdEstoque = 0;
