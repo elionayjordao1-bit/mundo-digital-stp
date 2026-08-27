@@ -11148,5 +11148,174 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   if(typeof auth!=="undefined" && auth?.onAuthStateChanged){ auth.onAuthStateChanged(u=>{ if(u) setTimeout(aplicar,500); }); }
 })();
 </script>
+
+<script>
+/* =========================================================================
+   FASE 6.11 — GERENTE: SUBSTITUIÇÃO OPERACIONAL RASTREÁVEL
+   Uma identidade, dois contextos. Nunca altera o role real do utilizador.
+   ========================================================================= */
+(function(){
+  let subDocRef611=null, subUnsub611=null;
+  window.f611SubAtiva=false;
+  window.f611SubDados=null;
+
+  function ehGerente611(){ return usuarioRole === "gerente"; }
+  function emSub611(){ return ehGerente611() && window.f611SubAtiva === true; }
+  window.f611EmSubstituicaoOperacional = emSub611;
+  function esc611(v){ return String(v??"").replace(/[&<>\"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  function data611(v){ try{const d=v?.toDate?v.toDate():new Date(v);return isNaN(d.getTime())?"-":d.toLocaleString('pt-PT');}catch(e){return "-";} }
+
+  async function log611(tipo, extra={}){
+    const u=auth.currentUser; if(!u) return;
+    await db.collection('substituicao_operacional_historico').add({
+      tipo, uid:u.uid, usuario:u.email||'', nomeUsuario:usuarioNome||'', roleOriginal:'gerente',
+      contexto:'substituicao_operacional', substituicaoUid:u.uid,
+      motivo:window.f611SubDados?.motivo||extra.motivo||'', observacao:window.f611SubDados?.observacao||extra.observacao||'',
+      caixaId:caixaAtualObj?.id||null, data:new Date(), ...extra
+    });
+  }
+
+  function garantirCard611(){
+    if(!ehGerente611()) return;
+    const pag=document.getElementById('paginaCaixa'); if(!pag) return;
+    let card=document.getElementById('cardSubstituicaoOperacional611');
+    if(!card){
+      card=document.createElement('div'); card.id='cardSubstituicaoOperacional611'; card.className='card';
+      const alvo=document.getElementById('cardAuditoriaCaixas')||pag.firstElementChild;
+      pag.insertBefore(card,alvo||null);
+    }
+    const d=window.f611SubDados||{};
+    if(emSub611()){
+      card.style.borderLeft='5px solid #f59e0b'; card.style.background='#fffbeb';
+      card.innerHTML=`<h3>🟠 SUBSTITUIÇÃO OPERACIONAL ATIVA</h3>
+        <p><b>${esc611(usuarioNome||auth.currentUser?.email||'GERENTE')}</b> · Perfil real: <b>GERENTE</b> · Contexto: <b>SUBSTITUIÇÃO OPERACIONAL</b></p>
+        <p><b>Motivo:</b> ${esc611(d.motivo||'-')} ${d.observacao?`· ${esc611(d.observacao)}`:''}<br><b>Iniciada:</b> ${data611(d.iniciadaEm)}</p>
+        <p style="font-size:13px">Enquanto este modo estiver ativo, pode abrir e operar <b>o seu próprio Caixa/Turno</b>, vender e usar Caixa Loja nas operações físicas autorizadas. Os poderes exclusivos do ADMIN continuam bloqueados.</p>
+        <button id="btnEncerrarSub611" class="btn danger">Encerrar substituição</button>`;
+      card.querySelector('#btnEncerrarSub611').onclick=encerrarSub611;
+    }else{
+      card.style.borderLeft='5px solid #64748b'; card.style.background='#f8fafc';
+      card.innerHTML=`<h3>🧑‍💼 Substituição Operacional</h3>
+        <p>Use apenas quando a GERENTE precisar cobrir temporariamente o balcão. A identidade permanece GERENTE e todas as ações ficam marcadas como substituição operacional.</p>
+        <button id="btnIniciarSub611" class="btn warning">🟠 Iniciar Substituição Operacional</button>`;
+      card.querySelector('#btnIniciarSub611').onclick=iniciarSub611;
+    }
+  }
+
+  async function iniciarSub611(){
+    if(!ehGerente611()||!auth.currentUser) return;
+    if(caixaAtualObj?.estado==='aberto') return alert('Já existe um Caixa/Turno aberto nesta conta. Feche-o antes de iniciar uma nova substituição.');
+    const opcoes='1 - Ausência da vendedora\n2 - Intervalo / pausa\n3 - Emergência operacional\n4 - Cobertura temporária\n5 - Outro';
+    const n=prompt('Motivo obrigatório da substituição:\n\n'+opcoes,'1'); if(n===null) return;
+    const mapa={'1':'Ausência da vendedora','2':'Intervalo / pausa','3':'Emergência operacional','4':'Cobertura temporária','5':'Outro'};
+    const motivo=mapa[String(n).trim()]; if(!motivo) return alert('Escolha uma opção válida de 1 a 5.');
+    let observacao=''; if(motivo==='Outro'){ observacao=(prompt('Descreva obrigatoriamente o motivo:','')||'').trim(); if(!observacao) return alert('A observação é obrigatória quando escolher Outro.'); }
+    if(!confirm(`Ativar SUBSTITUIÇÃO OPERACIONAL?\n\nMotivo: ${motivo}${observacao?'\nObservação: '+observacao:''}\n\nA GERENTE poderá abrir o próprio turno e executar funções operacionais de balcão. As funções exclusivas do ADMIN continuarão bloqueadas.`)) return;
+    const u=auth.currentUser, agora=new Date();
+    await db.collection('substituicoes_operacionais').doc(u.uid).set({uid:u.uid,usuario:u.email||'',nomeUsuario:usuarioNome||'',roleOriginal:'gerente',contexto:'substituicao_operacional',estado:'ativa',motivo,observacao,iniciadaEm:agora,encerradaEm:null},{merge:false});
+    await log611('SUBSTITUICAO_INICIADA',{motivo,observacao});
+  }
+
+  async function encerrarSub611(){
+    if(!emSub611()||!auth.currentUser) return;
+    if(caixaAtualObj?.estado==='aberto') return alert('Não é possível encerrar a substituição com Caixa/Turno aberto. Feche e confira o turno primeiro.');
+    if(!confirm('Encerrar a Substituição Operacional agora?')) return;
+    const u=auth.currentUser, fim=new Date();
+    await log611('SUBSTITUICAO_ENCERRADA',{encerradaEm:fim});
+    await db.collection('substituicoes_operacionais').doc(u.uid).update({estado:'encerrada',encerradaEm:fim,encerradaPorUid:u.uid,encerradaPorUsuario:u.email||''});
+  }
+
+  function reporOpcao611(selectId,value,text){
+    const sel=document.getElementById(selectId); if(!sel) return;
+    if(![...sel.options].some(o=>o.value===value || o.textContent.trim()===text)){
+      const o=document.createElement('option');o.value=value;o.textContent=text;sel.appendChild(o);
+    }
+  }
+  function removerCaixa611(){
+    const rem=(id,matcher)=>{const s=document.getElementById(id);if(!s)return;[...s.options].forEach(o=>{if(matcher(o))o.remove();});};
+    rem('transfFormaSTP',o=>o.value==='Dinheiro'||o.textContent.includes('Dinheiro'));
+    rem('f5EncFormaSinal',o=>o.value==='Dinheiro'||o.textContent.includes('Dinheiro'));
+    rem('desp52ContaPagamento',o=>o.value==='caixa_stp');
+    rem('tesOrigem',o=>o.value==='caixa_stp'); rem('tesDestino',o=>o.value==='caixa_stp');
+  }
+  function aplicarContexto611(){
+    if(!ehGerente611()) return;
+    garantirCard611();
+    const painel=document.getElementById('cardPainelTurnoAtual');
+    if(emSub611()){
+      painel?.classList.remove('hidden');
+      // As opções físicas só ficam disponíveis com contexto operacional; as próprias funções ainda exigem turno aberto.
+      reporOpcao611('transfFormaSTP','Dinheiro','Dinheiro');
+      reporOpcao611('f5EncFormaSinal','Dinheiro','Dinheiro');
+      reporOpcao611('desp52ContaPagamento','caixa_stp','Caixa Loja');
+      reporOpcao611('tesOrigem','caixa_stp','Caixa Loja'); reporOpcao611('tesDestino','caixa_stp','Caixa Loja');
+    }else{
+      painel?.classList.add('hidden'); removerCaixa611();
+    }
+  }
+
+  function ouvir611(){
+    if(subUnsub611){try{subUnsub611();}catch(e){} subUnsub611=null;}
+    const u=auth.currentUser; if(!u||!ehGerente611()){window.f611SubAtiva=false;window.f611SubDados=null;return;}
+    subDocRef611=db.collection('substituicoes_operacionais').doc(u.uid);
+    subUnsub611=subDocRef611.onSnapshot(doc=>{
+      const d=doc.exists?doc.data():null; window.f611SubDados=d; window.f611SubAtiva=!!(d&&d.estado==='ativa');
+      aplicarContexto611();
+      if(typeof carregarCaixaDoUsuario==='function') carregarCaixaDoUsuario();
+    });
+  }
+
+  // Guards operacionais: mantém role real e adiciona apenas o contexto temporário.
+  const abrirCaixaOriginal611=abrirCaixa;
+  abrirCaixa=async function(){
+    if(ehGerente611()&&!emSub611()) return alert('GERENTE só pode abrir Caixa/Turno durante uma Substituição Operacional ativa.');
+    if(emSub611()){
+      // réplica segura da abertura existente, preservando o role real e acrescentando contexto.
+      if(!navigator.onLine) return alert('É necessária internet ativa para abrir o caixa.');
+      const u=auth.currentUser;if(!u)return alert('Sessão expirada.');
+      const valInicial=Number(document.getElementById('aberturaValorInicial')?.value)||0;
+      const origemFundos=document.getElementById('aberturaOrigemFundos')?.value||'responsavel_stp';
+      if(valInicial<0)return alert('Informe um valor inicial válido.');
+      if(valInicial>0&&origemFundos!=='responsavel_stp')return alert('O troco inicial deve sair de Responsável / Reserva.');
+      try{
+        const snap=await db.collection('caixas').where('uid','==',u.uid).where('estado','==','aberto').get(); if(!snap.empty)return alert('Já possui um caixa aberto.');
+        const caixaRef=db.collection('caixas').doc(), saldoRef=db.collection('tesouraria_saldos').doc('responsavel_stp'), movTesRef=db.collection('tesouraria_movimentos').doc(caixaRef.id), agora=new Date();
+        await db.runTransaction(async tx=>{
+          let saldoAntes=0;if(valInicial>0){const sd=await tx.get(saldoRef);if(!sd.exists)throw new Error('Saldo da Reserva ainda não foi sincronizado pelo ADMIN.');saldoAntes=Number(sd.data().saldo)||0;if(saldoAntes<valInicial)throw new Error('Saldo insuficiente em Responsável / Reserva.');}
+          tx.set(caixaRef,{uid:u.uid,usuario:u.email,nomeUsuario:usuarioNome||'',role:'gerente',contexto:'substituicao_operacional',substituicaoUid:u.uid,substituicaoMotivo:window.f611SubDados?.motivo||'',dataAbertura:agora,valorInicial:valInicial,origemValorInicial:valInicial>0?'responsavel_stp':'sem_fundo',estado:'aberto'});
+          if(valInicial>0){const depois=saldoAntes-valInicial;tx.set(movTesRef,{tipo:'abertura_caixa',natureza:'movimento_interno',origem:'responsavel_stp',destino:'caixa_stp',moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:valInicial,valorDestino:valInicial,taxaReferencia:null,taxaAplicada:null,margemDb:0,caixaId:caixaRef.id,observacao:'Troco inicial — substituição operacional',usuario:u.email,nomeUsuario:usuarioNome||'',uid:u.uid,role:'gerente',contexto:'substituicao_operacional',data:agora});tx.update(saldoRef,{saldo:depois,moeda:'STN',atualizadoEm:agora,ultimoCaixaId:caixaRef.id,ultimoUid:u.uid,ultimaOperacao:'abertura_caixa'});}
+        });
+        await log611('TURNO_SUBSTITUICAO_ABERTO',{caixaId:caixaRef.id,valorInicial:valInicial});
+        document.getElementById('aberturaValorInicial').value='0'; alert('Caixa/Turno de SUBSTITUIÇÃO OPERACIONAL aberto com sucesso.');
+      }catch(e){alert('Erro ao abrir caixa: '+(e.message||e));}
+      return;
+    }
+    return abrirCaixaOriginal611.apply(this,arguments);
+  };
+
+  const abrirVendaOriginal611=abrirModalVenda;
+  abrirModalVenda=function(id){
+    if(ehGerente611()){
+      if(!emSub611()) return alert('Venda bloqueada para GERENTE. Ative Substituição Operacional quando precisar cobrir o balcão.');
+      if(!caixaAtualObj||caixaAtualObj.estado!=='aberto') return alert('Abra primeiro o seu Caixa/Turno de substituição.');
+      // executa o corpo original fazendo uma elevação apenas de interface, sem mudar identidade persistida.
+      const r=usuarioRole; try{usuarioRole='venda1'; return abrirVendaOriginal611.call(this,id);} finally{usuarioRole=r;}
+    }
+    return abrirVendaOriginal611.apply(this,arguments);
+  };
+
+  const confirmarVendaOriginal611=confirmarVendaModal;
+  confirmarVendaModal=async function(){
+    if(ehGerente611()&&!emSub611()) return alert('Venda bloqueada fora da Substituição Operacional.');
+    return confirmarVendaOriginal611.apply(this,arguments);
+  };
+
+  // Reaplica contexto após a governança visual anterior.
+  document.addEventListener('click',()=>setTimeout(aplicarContexto611,20),true);
+  if(typeof auth!=='undefined'&&auth?.onAuthStateChanged){auth.onAuthStateChanged(u=>{setTimeout(()=>{ouvir611();aplicarContexto611();},700);});}
+  let n=0;const boot=setInterval(()=>{if(ehGerente611()){ouvir611();aplicarContexto611();clearInterval(boot);}else if(++n>20)clearInterval(boot);},400);
+})();
+</script>
+
 </body>
 </html>
