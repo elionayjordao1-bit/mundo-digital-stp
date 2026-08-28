@@ -408,6 +408,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <button class="nav-btn active" id="btnPageMain" onclick="navegarPara('paginaPrincipal')">📊 Dashboard & Vendas</button>
     <button class="nav-btn hidden" id="btnPageFinanceiro" onclick="navegarPara('paginaFinanceiro')">📈 Financeiro</button>
     <button class="nav-btn hidden" id="btnPageAuditoria" onclick="navegarPara('paginaAuditoria')">🛡️ Auditoria</button>
+    <button class="nav-btn hidden" id="btnPageRastreabilidade" onclick="navegarPara('paginaRastreabilidade')">📋 Rastreabilidade</button>
     <button class="nav-btn" id="btnPageCaixa" onclick="navegarPara('paginaCaixa')">💵 Gestão de Caixa</button>
     <button class="nav-btn hidden" id="btnPageTransferencias" onclick="navegarPara('paginaTransferencias')">💱 Transferências</button>
     <button class="nav-btn hidden" id="btnPageEncomendas" onclick="navegarPara('paginaEncomendas')">🚚 Encomendas</button>
@@ -718,6 +719,40 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
   </div> <!-- FIM PAGINA PRINCIPAL -->
 
+  <!-- FASE 6.10.2 — RASTREABILIDADE PERMANENTE
+       A existência da interface NÃO depende da coleção produto_rastreabilidade ter documentos. -->
+  <section id="paginaRastreabilidade" class="hidden">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0;">📋 Rastreabilidade de Produtos</h2>
+          <small>Criação, edição, exclusão, inventário e movimentos de estoque/venda com responsável, data/hora e antes/depois.</small>
+        </div>
+        <button id="btnInventarioInicial610" class="btn-warning hidden" onclick="confirmarInventarioInicial610()">✅ Confirmar Inventário Inicial</button>
+      </div>
+      <div id="rastEstadoVazio610" style="margin-top:12px;padding:10px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:12px;line-height:1.5;">
+        A Rastreabilidade está ativa. Se ainda não existirem eventos, os novos registos começarão a aparecer aqui. A interface permanece disponível mesmo com a coleção vazia.
+      </div>
+      <div class="form-grid" style="margin-top:14px;">
+        <input id="rastBusca610" placeholder="Pesquisar produto, ação ou responsável..." oninput="renderizarRastreabilidade610()">
+        <select id="rastAcao610" onchange="renderizarRastreabilidade610()">
+          <option value="">Todas as ações</option>
+          <option>INVENTARIO_INICIAL_CONFIRMADO</option>
+          <option>PRODUTO_CRIADO</option>
+          <option>PRODUTO_EDITADO</option>
+          <option>PRODUTO_EXCLUIDO</option>
+          <option>ESTOQUE_ENTRADA</option>
+          <option>VENDA_SAIDA</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Data/Hora</th><th>Produto</th><th>Ação</th><th>Antes → Depois</th><th>Responsável</th><th>Perfil</th><th>Origem</th><th>Detalhes</th></tr></thead>
+          <tbody id="listaRastreabilidade610"><tr><td colspan="8" style="color:#94a3b8;">Nenhum evento de rastreabilidade.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
 
   <!-- PÁGINA: FINANCEIRO CONSOLIDADO — FASE 5.4 -->
@@ -10865,7 +10900,21 @@ let listenerMovRastreabilidade610=null;
 
 function f610SnapshotProduto(p){
   if(!p) return null;
-  return {nome:p.nome||"",barcode:p.barcode||"",categoria:p.categoria||"Geral",estoque:Number(p.estoque)||0,minimo:Number(p.minimo)||0,compra:Number(p.compra)||0,venda:Number(p.venda)||0,foto:p.foto||""};
+  // FASE 6.10.2 — snapshot compacto.
+  // NUNCA copiar a foto Base64 para a Rastreabilidade: um rastro de edição guarda
+  // ANTES + DEPOIS e podia ultrapassar o limite de 1 MiB por documento do Firestore.
+  // A foto continua preservada no documento oficial do produto; o rastro regista apenas
+  // se existia imagem, além dos campos comerciais/quantitativos necessários à auditoria.
+  return {
+    nome:p.nome||"",
+    barcode:p.barcode||"",
+    categoria:p.categoria||"Geral",
+    estoque:Number(p.estoque)||0,
+    minimo:Number(p.minimo)||0,
+    compra:Number(p.compra)||0,
+    venda:Number(p.venda)||0,
+    temFoto:!!(p.foto && String(p.foto).trim())
+  };
 }
 function f610RastroPayload(produtoId,produtoNome,acao,antes,depois,extra={}){
   const u=auth.currentUser;
@@ -10878,18 +10927,34 @@ function f610RastroPayload(produtoId,produtoNome,acao,antes,depois,extra={}){
 }
 
 function f610InjetarUI(){
-  if(document.getElementById("btnPageRastreabilidade")) return;
-  const navRef=document.getElementById("btnPageAuditoria")||document.getElementById("btnPageFinanceiro")||document.getElementById("btnPageMain");
-  if(navRef?.parentElement){
-    const b=document.createElement("button"); b.id="btnPageRastreabilidade"; b.className="nav-btn hidden"; b.innerHTML="📋 Rastreabilidade"; b.onclick=()=>navegarPara("paginaRastreabilidade");
-    navRef.parentElement.insertBefore(b,navRef.nextSibling);
+  // FASE 6.10.2 — auto-reparação da interface.
+  // A coleção Firestore pode estar vazia/inexistente e isso NÃO remove o módulo.
+  let btn=document.getElementById("btnPageRastreabilidade");
+  if(!btn){
+    const navRef=document.getElementById("btnPageAuditoria")||document.getElementById("btnPageFinanceiro")||document.getElementById("btnPageMain");
+    if(navRef?.parentElement){
+      btn=document.createElement("button");
+      btn.id="btnPageRastreabilidade";
+      btn.className="nav-btn hidden";
+      btn.innerHTML="📋 Rastreabilidade";
+      btn.onclick=()=>navegarPara("paginaRastreabilidade");
+      navRef.parentElement.insertBefore(btn,navRef.nextSibling);
+    }
   }
-  const appEl=document.getElementById("app"); if(!appEl) return;
-  const sec=document.createElement("section"); sec.id="paginaRastreabilidade"; sec.className="hidden";
-  sec.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;"><div><h2 style="margin:0;">📋 Rastreabilidade de Produtos</h2><small>Criação, edição, exclusão, inventário e movimentos de estoque/venda com responsável, data/hora e antes/depois.</small></div><button id="btnInventarioInicial610" class="btn-warning hidden" onclick="confirmarInventarioInicial610()">✅ Confirmar Inventário Inicial</button></div>
-  <div class="form-grid" style="margin-top:14px;"><input id="rastBusca610" placeholder="Pesquisar produto, ação ou responsável..." oninput="renderizarRastreabilidade610()"><select id="rastAcao610" onchange="renderizarRastreabilidade610()"><option value="">Todas as ações</option><option>INVENTARIO_INICIAL_CONFIRMADO</option><option>PRODUTO_CRIADO</option><option>PRODUTO_EDITADO</option><option>PRODUTO_EXCLUIDO</option><option>ESTOQUE_ENTRADA</option><option>VENDA_SAIDA</option></select></div>
-  <div style="overflow-x:auto;"><table><thead><tr><th>Data/Hora</th><th>Produto</th><th>Ação</th><th>Antes → Depois</th><th>Responsável</th><th>Perfil</th><th>Origem</th><th>Detalhes</th></tr></thead><tbody id="listaRastreabilidade610"></tbody></table></div></div>`;
-  appEl.appendChild(sec);
+
+  let sec=document.getElementById("paginaRastreabilidade");
+  if(!sec){
+    const appEl=document.getElementById("app");
+    if(!appEl) return;
+    sec=document.createElement("section");
+    sec.id="paginaRastreabilidade";
+    sec.className="hidden";
+    sec.innerHTML=`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;"><div><h2 style="margin:0;">📋 Rastreabilidade de Produtos</h2><small>Criação, edição, exclusão, inventário e movimentos de estoque/venda com responsável, data/hora e antes/depois.</small></div><button id="btnInventarioInicial610" class="btn-warning hidden" onclick="confirmarInventarioInicial610()">✅ Confirmar Inventário Inicial</button></div>
+    <div id="rastEstadoVazio610" style="margin-top:12px;padding:10px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:12px;line-height:1.5;">A Rastreabilidade está ativa. Se ainda não existirem eventos, os novos registos começarão a aparecer aqui.</div>
+    <div class="form-grid" style="margin-top:14px;"><input id="rastBusca610" placeholder="Pesquisar produto, ação ou responsável..." oninput="renderizarRastreabilidade610()"><select id="rastAcao610" onchange="renderizarRastreabilidade610()"><option value="">Todas as ações</option><option>INVENTARIO_INICIAL_CONFIRMADO</option><option>PRODUTO_CRIADO</option><option>PRODUTO_EDITADO</option><option>PRODUTO_EXCLUIDO</option><option>ESTOQUE_ENTRADA</option><option>VENDA_SAIDA</option></select></div>
+    <div style="overflow-x:auto;"><table><thead><tr><th>Data/Hora</th><th>Produto</th><th>Ação</th><th>Antes → Depois</th><th>Responsável</th><th>Perfil</th><th>Origem</th><th>Detalhes</th></tr></thead><tbody id="listaRastreabilidade610"></tbody></table></div></div>`;
+    appEl.appendChild(sec);
+  }
 }
 
 const _f610Navegar=navegarPara;
@@ -10938,6 +11003,11 @@ function renderizarRastreabilidade610(){
   let all=[...rastreabilidadeProdutos610]; if(f610EhGestor()) all.push(...movimentosRastreabilidade610.map(f610MovParaRastro).filter(Boolean));
   all.sort((a,b)=>{const da=a.data?.toMillis?a.data.toMillis():new Date(a.data||0).getTime();const dbb=b.data?.toMillis?b.data.toMillis():new Date(b.data||0).getTime();return dbb-da;});
   all=all.filter(r=>(!fa||r.acao===fa)&&(!b||[r.produtoNome,r.acao,r.nomeUsuario,r.usuario,r.role,r.origemModulo,r.motivo].join(" ").toLowerCase().includes(b)));
+  const vazio=document.getElementById("rastEstadoVazio610");
+  if(vazio){
+    const semBase=(rastreabilidadeProdutos610.length===0 && (!f610EhGestor() || movimentosRastreabilidade610.length===0));
+    vazio.classList.toggle("hidden", !semBase);
+  }
   tb.innerHTML=all.slice(0,800).map(r=>{let delta="—";if(r.antes||r.depois){const a=r.antes||{},d=r.depois||{};delta=`Qtd ${a.estoque??"—"} → ${d.estoque??"—"}<br><small>Custo ${Number(a.compra||0).toLocaleString('pt-PT')} → ${Number(d.compra||0).toLocaleString('pt-PT')} Db · Venda ${Number(a.venda||0).toLocaleString('pt-PT')} → ${Number(d.venda||0).toLocaleString('pt-PT')} Db</small>`;}else if(r.quantidadeMov){delta=`${r.acao==="VENDA_SAIDA"?"−":"+"}${r.quantidadeMov} un · ${Number(r.valorMov||0).toLocaleString('pt-PT')} Db`;}
   return `<tr><td><small>${f610Data(r.data)}</small></td><td><b>${f610Esc(r.produtoNome)}</b><br><small style="font-family:monospace">${f610Esc(r.produtoId||"")}</small></td><td><b>${f610Esc(r.acao)}</b></td><td style="text-align:left">${delta}</td><td>${f610Esc(r.nomeUsuario||r.usuario||"-")}</td><td>${f610Esc(String(r.role||"").toUpperCase())}</td><td>${f610Esc(r.origemModulo||"-")}</td><td style="text-align:left"><small>${f610Esc(r.motivo||r.tipoOrigem||r.referenciaId||"-")}</small></td></tr>`;}).join("")||'<tr><td colspan="8" style="color:#94a3b8;">Nenhum evento de rastreabilidade.</td></tr>';
 }
