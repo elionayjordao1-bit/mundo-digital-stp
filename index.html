@@ -2601,6 +2601,22 @@ auth.onAuthStateChanged(async u => {
     // Aplica permissões ANTES de revelar qualquer pixel da aplicação.
     aplicarSegurancaInterface64();
 
+    // FASE 6.10.3 — sincroniza a Rastreabilidade somente DEPOIS de a role
+    // ter sido carregada do Firestore. O antigo setTimeout de 700 ms podia
+    // executar cedo demais (usuarioRole ainda null) e deixar o botão oculto
+    // durante toda a sessão. Isto é interface, não depende de a coleção existir.
+    try {
+      if (typeof f610AplicarInterfaceGerente === "function") {
+        f610AplicarInterfaceGerente();
+      }
+      if ((usuarioRole === "admin" || usuarioRole === "gerente" || usuarioRole === "estoque") &&
+          typeof iniciarRastreabilidade610 === "function") {
+        iniciarRastreabilidade610();
+      }
+    } catch (e) {
+      console.warn("Rastreabilidade — sincronização pós-RBAC:", e);
+    }
+
     if(usuarioRole === "admin") {
       cardRelatorio.classList.remove("hidden");
       cardCompras.classList.remove("hidden");
@@ -11076,7 +11092,16 @@ function f610AplicarInterfaceGerente(){
   if(usuarioRole==="estoque"){document.getElementById("btnPageRastreabilidade")?.classList.remove("hidden");}
 }
 
-auth.onAuthStateChanged(u=>{if(!u)return;setTimeout(()=>{f610AplicarInterfaceGerente();if(f610EhGestor()||usuarioRole==="estoque")iniciarRastreabilidade610();},700);});
+auth.onAuthStateChanged(u=>{
+  if(!u)return;
+  // Fallback visual apenas. A ativação principal acontece no fluxo RBAC,
+  // imediatamente após usuarioRole ser carregado.
+  setTimeout(()=>{
+    if(!usuarioRole) return;
+    f610AplicarInterfaceGerente();
+    if(f610EhGestor()||usuarioRole==="estoque") iniciarRastreabilidade610();
+  },1200);
+});
 document.addEventListener("DOMContentLoaded",f610InjetarUI);
 setTimeout(f610InjetarUI,0);
 
