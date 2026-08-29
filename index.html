@@ -12145,5 +12145,243 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   });
 })();
 </script>
+
+
+<script>
+/* =========================================================================
+   FASE 6.15 — HISTÓRICO DAS MINHAS VENDAS (VENDA1 / VENDA2)
+   - Somente leitura.
+   - Reaproveita o listener de movimentacoes já limitado por UID para vendedor.
+   - Filtra novamente por UID autenticado na interface (defesa em profundidade).
+   - Não expõe custo, lucro, vendas de terceiros, tesouraria ou ações administrativas.
+   - Sem listener Firestore adicional: impacto mínimo em desempenho.
+   ========================================================================= */
+(function(){
+  let mvPeriodo615 = "hoje";
+
+  function mvEhVendedor615(){
+    return usuarioRole === "venda1" || usuarioRole === "venda2";
+  }
+
+  function mvEsc615(v){
+    return String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function mvData615(v){
+    try{
+      const d = v?.toDate ? v.toDate() : (v instanceof Date ? v : new Date(v));
+      return isNaN(d?.getTime()) ? null : d;
+    }catch(e){ return null; }
+  }
+
+  function mvInicioDia615(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0,0,0,0); }
+  function mvFimDia615(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23,59,59,999); }
+
+  function mvEhVendaProduto615(m){
+    if(!m || m.tipo !== "saida") return false;
+    // Transferências/câmbio e movimentos de encomenda têm módulos próprios e não são
+    // apresentados como venda POS neste histórico do vendedor.
+    try { if(typeof ehTransferenciaLegacy === "function" && ehTransferenciaLegacy(m)) return false; } catch(e){}
+    if(String(m.origem || "").toLowerCase() === "encomenda") return false;
+    return true;
+  }
+
+  function mvIntervalo615(){
+    const agora = new Date();
+    if(mvPeriodo615 === "mes"){
+      return {ini:new Date(agora.getFullYear(), agora.getMonth(), 1, 0,0,0,0), fim:new Date(agora.getFullYear(), agora.getMonth()+1, 0, 23,59,59,999)};
+    }
+    if(mvPeriodo615 === "personalizado"){
+      const i = document.getElementById("mvDataInicio615")?.value || "";
+      const f = document.getElementById("mvDataFim615")?.value || "";
+      if(!i || !f) return {ini:null,fim:null};
+      const di = new Date(i + "T00:00:00");
+      const df = new Date(f + "T23:59:59.999");
+      return {ini:di,fim:df};
+    }
+    return {ini:mvInicioDia615(agora), fim:mvFimDia615(agora)};
+  }
+
+  function mvEstado615(m){
+    const bruto = String(m.estadoVenda || m.estado || m.status || "").trim();
+    if(bruto) return bruto.toUpperCase();
+    // A venda POS nasce concluída/registrada e o documento original permanece imutável.
+    return "REGISTADA";
+  }
+
+  function mvCriarUI615(){
+    if(document.getElementById("cardMinhasVendas615")) return;
+    const hist = document.getElementById("cardHistorico");
+    if(!hist?.parentElement) return;
+
+    const card = document.createElement("div");
+    card.id = "cardMinhasVendas615";
+    card.className = "card hidden";
+    card.style.borderTop = "4px solid #2563eb";
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div>
+          <h3 style="margin:0;border:none;color:#1d4ed8;">🧾 Histórico das Minhas Vendas</h3>
+          <small style="color:#64748b;">Somente as vendas registadas pela sua própria conta. Consulta apenas — sem editar ou apagar.</small>
+        </div>
+        <div id="mvResumo615" style="font-size:12px;font-weight:700;color:#1e40af;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;">0 vendas</div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f8fafc;padding:8px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:10px;">
+        <button type="button" id="mvBtnHoje615" class="btn-success" onclick="mvSetPeriodo615('hoje')" style="min-height:38px;padding:5px 10px;">Hoje</button>
+        <button type="button" id="mvBtnMes615" class="btn-secondary" onclick="mvSetPeriodo615('mes')" style="min-height:38px;padding:5px 10px;">Este mês</button>
+        <input type="date" id="mvDataInicio615" style="width:auto;min-height:38px;padding:5px 8px;">
+        <span style="font-size:12px;font-weight:700;color:#64748b;">até</span>
+        <input type="date" id="mvDataFim615" style="width:auto;min-height:38px;padding:5px 8px;">
+        <button type="button" class="btn-secondary" onclick="mvAplicarPeriodo615()" style="min-height:38px;padding:5px 10px;">Aplicar período</button>
+        <input type="text" id="mvBusca615" placeholder="Pesquisar produto, cliente ou ID..." oninput="renderizarMinhasVendas615()" style="flex:1;min-width:210px;min-height:38px;">
+      </div>
+
+      <div class="table-responsive">
+        <table style="min-width:980px;">
+          <thead><tr>
+            <th>Data/Hora</th><th>Produto</th><th>Qtd</th><th>Valor</th><th>Pagamento</th>
+            <th>Cliente / Ref.</th><th>Estado</th><th>ID Movimento</th><th>Ação</th>
+          </tr></thead>
+          <tbody id="mvLista615"><tr><td colspan="9" style="color:#94a3b8;">Nenhuma venda encontrada.</td></tr></tbody>
+        </table>
+      </div>`;
+    hist.insertAdjacentElement("afterend", card);
+
+    const hoje = new Date();
+    const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const ini = document.getElementById("mvDataInicio615");
+    const fim = document.getElementById("mvDataFim615");
+    if(ini) ini.value = iso(hoje);
+    if(fim) fim.value = iso(hoje);
+  }
+
+  window.mvSetPeriodo615 = function(modo){
+    mvPeriodo615 = modo === "mes" ? "mes" : "hoje";
+    document.getElementById("mvBtnHoje615")?.classList.toggle("btn-success", mvPeriodo615 === "hoje");
+    document.getElementById("mvBtnHoje615")?.classList.toggle("btn-secondary", mvPeriodo615 !== "hoje");
+    document.getElementById("mvBtnMes615")?.classList.toggle("btn-success", mvPeriodo615 === "mes");
+    document.getElementById("mvBtnMes615")?.classList.toggle("btn-secondary", mvPeriodo615 !== "mes");
+    renderizarMinhasVendas615();
+  };
+
+  window.mvAplicarPeriodo615 = function(){
+    const i = document.getElementById("mvDataInicio615")?.value || "";
+    const f = document.getElementById("mvDataFim615")?.value || "";
+    if(!i || !f) return alert("Selecione a data inicial e a data final.");
+    if(i > f) return alert("A data inicial não pode ser posterior à data final.");
+    mvPeriodo615 = "personalizado";
+    document.getElementById("mvBtnHoje615")?.classList.remove("btn-success");
+    document.getElementById("mvBtnHoje615")?.classList.add("btn-secondary");
+    document.getElementById("mvBtnMes615")?.classList.remove("btn-success");
+    document.getElementById("mvBtnMes615")?.classList.add("btn-secondary");
+    renderizarMinhasVendas615();
+  };
+
+  window.renderizarMinhasVendas615 = function(){
+    mvCriarUI615();
+    const card = document.getElementById("cardMinhasVendas615");
+    const tbody = document.getElementById("mvLista615");
+    if(!card || !tbody) return;
+
+    const vendedor = mvEhVendedor615();
+    card.classList.toggle("hidden", !vendedor);
+    if(!vendedor){ tbody.innerHTML = ""; return; }
+
+    const uid = auth.currentUser?.uid || "";
+    const busca = String(document.getElementById("mvBusca615")?.value || "").trim().toLowerCase();
+    const {ini,fim} = mvIntervalo615();
+
+    let lista = (todasMovimentacoes || []).filter(m => {
+      if(String(m.uid || "") !== uid) return false; // defesa em profundidade
+      if(!mvEhVendaProduto615(m)) return false;
+      const d = mvData615(m.data);
+      if(ini && (!d || d < ini)) return false;
+      if(fim && (!d || d > fim)) return false;
+      if(busca){
+        const alvo = [m.produto,m.produtoId,m.id,m.cliente,m.referenciaId,m.formaPagamento].map(v=>String(v||"").toLowerCase()).join(" ");
+        if(!alvo.includes(busca)) return false;
+      }
+      return true;
+    });
+
+    lista.sort((a,b)=>(mvData615(b.data)?.getTime()||0)-(mvData615(a.data)?.getTime()||0));
+
+    const total = lista.reduce((s,m)=>s+(Number(m.valor)||0),0);
+    const resumo = document.getElementById("mvResumo615");
+    if(resumo) resumo.textContent = `${lista.length} venda(s) • ${total.toLocaleString('pt-PT')} Db`;
+
+    tbody.innerHTML = lista.map(m => {
+      const d = mvData615(m.data);
+      const dataTxt = d ? d.toLocaleString('pt-PT') : "-";
+      const cliente = String(m.cliente || "Consumidor Final");
+      const ref = String(m.referenciaId || "").trim();
+      const clienteRef = ref ? `${mvEsc615(cliente)}<br><small style="color:#64748b;">Ref: ${mvEsc615(ref)}</small>` : mvEsc615(cliente);
+      const estado = mvEstado615(m);
+      const id = String(m.id || "");
+      return `<tr>
+        <td><small>${mvEsc615(dataTxt)}</small></td>
+        <td><b>${mvEsc615(m.produto || "-")}</b></td>
+        <td><b>${Number(m.quantidade)||0}</b></td>
+        <td><b>${(Number(m.valor)||0).toLocaleString('pt-PT')} Db</b></td>
+        <td><small>${mvEsc615(m.formaPagamento || "-")}</small></td>
+        <td>${clienteRef}</td>
+        <td><span style="background:#dcfce7;color:#166534;padding:3px 8px;border-radius:12px;font-weight:800;font-size:11px;">${mvEsc615(estado)}</span></td>
+        <td><small style="font-family:monospace;word-break:break-all;">${mvEsc615(id)}</small></td>
+        <td><button class="btn-secondary btn-acao" onclick="emitirReciboHistorico('${mvEsc615(id)}')" title="Ver ou imprimir o recibo desta venda">🧾 Recibo</button></td>
+      </tr>`;
+    }).join("") || '<tr><td colspan="9" style="color:#94a3b8;">Nenhuma venda encontrada para este filtro.</td></tr>';
+  };
+
+  function mvSincronizarInterface615(){
+    mvCriarUI615();
+    const vendedor = mvEhVendedor615();
+    document.getElementById("cardMinhasVendas615")?.classList.toggle("hidden", !vendedor);
+    // VENDA1/VENDA2 ficam estritamente no próprio histórico; o histórico global continua
+    // reservado a ADMIN/GERENTE conforme a arquitetura atual.
+    if(vendedor) document.getElementById("cardHistorico")?.classList.add("hidden");
+    renderizarMinhasVendas615();
+  }
+
+  // Mantém a segurança/visibilidade centralizada e não interfere com as regras existentes.
+  if(typeof aplicarSegurancaInterface64 === "function"){
+    const aplicarAnterior615 = aplicarSegurancaInterface64;
+    aplicarSegurancaInterface64 = function(){
+      const r = aplicarAnterior615.apply(this, arguments);
+      mvSincronizarInterface615();
+      return r;
+    };
+  }
+
+  if(typeof resetarInterface === "function"){
+    const resetAnterior615 = resetarInterface;
+    resetarInterface = function(){
+      const r = resetAnterior615.apply(this, arguments);
+      document.getElementById("cardMinhasVendas615")?.classList.add("hidden");
+      const t=document.getElementById("mvLista615"); if(t) t.innerHTML="";
+      return r;
+    };
+  }
+
+  // Atualiza a nova tabela toda vez que o listener já existente redesenha o histórico.
+  if(typeof renderizarHistorico === "function"){
+    const renderHistoricoAnterior615 = renderizarHistorico;
+    renderizarHistorico = function(lista){
+      const r = renderHistoricoAnterior615.apply(this, arguments);
+      try { renderizarMinhasVendas615(); } catch(e){ console.warn("Minhas Vendas 6.15:", e); }
+      return r;
+    };
+  }
+
+  document.addEventListener("DOMContentLoaded", mvCriarUI615);
+  mvCriarUI615();
+  auth.onAuthStateChanged(u=>{
+    if(!u){ document.getElementById("cardMinhasVendas615")?.classList.add("hidden"); return; }
+    setTimeout(mvSincronizarInterface615, 0);
+    setTimeout(mvSincronizarInterface615, 700);
+  });
+})();
+</script>
+
 </body>
 </html>
