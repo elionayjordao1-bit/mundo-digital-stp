@@ -700,7 +700,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <input type="date" id="histDataFim" style="padding: 5px; font-size: 12px; width: auto; min-height: 38px;">
           <button onclick="filtrarHistoricoIntervalo()" class="btn-success" style="padding: 5px 10px; font-size: 12px; min-height: 38px;">Filtrar Período</button>
           <button onclick="filtrarHistoricoHoje()" class="btn-secondary" style="padding: 5px 10px; font-size: 12px; min-height: 38px;">Hoje</button>
+          <button onclick="filtrarHistoricoMesAtual()" class="btn-secondary" style="padding: 5px 10px; font-size: 12px; min-height: 38px;">Este mês</button>
           <button onclick="limparFiltroHistorico()" class="btn-secondary" style="padding: 5px 10px; font-size: 12px; min-height: 38px;">Todos</button>
+          <input type="text" id="histBuscaGlobal" placeholder="🔎 Produto, cliente ou ID..." oninput="aplicarFiltroHistoricoGlobal()" style="flex:1;min-width:210px;min-height:38px;padding:5px 8px;font-size:12px;">
           <button id="btnExportarHistorico" class="btn-secondary hidden" onclick="exportarHistorico()" style="padding: 5px 10px; font-size: 12px; min-height: 38px;">📥 Excel</button>
         </div>
       </div>
@@ -12146,6 +12148,112 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 })();
 </script>
 
+
+<script>
+/* ==========================================================================
+   FASE 6.16 — PESQUISA DO HISTÓRICO GLOBAL (ADMIN / GERENTE)
+   Consulta apenas: combina período + pesquisa por produto, cliente ou ID.
+   Não cria listeners, não altera documentos e não modifica permissões.
+   ========================================================================== */
+(function(){
+  let histModoGlobal616 = "todos";
+
+  function h616Data(v){
+    try {
+      if(v?.toDate) return v.toDate();
+      if(v instanceof Date) return v;
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? null : d;
+    } catch(e){ return null; }
+  }
+
+  function h616EhGestor(){
+    return usuarioRole === "admin" || usuarioRole === "gerente";
+  }
+
+  function h616Intervalo(){
+    const agora = new Date();
+    if(histModoGlobal616 === "hoje") {
+      return {
+        ini:new Date(agora.getFullYear(),agora.getMonth(),agora.getDate(),0,0,0,0),
+        fim:new Date(agora.getFullYear(),agora.getMonth(),agora.getDate(),23,59,59,999)
+      };
+    }
+    if(histModoGlobal616 === "mes") {
+      return {
+        ini:new Date(agora.getFullYear(),agora.getMonth(),1,0,0,0,0),
+        fim:new Date(agora.getFullYear(),agora.getMonth()+1,0,23,59,59,999)
+      };
+    }
+    if(histModoGlobal616 === "personalizado") {
+      const i=document.getElementById("histDataInicio")?.value||"";
+      const f=document.getElementById("histDataFim")?.value||"";
+      if(!i||!f) return {ini:null,fim:null};
+      return {ini:new Date(i+"T00:00:00"),fim:new Date(f+"T23:59:59.999")};
+    }
+    return {ini:null,fim:null};
+  }
+
+  window.aplicarFiltroHistoricoGlobal = function(){
+    if(!h616EhGestor()) return;
+    const busca=String(document.getElementById("histBuscaGlobal")?.value||"").trim().toLowerCase();
+    const {ini,fim}=h616Intervalo();
+    const filtrados=(todasMovimentacoes||[]).filter(m=>{
+      const d=h616Data(m.data);
+      if(ini && (!d || d<ini)) return false;
+      if(fim && (!d || d>fim)) return false;
+      if(busca){
+        const alvo=[
+          m.produto,m.produtoId,m.cliente,m.id,m.referenciaId,m.operacaoOriginalId,
+          m.solicitacaoTransferenciaId,m.solicitacaoEncomendaId,m.formaPagamento
+        ].map(v=>String(v||"").toLowerCase()).join(" ");
+        if(!alvo.includes(busca)) return false;
+      }
+      return true;
+    });
+    filtrados.sort((a,b)=>(h616Data(b.data)?.getTime()||0)-(h616Data(a.data)?.getTime()||0));
+    renderizarHistorico(filtrados);
+  };
+
+  window.filtrarHistoricoIntervalo = function(){
+    const i=document.getElementById("histDataInicio")?.value||"";
+    const f=document.getElementById("histDataFim")?.value||"";
+    if(!i||!f) return alert("Selecione ambas as datas de início e fim para filtrar!");
+    if(i>f) return alert("A data inicial não pode ser posterior à data final.");
+    histModoGlobal616="personalizado";
+    aplicarFiltroHistoricoGlobal();
+  };
+
+  window.filtrarHistoricoHoje = function(){
+    histModoGlobal616="hoje";
+    aplicarFiltroHistoricoGlobal();
+  };
+
+  window.filtrarHistoricoMesAtual = function(){
+    histModoGlobal616="mes";
+    aplicarFiltroHistoricoGlobal();
+  };
+
+  window.limparFiltroHistorico = function(){
+    histModoGlobal616="todos";
+    const i=document.getElementById("histDataInicio");
+    const f=document.getElementById("histDataFim");
+    const b=document.getElementById("histBuscaGlobal");
+    if(i)i.value=""; if(f)f.value=""; if(b)b.value="";
+    aplicarFiltroHistoricoGlobal();
+  };
+
+  // Quando o listener global recebe novos movimentos, preserva o filtro atual
+  // em vez de obrigar ADMIN/GERENTE a refazer a pesquisa.
+  if(typeof renderizarHistorico === "function") {
+    const renderAnterior616=renderizarHistorico;
+    let emFiltro616=false;
+    renderizarHistorico=function(lista){
+      return renderAnterior616.apply(this,arguments);
+    };
+  }
+})();
+</script>
 
 <script>
 /* =========================================================================
