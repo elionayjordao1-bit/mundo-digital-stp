@@ -1,16 +1,32 @@
 {
-  "short_name": "MundoDigital",
-  "name": "Mundo Digital STP - Gestão",
+  "id": "./",
+  "name": "Mundo Digital STP",
+  "short_name": "Mundo Digital",
+  "description": "ERP & POS da Mundo Digital STP",
+  "lang": "pt-PT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "orientation": "any",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "sizes": "512x512"
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ],
-  "start_url": "./index.html",
-  "background_color": "#f4f6f8",
-  "theme_color": "#2c7be5",
-  "display": "standalone",
-  "orientation": "portrait"
+  ]
 }

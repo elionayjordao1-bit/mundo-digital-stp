@@ -360,8 +360,22 @@ tr:nth-child(even) { background-color: #f8fafc; }
   .top-action-bar button { flex: 1; }
 }
 </style>
+
+<!-- PWA Mundo Digital STP -->
+<meta name="application-name" content="Mundo Digital STP">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+
 </head>
 <body>
+<!-- PWA: atualização controlada -->
+<div id="pwaUpdateBar" class="hidden no-print" style="position:fixed;left:12px;right:12px;bottom:12px;z-index:5000;background:#0f172a;color:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 10px 30px rgba(15,23,42,.28);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <span style="font-size:13px;font-weight:700;">🔄 Nova versão da Mundo Digital STP disponível.</span>
+  <button id="pwaUpdateBtn" type="button" style="min-height:38px;background:#10b981;padding:7px 13px;">Atualizar agora</button>
+</div>
+
 
 <!-- FASE 3: BANNER DE CONEXÃO E FILA LOCAL -->
 <div id="offlineBanner" class="hidden no-print">
@@ -12494,6 +12508,101 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
     if(!u){ document.getElementById("cardMinhasVendas615")?.classList.add("hidden"); return; }
     setTimeout(mvSincronizarInterface615, 0);
     setTimeout(mvSincronizarInterface615, 700);
+  });
+})();
+</script>
+
+
+<script>
+/* =========================================================================
+   PWA MUNDO DIGITAL STP — CAMADA DE INSTALAÇÃO / ATUALIZAÇÃO
+   Não altera Caixa, Tesouraria, Vendas, Estoque ou Firebase.
+   Operações críticas continuam dependentes de internet e das regras atuais.
+   ========================================================================= */
+(function(){
+  'use strict';
+  let deferredInstallPrompt = null;
+  let waitingWorker = null;
+
+  function mostrarAtualizacao(worker){
+    waitingWorker = worker || waitingWorker;
+    const bar = document.getElementById('pwaUpdateBar');
+    if(bar) bar.classList.remove('hidden');
+  }
+
+  function esconderAtualizacao(){
+    document.getElementById('pwaUpdateBar')?.classList.add('hidden');
+  }
+
+  function garantirBotaoInstalar(){
+    if(document.getElementById('btnInstalarPWA')) return;
+    const header = document.getElementById('userInfoHeader');
+    if(!header) return;
+    const btn = document.createElement('button');
+    btn.id = 'btnInstalarPWA';
+    btn.type = 'button';
+    btn.className = 'btn-success';
+    btn.style.cssText = 'margin-left:10px;min-height:36px;padding:4px 10px;';
+    btn.textContent = '⬇️ Instalar App';
+    btn.onclick = async function(){
+      if(!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      try { await deferredInstallPrompt.userChoice; } catch(e) {}
+      deferredInstallPrompt = null;
+      btn.remove();
+    };
+    header.insertBefore(btn, header.querySelector('button[onclick="logout()"]') || null);
+  }
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    garantirBotaoInstalar();
+  });
+
+  window.addEventListener('appinstalled', function(){
+    deferredInstallPrompt = null;
+    document.getElementById('btnInstalarPWA')?.remove();
+  });
+
+  document.getElementById('pwaUpdateBtn')?.addEventListener('click', function(){
+    if(waitingWorker) waitingWorker.postMessage({type:'SKIP_WAITING'});
+  });
+
+  if(!('serviceWorker' in navigator)) return;
+
+  window.addEventListener('load', async function(){
+    try {
+      const reg = await navigator.serviceWorker.register('./service-worker.js', {scope:'./'});
+
+      if(reg.waiting && navigator.serviceWorker.controller) mostrarAtualizacao(reg.waiting);
+
+      reg.addEventListener('updatefound', function(){
+        const novo = reg.installing;
+        if(!novo) return;
+        novo.addEventListener('statechange', function(){
+          if(novo.state === 'installed' && navigator.serviceWorker.controller){
+            mostrarAtualizacao(novo);
+          }
+        });
+      });
+
+      // Procura novas versões periodicamente quando a aplicação permanece aberta.
+      setInterval(function(){ reg.update().catch(()=>{}); }, 15 * 60 * 1000);
+      document.addEventListener('visibilitychange', function(){
+        if(document.visibilityState === 'visible') reg.update().catch(()=>{});
+      });
+    } catch(e) {
+      console.warn('PWA: não foi possível registar o Service Worker:', e);
+    }
+  });
+
+  let recarregando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(recarregando) return;
+    recarregando = true;
+    esconderAtualizacao();
+    window.location.reload();
   });
 })();
 </script>
