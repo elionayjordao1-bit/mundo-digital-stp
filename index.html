@@ -7241,20 +7241,39 @@ function recalcularSaldosTesouraria() {
   contasTesouraria = saldos;
   atualizarKpisCapitalTesouraria();
 
-  // FASE 6.8 — saldo-resumo seguro usado somente para financiar abertura de Caixa.
-  // VENDA1/VENDA2 conseguem ler apenas este número; o razão completo continua privado do ADMIN.
+  // FASE 6.14 — snapshots completos da Tesouraria.
+  // O razão (tesouraria_movimentos) continua sendo a fonte de verdade.
+  // Esta coleção mantém apenas saldos-resumo sincronizados para consultas/validações operacionais.
+  // VENDA1/VENDA2 continuam limitados pelas Firestore Rules; esta escrita é exclusiva do ADMIN.
   if(usuarioRole === "admin" && auth.currentUser) {
     try {
-      db.collection("tesouraria_saldos").doc("responsavel_stp").set({
-        saldo: Number(saldos.responsavel_stp) || 0,
-        moeda: "STN",
-        atualizadoEm: new Date(),
+      const agoraResumoTes = new Date();
+      const metaResumoTes = {
+        atualizadoEm: agoraResumoTes,
         atualizadoPorUid: auth.currentUser.uid,
         atualizadoPorUsuario: auth.currentUser.email || "",
         origemCalculo: "ledger_tesouraria"
-      }, { merge: true }).catch(e => console.warn("Não foi possível sincronizar saldo-resumo da Reserva; sessão mantida ativa:", e));
+      };
+
+      Promise.all([
+        db.collection("tesouraria_saldos").doc("responsavel_stp").set({
+          saldo: Number(saldos.responsavel_stp) || 0,
+          moeda: "STN",
+          ...metaResumoTes
+        }, { merge: true }),
+        db.collection("tesouraria_saldos").doc("banco_stp").set({
+          saldo: Number(saldos.banco_stp) || 0,
+          moeda: "STN",
+          ...metaResumoTes
+        }, { merge: true }),
+        db.collection("tesouraria_saldos").doc("portugal_eur").set({
+          saldo: Number(saldos.portugal_eur) || 0,
+          moeda: "EUR",
+          ...metaResumoTes
+        }, { merge: true })
+      ]).catch(e => console.warn("Não foi possível sincronizar todos os saldos-resumo da Tesouraria; razão principal preservado:", e));
     } catch(e) {
-      console.warn("Falha local ao preparar saldo-resumo da Reserva; sessão mantida ativa:", e);
+      console.warn("Falha local ao preparar saldos-resumo da Tesouraria; razão principal preservado:", e);
     }
   }
 }
@@ -11835,20 +11854,8 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
     };
   }
 
-  // Mantém também o saldo-resumo do Banco sincronizado quando o ADMIN recalcula o razão.
-  if(typeof recalcularSaldosTesouraria==='function'){
-    const recalcularOriginal612=recalcularSaldosTesouraria;
-    recalcularSaldosTesouraria=function(){
-      const r=recalcularOriginal612.apply(this,arguments);
-      if(usuarioRole==='admin'&&auth.currentUser){
-        db.collection('tesouraria_saldos').doc('banco_stp').set({
-          saldo:Number(contasTesouraria?.banco_stp)||0,moeda:'STN',atualizadoEm:new Date(),
-          atualizadoPorUid:auth.currentUser.uid,atualizadoPorUsuario:auth.currentUser.email||'',origemCalculo:'ledger_tesouraria'
-        },{merge:true}).catch(e=>console.warn('Saldo-resumo Banco:',e));
-      }
-      return r;
-    };
-  }
+  // FASE 6.14: Banco, Reserva e Portugal/EUR são sincronizados em conjunto
+  // diretamente por recalcularSaldosTesouraria(). Evita writes duplicados e omissões entre contas.
 
   // Auditoria 6.12.1: pedido pendente/rejeitado não pode ter dinheiro; aprovado deve ter par 1:1.
   if(typeof executarAuditoriaIntegridade==='function'){
