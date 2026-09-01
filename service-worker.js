@@ -1,31 +1,34 @@
-/* Mundo Digital STP PWA
-   Estratégia segura: navegação network-first; cache só da interface local.
-   Firebase/Firestore e operações financeiras NÃO são interceptadas nem simuladas offline. */
-const CACHE_NAME = 'mdstp-shell-2026-09-01-v1';
+/* Mundo Digital STP PWA — 2026.09.02-001
+   Cache apenas da interface local.
+   Firebase/Firestore e operações financeiras NÃO são simuladas offline. */
+
+const CACHE_NAME = 'mdstp-shell-2026.09.02-001';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './app-version.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      .then(keys => Promise.all(
+        keys.filter(k => k.startsWith('mdstp-shell-') && k !== CACHE_NAME)
+            .map(k => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   );
-});
-
-self.addEventListener('message', event => {
-  if(event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', event => {
@@ -34,10 +37,10 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(req.url);
 
-  // Nunca controlar tráfego Firebase/Google externo.
+  // Nunca interceptar Firebase, Google APIs ou outros domínios externos.
   if(url.origin !== self.location.origin) return;
 
-  // HTML/navegação: sempre procurar a versão publicada primeiro.
+  // HTML/navegação: rede primeiro para receber sempre a versão publicada.
   if(req.mode === 'navigate') {
     event.respondWith(
       fetch(req, {cache:'no-store'})
@@ -53,8 +56,16 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Arquivos locais PWA: cache-first com atualização normal pelo ciclo do SW.
+  // app-version deve vir sempre da rede.
+  if(url.pathname.endsWith('/app-version.json')) {
+    event.respondWith(fetch(req, {cache:'no-store'}));
+    return;
+  }
+
+  // Manifesto e ícones podem usar cache.
   if(url.pathname.endsWith('/manifest.json') || url.pathname.includes('/icons/')) {
-    event.respondWith(caches.match(req).then(cached => cached || fetch(req)));
+    event.respondWith(
+      caches.match(req).then(cached => cached || fetch(req))
+    );
   }
 });

@@ -368,6 +368,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
+<meta name="mdstp-build" content="2026.09.02-001">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -12515,35 +12516,48 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 <script>
 /* =========================================================================
-   PWA MUNDO DIGITAL STP — CAMADA DE INSTALAÇÃO / ATUALIZAÇÃO
-   Não altera Caixa, Tesouraria, Vendas, Estoque ou Firebase.
-   Operações críticas continuam dependentes de internet e das regras atuais.
+   PWA MUNDO DIGITAL STP — INSTALAÇÃO + ATUALIZAÇÃO CONTROLADA
+   - Não altera Caixa, Tesouraria, Vendas, Estoque ou Firebase.
+   - Operações críticas continuam dependentes de internet.
+   - A atualização da aplicação é detectada por app-version.json.
    ========================================================================= */
 (function(){
   'use strict';
-  let deferredInstallPrompt = null;
-  let waitingWorker = null;
 
-  function mostrarAtualizacao(worker){
-    waitingWorker = worker || waitingWorker;
-    const bar = document.getElementById('pwaUpdateBar');
+  let deferredInstallPrompt = null;
+  let updateEmCurso = false;
+  let registroSW = null;
+
+  function buildAtual(){
+    return document.querySelector('meta[name="mdstp-build"]')?.content || "";
+  }
+
+  function barraAtualizacao(){
+    return document.getElementById('pwaUpdateBar');
+  }
+
+  function mostrarAtualizacao(){
+    const bar = barraAtualizacao();
     if(bar) bar.classList.remove('hidden');
   }
 
   function esconderAtualizacao(){
-    document.getElementById('pwaUpdateBar')?.classList.add('hidden');
+    const bar = barraAtualizacao();
+    if(bar) bar.classList.add('hidden');
   }
 
   function garantirBotaoInstalar(){
     if(document.getElementById('btnInstalarPWA')) return;
     const header = document.getElementById('userInfoHeader');
     if(!header) return;
+
     const btn = document.createElement('button');
     btn.id = 'btnInstalarPWA';
     btn.type = 'button';
     btn.className = 'btn-success';
     btn.style.cssText = 'margin-left:10px;min-height:36px;padding:4px 10px;';
     btn.textContent = '⬇️ Instalar App';
+
     btn.onclick = async function(){
       if(!deferredInstallPrompt) return;
       deferredInstallPrompt.prompt();
@@ -12551,6 +12565,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       deferredInstallPrompt = null;
       btn.remove();
     };
+
     header.insertBefore(btn, header.querySelector('button[onclick="logout()"]') || null);
   }
 
@@ -12565,45 +12580,92 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
     document.getElementById('btnInstalarPWA')?.remove();
   });
 
-  document.getElementById('pwaUpdateBtn')?.addEventListener('click', function(){
-    if(waitingWorker) waitingWorker.postMessage({type:'SKIP_WAITING'});
-  });
-
-  if(!('serviceWorker' in navigator)) return;
-
-  window.addEventListener('load', async function(){
+  async function verificarNovaVersao(){
+    if(!navigator.onLine) return false;
     try {
-      const reg = await navigator.serviceWorker.register('./service-worker.js', {scope:'./'});
-
-      if(reg.waiting && navigator.serviceWorker.controller) mostrarAtualizacao(reg.waiting);
-
-      reg.addEventListener('updatefound', function(){
-        const novo = reg.installing;
-        if(!novo) return;
-        novo.addEventListener('statechange', function(){
-          if(novo.state === 'installed' && navigator.serviceWorker.controller){
-            mostrarAtualizacao(novo);
-          }
-        });
+      const resp = await fetch('./app-version.json?t=' + Date.now(), {
+        cache: 'no-store',
+        headers: {'Cache-Control':'no-cache'}
       });
+      if(!resp.ok) return false;
+      const info = await resp.json();
+      const remota = String(info?.build || '').trim();
+      const local = String(buildAtual() || '').trim();
 
-      // Procura novas versões periodicamente quando a aplicação permanece aberta.
-      setInterval(function(){ reg.update().catch(()=>{}); }, 15 * 60 * 1000);
-      document.addEventListener('visibilitychange', function(){
-        if(document.visibilityState === 'visible') reg.update().catch(()=>{});
-      });
-    } catch(e) {
-      console.warn('PWA: não foi possível registar o Service Worker:', e);
+      if(remota && local && remota !== local){
+        mostrarAtualizacao();
+        return true;
+      }
+      return false;
+    } catch(e){
+      return false;
     }
-  });
+  }
 
-  let recarregando = false;
-  navigator.serviceWorker.addEventListener('controllerchange', function(){
-    if(recarregando) return;
-    recarregando = true;
-    esconderAtualizacao();
-    window.location.reload();
-  });
+  async function atualizarAplicacaoAgora(){
+    if(updateEmCurso) return;
+    updateEmCurso = true;
+
+    const btn = document.getElementById('pwaUpdateBtn');
+    if(btn){
+      btn.disabled = true;
+      btn.textContent = '⏳ A atualizar...';
+    }
+
+    try {
+      // Pede ao navegador para verificar também o Service Worker.
+      if(registroSW) {
+        try { await registroSW.update(); } catch(e) {}
+      }
+
+      // Limpa apenas caches PWA do mesmo site. Não toca no Firestore/Firebase.
+      if('caches' in window){
+        try {
+          const keys = await caches.keys();
+          await Promise.all(
+            keys
+              .filter(k => k.startsWith('mdstp-shell-'))
+              .map(k => caches.delete(k))
+          );
+        } catch(e) {}
+      }
+
+      esconderAtualizacao();
+
+      // Reabre a URL sem fragmentos/parâmetros, forçando a versão publicada.
+      const destino = window.location.origin + window.location.pathname + '?pwa_refresh=' + Date.now();
+      window.location.replace(destino);
+    } catch(e){
+      console.warn('PWA: falha ao aplicar atualização:', e);
+      if(btn){
+        btn.disabled = false;
+        btn.textContent = 'Tentar novamente';
+      }
+      updateEmCurso = false;
+    }
+  }
+
+  document.getElementById('pwaUpdateBtn')?.addEventListener('click', atualizarAplicacaoAgora);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', async function(){
+      try {
+        registroSW = await navigator.serviceWorker.register('./service-worker.js', {scope:'./'});
+        try { await registroSW.update(); } catch(e) {}
+      } catch(e){
+        console.warn('PWA: não foi possível registar o Service Worker:', e);
+      }
+
+      await verificarNovaVersao();
+
+      // Verifica discretamente enquanto a app permanece aberta.
+      setInterval(verificarNovaVersao, 15 * 60 * 1000);
+      document.addEventListener('visibilitychange', function(){
+        if(document.visibilityState === 'visible') verificarNovaVersao();
+      });
+      window.addEventListener('online', verificarNovaVersao);
+    });
+  }
 })();
 </script>
 
