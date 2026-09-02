@@ -368,7 +368,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.02-001">
+<meta name="mdstp-build" content="2026.09.02-003">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -1239,7 +1239,10 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
     <!-- FASE 6.3 — PRESTAÇÃO DE CONTAS DOS TURNOS FECHADOS -->
     <div class="card hidden" id="cardPrestacaoContasTurnos" style="border-left:4px solid #2563eb;">
-      <h3 style="color:#1d4ed8;">🧾 Prestação de Contas — Turnos Fechados</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h3 style="color:#1d4ed8;margin-bottom:4px;">🧾 Prestação de Contas — Turnos Fechados</h3>
+        <span id="badgePrestacaoPendente63" style="background:#fef3c7;color:#92400e;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:800;">0 pendente(s)</span>
+      </div>
       <p style="font-size:13px;color:#64748b;margin-top:-8px;line-height:1.6;">
         Depois do fecho, o dinheiro contado permanece associado ao turno até ser entregue à
         <b>Responsável / Reserva</b>. A entrega pode ser total ou parcial e não é receita nem despesa.
@@ -1568,11 +1571,11 @@ tr:nth-child(even) { background-color: #f8fafc; }
               <small style="color:#6b21a8;font-weight:700;">VALOR EM DOBRAS</small>
               <div id="transfResumoDb" style="font-size:20px;font-weight:800;color:#1e293b;">0 Db</div>
             </div>
-            <div>
+            <div id="transfResumoMargemBox">
               <small style="color:#6b21a8;font-weight:700;">MARGEM ESTIMADA</small>
               <div id="transfResumoMargem" style="font-size:20px;font-weight:800;color:#059669;">0 Db</div>
             </div>
-            <div>
+            <div id="transfResumoMargemEuroBox">
               <small style="color:#6b21a8;font-weight:700;">MARGEM POR EURO</small>
               <div id="transfResumoMargemEuro" style="font-size:20px;font-weight:800;color:#059669;">0 Db/€</div>
             </div>
@@ -1591,9 +1594,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div id="cardPedidosTransferencia651" class="card" style="border-left:4px solid #8b5cf6;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
         <div>
-          <h3 style="color:#6d28d9;margin-bottom:4px;">📨 Transferências Aguardando Aprovação</h3>
+          <h3 style="color:#6d28d9;margin-bottom:4px;">📨 Solicitações de Transferência</h3>
           <p id="textoPedidosTransferencia651" style="margin:0;color:#64748b;font-size:13px;">
-            Pedidos pendentes. Movimentos físicos provisórios ficam reservados até aprovação ou rejeição.
+            Histórico das solicitações de transferência. O contador destaca apenas as que ainda aguardam decisão.
           </p>
         </div>
         <span id="badgePedidosTransferencia651" style="background:#ede9fe;color:#6d28d9;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:800;">0 pendente(s)</span>
@@ -1614,7 +1617,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
 
     <div class="kpi-grid">
-      <div class="kpi-card purple">
+      <div id="transfKpiMargemBox" class="kpi-card purple">
         <span class="kpi-title">Margem das Transferências</span>
         <span id="transfKpiMargem" class="kpi-value">0 Db</span>
         <span class="kpi-sub">No período carregado</span>
@@ -1629,7 +1632,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <span id="transfKpiSTPPT" class="kpi-value">0 €</span>
         <span class="kpi-sub">EUR entregues em Portugal</span>
       </div>
-      <div class="kpi-card orange">
+      <div id="transfKpiSaldoBox" class="kpi-card orange">
         <span class="kpi-title">Posição Líquida EUR</span>
         <span id="transfKpiSaldoEur" class="kpi-value">0 €</span>
         <span class="kpi-sub">Líquido das transferências registadas; não é saldo bancário</span>
@@ -1643,8 +1646,8 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <thead>
             <tr>
               <th>Data</th><th>Direção</th><th>Cliente</th><th>EUR</th>
-              <th>Taxa Ref.</th><th>Taxa Aplicada</th><th>Db</th>
-              <th>Margem</th><th>Forma STP</th><th>Estado</th>
+              <th class="transf-col-interna">Taxa Ref.</th><th>Taxa Aplicada</th><th>Db</th>
+              <th class="transf-col-interna">Margem</th><th>Forma STP</th><th>Estado</th>
             </tr>
           </thead>
           <tbody id="listaTransferencias"></tbody>
@@ -5613,10 +5616,10 @@ function renderizarTransferencias() {
       <td>${dir}</td>
       <td><b>${t.cliente || "-"}</b>${t.telefone ? `<br><small>${t.telefone}</small>` : ""}</td>
       <td>${Number(t.qtdEur || 0).toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €</td>
-      <td>${Number(t.taxaReferencia || 0).toFixed(2)}</td>
+      <td class="transf-col-interna">${Number(t.taxaReferencia || 0).toFixed(2)}</td>
       <td>${Number(t.taxaAplicada || 0).toFixed(2)}</td>
       <td><b>${Number(t.totalDb || 0).toLocaleString("pt-PT")} Db</b></td>
-      <td style="font-weight:800;color:${corMargem};">${margem > 0 ? "+" : ""}${margem.toLocaleString("pt-PT")} Db</td>
+      <td class="transf-col-interna" style="font-weight:800;color:${corMargem};">${margem > 0 ? "+" : ""}${margem.toLocaleString("pt-PT")} Db</td>
       <td><small>${forma}</small></td>
       <td>${estado}</td>
     </tr>`;
@@ -8966,6 +8969,7 @@ function renderizarPrestacoesTurnos63() {
   setTxt("prestKpiTotalPendente", totalPendente.toLocaleString("pt-PT",{maximumFractionDigits:2}) + " Db");
   setTxt("prestKpiTurnosPendentes", String(pendentes.length));
   setTxt("prestKpiTurnosPrestados", String(prestados.length));
+  setTxt("badgePrestacaoPendente63", `${pendentes.length} pendente(s)`);
 
   if(!sujeitos.length) {
     tbody.innerHTML = '<tr><td colspan="8" style="color:#94a3b8;">Nenhum turno da Fase 6.3 fechado ainda.</td></tr>';
@@ -11605,9 +11609,13 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       card.id='cardAprovacoesCaixa612'; card.className='card'; card.style.borderLeft='4px solid #0f766e';
       card.innerHTML=`
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-          <div><h3 style="color:#0f766e;margin-bottom:4px;">✅ Aprovações de Movimentos de Caixa</h3>
+          <div><h3 style="color:#0f766e;margin-bottom:4px;">💵 Suprimentos e Sangrias</h3>
           <p id="textoAprovacoesCaixa612" style="margin:0;color:#64748b;font-size:13px;">Suprimentos e Sangrias pendentes não movimentam dinheiro.</p></div>
-          <span id="badgeAprovacoesCaixa612" class="badge-em-transito">0 pendente(s)</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+            <span id="badgeAprovacoesCaixa612" class="badge-em-transito">0 pendente(s)</span>
+            <span id="badgeAprovacoesCaixa612Aprov" style="background:#dcfce7;color:#15803d;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:800;">0 aprovado(s)</span>
+            <span id="badgeAprovacoesCaixa612Rej" style="background:#fee2e2;color:#b91c1c;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:800;">0 rejeitado(s)</span>
+          </div>
         </div>
         <div class="table-responsive" style="margin-top:12px;"><table style="min-width:1100px;">
           <thead><tr><th>Data</th><th>Tipo</th><th>Solicitante</th><th>Turno</th><th>Origem</th><th>Destino</th><th>Valor</th><th>Motivo</th><th>Estado</th><th>Decisão</th></tr></thead>
@@ -11647,7 +11655,11 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       return dbb-da;
     });
     const pend=lista.filter(x=>x.estado==='PENDENTE_APROVACAO').length;
+    const aprov=lista.filter(x=>x.estado==='APROVADA_EXECUTADA').length;
+    const rej=lista.filter(x=>x.estado==='REJEITADA').length;
     const badge=document.getElementById('badgeAprovacoesCaixa612'); if(badge)badge.textContent=`${pend} pendente(s)`;
+    const badgeA=document.getElementById('badgeAprovacoesCaixa612Aprov'); if(badgeA)badgeA.textContent=`${aprov} aprovado(s)`;
+    const badgeR=document.getElementById('badgeAprovacoesCaixa612Rej'); if(badgeR)badgeR.textContent=`${rej} rejeitado(s)`;
     const texto=document.getElementById('textoAprovacoesCaixa612');
     if(texto) texto.textContent = usuarioRole==='gerente'
       ? 'GERENTE decide pedidos de terceiros apenas em Responsável / Reserva ↔ Caixa. Pedido próprio e qualquer movimento com Banco exigem ADMIN.'
@@ -12666,6 +12678,145 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       window.addEventListener('online', verificarNovaVersao);
     });
   }
+})();
+</script>
+
+
+<script>
+/* =========================================================================
+   FASE 6.17 — PADRONIZAÇÃO OPERACIONAL DE CAIXA E TRANSFERÊNCIAS
+   ========================================================================= */
+(function(){
+  function ehVendedor617(){ return usuarioRole==='venda1' || usuarioRole==='venda2'; }
+
+  function ajustarTransferencias617(){
+    const vendedor=ehVendedor617();
+    const taxaRef=document.getElementById('transfTaxaReferencia');
+    const nota=document.getElementById('transfNotaTaxa');
+    const margemResumo=document.getElementById('transfResumoMargemBox');
+    const margemEuro=document.getElementById('transfResumoMargemEuroBox');
+    const margemKpi=document.getElementById('transfKpiMargemBox');
+    const saldoKpi=document.getElementById('transfKpiSaldoBox');
+
+    if(taxaRef){
+      taxaRef.classList.toggle('hidden',vendedor);
+      if(vendedor) taxaRef.setAttribute('tabindex','-1');
+      else taxaRef.removeAttribute('tabindex');
+    }
+
+    if(nota){
+      nota.innerText = vendedor
+        ? 'Informe a taxa aplicada ao cliente. A referência interna e a margem são controladas pela gestão.'
+        : 'PT → STP: referência 26,00 Db/€; taxa aplicada padrão 25,00 Db/€. A taxa aplicada pode ser alterada em cada operação.';
+    }
+
+    [margemResumo,margemEuro,margemKpi].forEach(el=>el?.classList.toggle('hidden',vendedor));
+    document.querySelectorAll('#paginaTransferencias .transf-col-interna')
+      .forEach(el=>el.classList.toggle('hidden',vendedor));
+
+    if(saldoKpi){
+      const titulo=saldoKpi.querySelector('.kpi-title');
+      const sub=saldoKpi.querySelector('.kpi-sub');
+      if(vendedor){
+        if(titulo) titulo.textContent='Balanço das Minhas Transferências';
+        if(sub) sub.textContent='Diferença entre EUR recebidos e entregues nas suas operações';
+      } else {
+        if(titulo) titulo.textContent='Posição Líquida EUR';
+        if(sub) sub.textContent='Líquido das transferências registadas; não é saldo bancário';
+      }
+    }
+
+    const tituloPedidos=document.querySelector('#cardPedidosTransferencia651 h3');
+    if(tituloPedidos) tituloPedidos.textContent='📨 Solicitações de Transferência';
+  }
+
+  function fmt617(v){
+    return (Number(v)||0).toLocaleString('pt-PT',{maximumFractionDigits:2})+' Db';
+  }
+
+  function dt617(v){
+    try{
+      const d=v?.toDate?v.toDate():new Date(v);
+      return isNaN(d.getTime())?'-':d.toLocaleString('pt-PT');
+    }catch(e){ return '-'; }
+  }
+
+  function renderPrestacaoVendedor617(){
+    if(!ehVendedor617()) return false;
+    const card=document.getElementById('cardPrestacaoContasTurnos');
+    const tbody=document.getElementById('listaPrestacaoContasTurnos');
+    if(!card||!tbody||!auth.currentUser) return true;
+
+    card.classList.remove('hidden');
+
+    const meus=(todosCaixasAuditoria||[])
+      .filter(c=>c && c.uid===auth.currentUser.uid && c.estado==='fechado' && c.prestacaoObrigatoria===true)
+      .sort((a,b)=>{
+        const da=a.dataFechamento?.toDate?a.dataFechamento.toDate():new Date(a.dataFechamento||0);
+        const db=b.dataFechamento?.toDate?b.dataFechamento.toDate():new Date(b.dataFechamento||0);
+        return db-da;
+      });
+
+    const pend=meus.filter(c=>valorPendenteTurno63(c)>0.0001);
+    const badge=document.getElementById('badgePrestacaoPendente63');
+    if(badge) badge.textContent=`${pend.length} pendente(s)`;
+
+    const set=(id,v)=>{ const e=document.getElementById(id); if(e)e.textContent=v; };
+    set('prestKpiTotalPendente', fmt617(pend.reduce((s,c)=>s+valorPendenteTurno63(c),0)));
+    set('prestKpiTurnosPendentes', String(pend.length));
+    set('prestKpiTurnosPrestados', String(meus.length-pend.length));
+
+    tbody.innerHTML=meus.map(c=>{
+      const p=valorPendenteTurno63(c);
+      const st=estadoPrestacaoTurno63(c);
+      return `<tr>
+        <td>#${String(c.id||'').substring(0,8).toUpperCase()}</td>
+        <td>${String(c.nomeUsuario||c.usuario||'-')}</td>
+        <td><small>${dt617(c.dataFechamento)}</small></td>
+        <td><b>${fmt617(c.dinheiroContado)}</b></td>
+        <td>${fmt617(valorPrestadoTurno63(c))}</td>
+        <td><b>${fmt617(p)}</b></td>
+        <td>${badgePrestacao63(c)}</td>
+        <td><span style="font-size:11px;color:#64748b;">${st==='PRESTADA'?'Concluída':'Aguardando entrega/receção'}</span></td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="8" style="color:#94a3b8;">Nenhum turno fechado sujeito a prestação.</td></tr>';
+
+    return true;
+  }
+
+  if(typeof renderizarPrestacoesTurnos63==='function'){
+    const original617=renderizarPrestacoesTurnos63;
+    renderizarPrestacoesTurnos63=function(){
+      if(ehVendedor617()) return renderPrestacaoVendedor617();
+
+      const r=original617.apply(this,arguments);
+      const sujeitos=(todosCaixasAuditoria||[])
+        .filter(c=>c && c.estado==='fechado' && c.prestacaoObrigatoria===true);
+      const pend=sujeitos.filter(c=>valorPendenteTurno63(c)>0.0001).length;
+      const badge=document.getElementById('badgePrestacaoPendente63');
+      if(badge) badge.textContent=`${pend} pendente(s)`;
+      return r;
+    };
+  }
+
+  document.addEventListener('click',()=>setTimeout(()=>{
+    ajustarTransferencias617();
+    if(ehVendedor617()) renderPrestacaoVendedor617();
+  },30),true);
+
+  setInterval(()=>{
+    if(auth.currentUser){
+      ajustarTransferencias617();
+      if(ehVendedor617()) renderPrestacaoVendedor617();
+    }
+  },2000);
+
+  auth.onAuthStateChanged(u=>{
+    if(u) setTimeout(()=>{
+      ajustarTransferencias617();
+      if(ehVendedor617()) renderPrestacaoVendedor617();
+    },250);
+  });
 })();
 </script>
 
