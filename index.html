@@ -368,7 +368,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.02-004">
+<meta name="mdstp-build" content="2026.09.05-001">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -7890,7 +7890,111 @@ function iniciarListenerTesouraria() {
     }
     renderizarTesouraria();
     processarFinanceiro();
+    // Após o razão estar carregado, o ADMIN pode reconciliar de forma idempotente
+    // transferências diretas GO-LIVE que tenham ficado sem perna de Tesouraria.
+    reconciliarTransferenciasDiretasTesouraria619();
   }, e => console.warn("Tesouraria:", e));
+}
+
+
+/* =========================================================================
+   FASE 6.19.1 — RECONCILIAÇÃO DE TRANSFERÊNCIAS DIRETAS GO-LIVE
+   Corrige SOMENTE transferências diretas ADMIN/GERENTE desde 01/09/2026 que
+   ficaram sem a perna correspondente em tesouraria_movimentos.
+   - Não altera Caixa.
+   - Não altera o documento da transferência.
+   - Não duplica movimento já ligado por transferenciaId.
+   - Execução automática somente para ADMIN, uma vez por sessão.
+   ========================================================================= */
+let f619ReconciliacaoExecutada = false;
+let f619ReconciliacaoEmCurso = false;
+
+async function reconciliarTransferenciasDiretasTesouraria619(){
+  if(usuarioRole !== 'admin' || !auth.currentUser || f619ReconciliacaoExecutada || f619ReconciliacaoEmCurso) return;
+  if(!navigator.onLine) return;
+  f619ReconciliacaoEmCurso = true;
+
+  try{
+    const [trSnap, tesSnap] = await Promise.all([
+      db.collection('transferencias').get(),
+      db.collection('tesouraria_movimentos').get()
+    ]);
+
+    const movimentos = tesSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const marco = new Date(2026,8,1,0,0,0); // 01/09/2026 local
+    const candidatos = trSnap.docs.map(d=>({id:d.id,...d.data()})).filter(t=>{
+      const dt = t.data?.toDate ? t.data.toDate() : new Date(t.data||0);
+      const role = String(t.role||'').toLowerCase();
+      const direto = !t.solicitacaoId && !t.solicitacaoTransferenciaId;
+      return t.estado === 'CONCLUIDA' && direto && (role === 'admin' || role === 'gerente') && dt >= marco;
+    });
+
+    let pernasCriadas = 0;
+    let transferenciasReparadas = 0;
+
+    for(const t of candidatos){
+      const eur = Number(t.qtdEur)||0;
+      const dbValor = Number(t.totalDb)||0;
+      if(eur <= 0 || dbValor <= 0 || (t.direcao !== 'PT_STP' && t.direcao !== 'STP_PT')) continue;
+
+      const ligados = movimentos.filter(m=>m.transferenciaId===t.id);
+      const faltaEur = t.direcao === 'PT_STP'
+        ? !ligados.some(m=>m.origem==='cliente_externo' && m.destino==='portugal_eur' && m.moedaDestino==='EUR')
+        : !ligados.some(m=>m.origem==='portugal_eur' && m.destino==='cliente_externo' && m.moedaOrigem==='EUR');
+
+      const usaBanco = t.formaSTP !== 'Dinheiro';
+      const faltaStn = usaBanco && (t.direcao === 'PT_STP'
+        ? !ligados.some(m=>m.origem==='banco_stp' && m.destino==='cliente_externo' && m.moedaOrigem==='STN')
+        : !ligados.some(m=>m.origem==='cliente_externo' && m.destino==='banco_stp' && m.moedaDestino==='STN'));
+
+      if(!faltaEur && !faltaStn) continue;
+
+      const dataOriginal = t.data?.toDate ? t.data.toDate() : new Date(t.data||Date.now());
+      const base = {
+        tipo:'transferencia_cliente', natureza:'movimento_cliente',
+        taxaReferencia:Number(t.taxaReferencia)||null, taxaAplicada:Number(t.taxaAplicada)||null,
+        margemDb:0, usuario:t.usuario||auth.currentUser.email||'', nomeUsuario:t.nomeUsuario||'',
+        uid:t.uid||auth.currentUser.uid, role:t.role||'admin', transferenciaId:t.id,
+        direcao:t.direcao, cliente:t.cliente||'', origemFluxo:'REPARACAO_DIRETA_6_19',
+        reparadoPorUid:auth.currentUser.uid, reparadoPorUsuario:auth.currentUser.email||'',
+        reparadoEm:new Date(), data:dataOriginal
+      };
+
+      const batch = db.batch();
+      if(faltaEur){
+        const ref = db.collection('tesouraria_movimentos').doc(`${t.id}_eur`);
+        if(t.direcao === 'PT_STP'){
+          batch.set(ref,{...base,origem:'cliente_externo',destino:'portugal_eur',moedaOrigem:'EUR',moedaDestino:'EUR',valorOrigem:eur,valorDestino:eur,observacao:`Reparação 6.19 — Transferência PT→STP direta — EUR recebidos em Portugal — ${t.cliente||'Cliente'}`});
+        }else{
+          batch.set(ref,{...base,origem:'portugal_eur',destino:'cliente_externo',moedaOrigem:'EUR',moedaDestino:'EUR',valorOrigem:eur,valorDestino:eur,observacao:`Reparação 6.19 — Transferência STP→PT direta — EUR entregues em Portugal — ${t.cliente||'Cliente'}`});
+        }
+        pernasCriadas++;
+      }
+
+      if(faltaStn){
+        const ref = db.collection('tesouraria_movimentos').doc(`${t.id}_stn`);
+        if(t.direcao === 'PT_STP'){
+          batch.set(ref,{...base,origem:'banco_stp',destino:'cliente_externo',moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:dbValor,valorDestino:dbValor,observacao:`Reparação 6.19 — Transferência PT→STP direta — Db entregues via Banco/DobraPay — ${t.cliente||'Cliente'}`});
+        }else{
+          batch.set(ref,{...base,origem:'cliente_externo',destino:'banco_stp',moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:dbValor,valorDestino:dbValor,observacao:`Reparação 6.19 — Transferência STP→PT direta — Db recebidos via Banco/DobraPay — ${t.cliente||'Cliente'}`});
+        }
+        pernasCriadas++;
+      }
+
+      await batch.commit();
+      transferenciasReparadas++;
+    }
+
+    f619ReconciliacaoExecutada = true;
+    if(transferenciasReparadas > 0){
+      console.info(`Fase 6.19: ${transferenciasReparadas} transferência(s) direta(s) reconciliada(s), ${pernasCriadas} movimento(s) de Tesouraria criado(s).`);
+      alert(`Reconciliação financeira concluída.\n\n${transferenciasReparadas} transferência(s) direta(s) oficial(is) tiveram o lançamento de Tesouraria em falta restaurado.\nNenhum movimento de Caixa foi repetido.`);
+    }
+  }catch(e){
+    console.warn('Fase 6.19 — reconciliação não concluída:',e);
+  }finally{
+    f619ReconciliacaoEmCurso = false;
+  }
 }
 
 
@@ -8830,14 +8934,29 @@ async function registrarTransferencia() {
       usuario: user.email, uid: user.uid, role: usuarioRole, data: agora
     };
 
+    // FASE 6.19 — o fluxo DIRETO de ADMIN/GERENTE passa a produzir o mesmo
+    // efeito patrimonial do fluxo de aprovação de VENDA1/VENDA2.
+    // O ID determinístico impede duplicação acidental das pernas da Tesouraria.
+    const tesEurRef = db.collection("tesouraria_movimentos").doc(`${transferenciaRef.id}_eur`);
+    const tesStnRef = formaSTP !== "Dinheiro"
+      ? db.collection("tesouraria_movimentos").doc(`${transferenciaRef.id}_stn`)
+      : null;
+
     await db.runTransaction(async tx => {
+      // Todas as leituras primeiro.
       if(exigeCaixa) {
         const caixaRef = db.collection("caixas").doc(caixaAtualObj.id);
         const caixaDoc = await tx.get(caixaRef);
         if(!caixaDoc.exists || caixaDoc.data().estado !== "aberto") throw new Error("O caixa já não está aberto.");
         if(usuarioRole !== "admin" && caixaDoc.data().uid !== user.uid) throw new Error("O caixa aberto não pertence ao utilizador atual.");
       }
-      tx.set(transferenciaRef, transferenciaPayload);
+
+      tx.set(transferenciaRef, {
+        ...transferenciaPayload,
+        origemFluxo: "DIRETO_GESTOR",
+        efeitoTesourariaDefinitivo: true
+      });
+
       if(exigeCaixa) {
         const movRef = db.collection("movimentacoes").doc();
         tx.set(movRef, {
@@ -8847,6 +8966,77 @@ async function registrarTransferencia() {
           cliente, telefone, usuario: user.email, uid: user.uid, role: usuarioRole, data: agora,
           caixaId: caixaAtualObj.id, transferenciaId: transferenciaRef.id, direcao: calc.dir
         });
+      }
+
+      const baseTesDireta619 = {
+        tipo: "transferencia_cliente",
+        natureza: "movimento_cliente",
+        taxaReferencia: Number(calc.ref) || null,
+        taxaAplicada: Number(calc.aplicada) || null,
+        margemDb: 0,
+        usuario: user.email || "",
+        nomeUsuario: usuarioNome || "",
+        uid: user.uid,
+        role: usuarioRole,
+        transferenciaId: transferenciaRef.id,
+        direcao: calc.dir,
+        cliente: cliente || "",
+        origemFluxo: "DIRETO_GESTOR",
+        data: agora
+      };
+
+      // PT→STP: EUR recebidos em Portugal aumentam Portugal/EUR.
+      // STP→PT: EUR entregues em Portugal reduzem Portugal/EUR.
+      if(calc.dir === "PT_STP") {
+        tx.set(tesEurRef, {
+          ...baseTesDireta619,
+          origem: "cliente_externo",
+          destino: "portugal_eur",
+          moedaOrigem: "EUR",
+          moedaDestino: "EUR",
+          valorOrigem: Number(calc.eur) || 0,
+          valorDestino: Number(calc.eur) || 0,
+          observacao: `Transferência PT→STP direta — EUR recebidos em Portugal — ${cliente || "Cliente"}`
+        });
+
+        // Quando o lado STN não é dinheiro físico, a saída ocorre no Banco STP/DobraPay.
+        if(tesStnRef) {
+          tx.set(tesStnRef, {
+            ...baseTesDireta619,
+            origem: "banco_stp",
+            destino: "cliente_externo",
+            moedaOrigem: "STN",
+            moedaDestino: "STN",
+            valorOrigem: Number(calc.totalDb) || 0,
+            valorDestino: Number(calc.totalDb) || 0,
+            observacao: `Transferência PT→STP direta — Db entregues via Banco/DobraPay — ${cliente || "Cliente"}`
+          });
+        }
+      } else {
+        tx.set(tesEurRef, {
+          ...baseTesDireta619,
+          origem: "portugal_eur",
+          destino: "cliente_externo",
+          moedaOrigem: "EUR",
+          moedaDestino: "EUR",
+          valorOrigem: Number(calc.eur) || 0,
+          valorDestino: Number(calc.eur) || 0,
+          observacao: `Transferência STP→PT direta — EUR entregues em Portugal — ${cliente || "Cliente"}`
+        });
+
+        // Quando o lado STN não é dinheiro físico, a entrada ocorre no Banco STP/DobraPay.
+        if(tesStnRef) {
+          tx.set(tesStnRef, {
+            ...baseTesDireta619,
+            origem: "cliente_externo",
+            destino: "banco_stp",
+            moedaOrigem: "STN",
+            moedaDestino: "STN",
+            valorOrigem: Number(calc.totalDb) || 0,
+            valorDestino: Number(calc.totalDb) || 0,
+            observacao: `Transferência STP→PT direta — Db recebidos via Banco/DobraPay — ${cliente || "Cliente"}`
+          });
+        }
       }
     });
 
