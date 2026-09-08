@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.08-004">
+<meta name="mdstp-build" content="2026.09.08-005">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -2058,6 +2058,40 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div style="display:flex;gap:10px;margin-top:14px;">
       <button id="btnF622ConfirmarAprovacao" class="btn-success" style="flex:1;background:#0d9488;" onclick="f622ConfirmarAprovacaoEncomenda()">✅ Aprovar e Debitar Tesouraria</button>
       <button class="btn-secondary" style="flex:1;" onclick="f622FecharModalAprovacao()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="modalRegularizarCompra6222" class="modal hidden">
+  <div class="modal-content" style="max-width:760px;">
+    <h3 style="margin-top:0;color:#92400e;">🧾 Regularizar Compra da Encomenda</h3>
+    <input id="f6222RegularizarEncId" type="hidden">
+    <div id="f6222RegularizarResumoEnc"
+         style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
+
+    <div class="form-grid">
+      <select id="f6222RegularizarConta" onchange="f6222AtualizarRegularizacaoUI()">
+        <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
+        <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+        <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+      </select>
+      <input id="f6222RegularizarValor" type="number" min="0.01" step="0.000001"
+             placeholder="Valor realmente pago" oninput="f6222AtualizarRegularizacaoUI()">
+      <input id="f6222RegularizarTaxa" type="number" min="0.01" step="0.000001" value="26"
+             placeholder="Taxa Db/€" oninput="f6222AtualizarRegularizacaoUI()">
+      <input id="f6222RegularizarFornecedor" placeholder="Fornecedor / plataforma (ex.: AliExpress)">
+    </div>
+
+    <div id="f6222RegularizarResumoFinanceiro"
+         style="margin-top:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:12px;color:#78350f;line-height:1.6;">
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button id="btnF6222ConfirmarRegularizacao" class="btn-success"
+              style="flex:1;background:#d97706;"
+              onclick="f6222ConfirmarRegularizacaoCompra()">✅ Regularizar e Debitar Tesouraria</button>
+      <button class="btn-secondary" style="flex:1;" onclick="f6222FecharRegularizacaoCompra()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -6486,9 +6520,19 @@ function f5RenderizarLista() {
       : '';
     let acao;
     if(usuarioRole === 'admin') {
+      const compraFinanceiraLigada = !!enc.movimentoTesourariaCompraId;
+      const precisaRegularizarCompra = compra > 0 && !compraFinanceiraLigada;
+
       acao = enc.estado === 'EM_TRANSITO'
         ? `${comprovativo} <button class="btn-success btn-acao" style="background:#0d9488;" onclick="f5AbrirFinalizacao('${enc.id}')">📦 Chegou / Entregar</button>`
         : `<span style="font-size:11px;color:#64748b;">Lucro: <b style="color:#059669;">${f5Moeda(lucroReal)}</b></span>`;
+
+      if(precisaRegularizarCompra) {
+        acao += ` <button class="btn-secondary btn-acao" style="background:#d97706;color:white;" onclick="f6222AbrirRegularizacaoCompra('${enc.id}')">🧾 Regularizar Compra</button>`;
+      } else if(compraFinanceiraLigada) {
+        acao += ` <span style="font-size:11px;color:#047857;font-weight:800;">✅ Compra contabilizada</span>`;
+      }
+
       acao += ` <button class="btn-danger btn-acao" onclick="apagarEncomenda('${enc.id}')">🗑️</button>`;
     } else {
       acao = comprovativo || '<span style="font-size:11px;color:#64748b;">Somente acompanhamento</span>';
@@ -8132,163 +8176,6 @@ async function reconciliarHistoricoTransferenciasDiretas620(){
 
 
 
-let f622ReparacaoBateriaExecutada=false,f622ReparacaoBateriaEmCurso=false;
-
-async function f622LocalizarBateriaOficial(){
-  // ADMIN pode ler todas as encomendas. A busca direta elimina dependência
-  // da ordem em que listeners/UI carregam.
-  const snap = await db.collection("encomendas").get();
-  let candidatos=[];
-  snap.forEach(d=>{
-    const e={id:d.id,...d.data()};
-    const cliente=String(e.cliente||"").trim().toLowerCase();
-    const produto=String(e.produto||"").trim().toLowerCase();
-    if(cliente==="etivaldo veloso" &&
-       produto==="bateria de computador marca hp" &&
-       Math.abs((Number(e.custoCompra)||0)-618.75)<0.01){
-      candidatos.push(e);
-    }
-  });
-  candidatos.sort((a,b)=>obterDataSegura(b.data)-obterDataSegura(a.data));
-  return candidatos[0]||null;
-}
-
-function f622GarantirBotaoReconciliacao(){
-  if(usuarioRole!=="admin") return;
-  const pagina=document.getElementById("paginaEncomendas");
-  if(!pagina || document.getElementById("f622CardReconciliacaoCompra")) return;
-
-  const logica=[...pagina.querySelectorAll("h3")].find(x=>
-    String(x.textContent||"").toLowerCase().includes("lógica financeira")
-  )?.parentElement;
-
-  const card=document.createElement("div");
-  card.id="f622CardReconciliacaoCompra";
-  card.style.cssText="margin:14px 0;padding:14px;border:1px solid #fbbf24;border-left:5px solid #f59e0b;border-radius:12px;background:#fffbeb;";
-  card.innerHTML=`
-    <div style="font-weight:800;color:#92400e;margin-bottom:5px;">🧾 Reconciliação de compra anterior à 6.22</div>
-    <div style="font-size:12px;color:#78350f;line-height:1.55;margin-bottom:10px;">
-      Use apenas para a bateria HP de Etivaldo Veloso já comprada no AliExpress.
-      A operação é idempotente: se o débito já existir, não será repetido.
-    </div>
-    <button id="f622BtnReconciliarBateria" class="btn-secondary" style="background:#d97706;color:#fff;"
-      onclick="f622RepararCompraBateriaAtual(true)">🔄 Reconciliar compra da bateria</button>
-    <div id="f622EstadoReconciliacao" style="font-size:12px;margin-top:8px;color:#78350f;"></div>`;
-  if(logica) logica.parentNode.insertBefore(card,logica);
-  else pagina.appendChild(card);
-}
-
-async function f622RepararCompraBateriaAtual(manual=false){
-  if(usuarioRole!=="admin"||!auth.currentUser||f622ReparacaoBateriaEmCurso||!navigator.onLine)return;
-  if(f622ReparacaoBateriaExecutada && !manual) return;
-
-  f622ReparacaoBateriaEmCurso=true;
-  const estado=document.getElementById("f622EstadoReconciliacao");
-  const btn=document.getElementById("f622BtnReconciliarBateria");
-  if(btn) btn.disabled=true;
-  if(estado) estado.textContent="A verificar a encomenda e a Tesouraria...";
-
-  try{
-    const enc=await f622LocalizarBateriaOficial();
-    if(!enc){
-      throw new Error("Não encontrei a encomenda oficial da bateria HP de Etivaldo Veloso com custo de 618,75 Db.");
-    }
-
-    const encRef=db.collection("encomendas").doc(enc.id);
-    const tesRef=db.collection("tesouraria_movimentos").doc(`enccompra_${enc.id}`);
-    const saldoRef=db.collection("tesouraria_saldos").doc("portugal_eur");
-    const valor=23.79807692307692, taxa=26, custoDb=618.75, user=auth.currentUser;
-
-    let resultado="executado";
-
-    await db.runTransaction(async tx=>{
-      const ed=await tx.get(encRef);
-      const sd=await tx.get(saldoRef);
-      const td=await tx.get(tesRef);
-
-      if(!ed.exists) throw new Error("A encomenda deixou de existir.");
-      if(!sd.exists) throw new Error("O saldo Portugal/EUR não está inicializado.");
-
-      // Idempotência forte: documento financeiro determinístico OU vínculo
-      // na encomenda impedem qualquer segundo débito.
-      if(td.exists || ed.data().movimentoTesourariaCompraId){
-        resultado="ja_existia";
-        return;
-      }
-
-      const antes=Number(sd.data().saldo)||0;
-      if(antes+1e-7<valor)
-        throw new Error(`Saldo Portugal/EUR insuficiente. Disponível: ${f622Fmt(antes,"EUR")}; necessário: ${f622Fmt(valor,"EUR")}.`);
-
-      const depois=antes-valor;
-      const agora=new Date();
-
-      tx.update(saldoRef,{
-        saldo:depois,
-        moeda:"EUR",
-        atualizadoEm:agora,
-        atualizadoPorUid:user.uid,
-        atualizadoPorUsuario:user.email||"",
-        origemCalculo:"ledger_tesouraria",
-        ultimaOperacao:"compra_encomenda_reparacao_6_22_1",
-        ultimaEncomendaId:enc.id
-      });
-
-      tx.set(tesRef,f622MovCompra({
-        encId:enc.id,
-        solId:enc.solicitacaoId||null,
-        produto:enc.produto,
-        cliente:enc.cliente,
-        conta:"portugal_eur",
-        moeda:"EUR",
-        valor,
-        taxa,
-        custoDb,
-        fornecedor:"AliExpress",
-        user,
-        agora
-      }));
-
-      tx.update(encRef,{
-        contaPagamentoCompra:"portugal_eur",
-        moedaCompra:"EUR",
-        valorPagoCompra:valor,
-        taxaReferenciaCompra:taxa,
-        fornecedorCompra:"AliExpress",
-        movimentoTesourariaCompraId:tesRef.id,
-        saldoContaCompraAntes:antes,
-        saldoContaCompraDepois:depois,
-        compraFinanceiraReconciliada:true,
-        compraFinanceiraReconciliadaEm:agora,
-        compraFinanceiraReconciliadaPorUid:user.uid
-      });
-    });
-
-    f622ReparacaoBateriaExecutada=true;
-
-    if(resultado==="ja_existia"){
-      if(estado) estado.textContent="✅ A compra já possui vínculo financeiro. Nenhum valor foi debitado novamente.";
-      if(manual) alert("A compra da bateria já estava reconciliada. Nenhum débito foi repetido.");
-    }else{
-      if(estado) estado.textContent="✅ Reconciliação concluída: 23,79807692307692 € debitados de Portugal / EUR.";
-      alert(
-        "Compra da encomenda reconciliada.\n\n"+
-        "Bateria HP — AliExpress\n"+
-        "23,79807692307692 € debitados de Portugal / EUR\n"+
-        "Taxa: 26 Db/€ · Custo: 618,75 Db\n\n"+
-        "Nenhum movimento de Caixa ou sinal foi repetido."
-      );
-    }
-  }catch(e){
-    console.error("Fase 6.22.1 — reconciliação da bateria:",e);
-    const msg="Não foi possível reconciliar a compra da bateria: "+(e.message||e);
-    if(estado) estado.textContent="❌ "+msg;
-    if(manual) alert(msg);
-  }finally{
-    f622ReparacaoBateriaEmCurso=false;
-    if(btn) btn.disabled=false;
-  }
-}
 
 
 /* =========================================================================
@@ -9020,10 +8907,6 @@ function navegarPara(paginaId) {
     f5AtualizarResumoPagina();
     renderizarSolicitacoesEncomenda651();
     if(typeof f622AplicarVisibilidade==="function") f622AplicarVisibilidade();
-    if(usuarioRole==="admin" && typeof f622GarantirBotaoReconciliacao==="function") {
-      f622GarantirBotaoReconciliacao();
-      setTimeout(()=>f622RepararCompraBateriaAtual(false),500);
-    }
   }
   if(paginaId === "paginaDespesas") {
     iniciarListenerDespesasFase52();
@@ -9977,10 +9860,6 @@ function carregarEncomendas() {
     if(typeof f622AplicarVisibilidade === "function") f622AplicarVisibilidade();
     // Mantém o Resumo Operacional & Comercial sincronizado também para a GERENTE.
     if(typeof processarDashboard === "function") processarDashboard();
-    if(usuarioRole==="admin") {
-      if(typeof f622GarantirBotaoReconciliacao==="function") f622GarantirBotaoReconciliacao();
-      if(typeof f622RepararCompraBateriaAtual==="function") setTimeout(()=>f622RepararCompraBateriaAtual(false),350);
-    }
   }, err => console.warn("Encomendas: acesso/erro", err));
 }
 
@@ -10056,6 +9935,224 @@ function f622AbrirAprovacaoEncomenda(id){
   f622AtualizarModalAprovacao();
   document.getElementById("modalAprovarEncomenda622").classList.remove("hidden");
 }
+
+/* FASE 6.22.2 — Regularização oficial de compra já existente.
+   Não procura produto/cliente específico. A própria encomenda define elegibilidade.
+   Só ADMIN executa. Documento financeiro determinístico impede débito duplicado. */
+function f6222FecharRegularizacaoCompra(){
+  document.getElementById("modalRegularizarCompra6222")?.classList.add("hidden");
+}
+
+function f6222EncomendaRegularizavel(enc){
+  return !!enc &&
+    (Number(enc.custoCompra)||0) > 0 &&
+    !enc.movimentoTesourariaCompraId;
+}
+
+function f6222AbrirRegularizacaoCompra(encId){
+  if(usuarioRole!=="admin") return alert("A regularização financeira é exclusiva do ADMIN.");
+  const enc=(todasEncomendas||[]).find(x=>x.id===encId);
+  if(!enc) return alert("Encomenda não encontrada.");
+  if(!f6222EncomendaRegularizavel(enc)) {
+    return alert(enc.movimentoTesourariaCompraId
+      ? "Esta compra já está contabilizada na Tesouraria."
+      : "Esta encomenda não possui custo de compra a regularizar.");
+  }
+
+  document.getElementById("f6222RegularizarEncId").value=enc.id;
+  document.getElementById("f6222RegularizarConta").value="portugal_eur";
+  document.getElementById("f6222RegularizarValor").value="";
+  document.getElementById("f6222RegularizarTaxa").value="26";
+  document.getElementById("f6222RegularizarFornecedor").value=enc.fornecedorCompra||"";
+
+  document.getElementById("f6222RegularizarResumoEnc").innerHTML=
+    `<b>${String(enc.cliente||"-")}</b> — ${String(enc.produto||"-")}<br>`+
+    `<small>Venda: ${f5Moeda(enc.valorTotal)} · Custo já registado: <b>${f5Moeda(enc.custoCompra)}</b> · Estado: ${String(enc.estado||"-")}</small>`;
+
+  f6222AtualizarRegularizacaoUI();
+  document.getElementById("modalRegularizarCompra6222")?.classList.remove("hidden");
+}
+
+function f6222AtualizarRegularizacaoUI(){
+  const id=document.getElementById("f6222RegularizarEncId")?.value||"";
+  const enc=(todasEncomendas||[]).find(x=>x.id===id);
+  const c=document.getElementById("f6222RegularizarConta")?.value||"portugal_eur";
+  const taxaEl=document.getElementById("f6222RegularizarTaxa");
+  const resumo=document.getElementById("f6222RegularizarResumoFinanceiro");
+  if(taxaEl) taxaEl.style.display = c==="portugal_eur" ? "" : "none";
+  if(!resumo || !enc) return;
+
+  try{
+    const d=f622DadosCompra(
+      c,
+      document.getElementById("f6222RegularizarValor")?.value,
+      taxaEl?.value
+    );
+    const custoExistente=Number(enc.custoCompra)||0;
+    const diferenca=d.custoDb-custoExistente;
+    const saldo=f622SaldoLocal(d.conta);
+    const compat=Math.abs(diferenca)<=0.05;
+
+    resumo.innerHTML=
+      `<b>Conta:</b> ${f622NomeConta(d.conta)}<br>`+
+      `<b>Pagamento real:</b> ${f622Fmt(d.valor,d.moeda)}<br>`+
+      (d.moeda==="EUR" ? `<b>Taxa:</b> ${Number(d.taxa).toLocaleString("pt-PT",{maximumFractionDigits:6})} Db/€<br>` : "")+
+      `<b>Custo calculado:</b> ${f5Moeda(d.custoDb)}<br>`+
+      `<b>Custo já registado:</b> ${f5Moeda(custoExistente)}<br>`+
+      `<b>Conferência:</b> <span style="font-weight:800;color:${compat?"#047857":"#b91c1c"}">${compat?"COERENTE":"DIVERGENTE"}</span><br>`+
+      `<b>Saldo antes:</b> ${f622Fmt(saldo,d.moeda)}<br>`+
+      `<b>Saldo depois:</b> ${f622Fmt(saldo-d.valor,d.moeda)}`;
+  }catch(e){
+    resumo.textContent=e.message||String(e);
+  }
+}
+
+async function f6222ConfirmarRegularizacaoCompra(){
+  if(usuarioRole!=="admin") return alert("Acesso restrito ao ADMIN.");
+  if(!navigator.onLine) return alert("É necessária ligação à internet.");
+  const user=auth.currentUser;
+  if(!user) return alert("Sessão expirada.");
+
+  const encId=document.getElementById("f6222RegularizarEncId")?.value||"";
+  const enc=(todasEncomendas||[]).find(x=>x.id===encId);
+  if(!enc) return alert("Encomenda não encontrada.");
+  if(!f6222EncomendaRegularizavel(enc)) {
+    return alert("Esta compra já foi contabilizada ou deixou de ser elegível para regularização.");
+  }
+
+  let compra;
+  try{
+    compra=f622DadosCompra(
+      document.getElementById("f6222RegularizarConta")?.value,
+      document.getElementById("f6222RegularizarValor")?.value,
+      document.getElementById("f6222RegularizarTaxa")?.value
+    );
+  }catch(e){ return alert(e.message||e); }
+
+  const custoExistente=Number(enc.custoCompra)||0;
+  if(Math.abs(compra.custoDb-custoExistente)>0.05){
+    return alert(
+      `O pagamento informado não corresponde ao custo já registado.\n\n`+
+      `Custo existente: ${f5Moeda(custoExistente)}\n`+
+      `Custo calculado pelo pagamento/taxa: ${f5Moeda(compra.custoDb)}\n\n`+
+      `Corrija o valor ou a taxa antes de continuar.`
+    );
+  }
+
+  const fornecedor=(document.getElementById("f6222RegularizarFornecedor")?.value||"").trim();
+  if(!fornecedor) return alert("Informe o fornecedor/plataforma da compra.");
+  if(f622SaldoLocal(compra.conta)+1e-7<compra.valor)
+    return alert(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
+
+  if(!confirm(
+    `REGULARIZAR COMPRA?\n\n${enc.cliente||"-"} — ${enc.produto||"-"}\n`+
+    `${f622Fmt(compra.valor,compra.moeda)} serão debitados de ${f622NomeConta(compra.conta)}.\n`+
+    `Custo contabilístico preservado: ${f5Moeda(custoExistente)}.\n\n`+
+    `Esta operação NÃO altera Caixa, sinal nem valor de venda.`
+  )) return;
+
+  const btn=document.getElementById("btnF6222ConfirmarRegularizacao");
+  if(btn) btn.disabled=true;
+
+  try{
+    const encRef=db.collection("encomendas").doc(enc.id);
+    const tesRef=db.collection("tesouraria_movimentos").doc(`enccompra_${enc.id}`);
+    const saldoRef=db.collection("tesouraria_saldos").doc(compra.conta);
+    let resultado="executado";
+
+    await db.runTransaction(async tx=>{
+      const encDoc=await tx.get(encRef);
+      const saldoDoc=await tx.get(saldoRef);
+      const tesDoc=await tx.get(tesRef);
+
+      if(!encDoc.exists) throw new Error("A encomenda deixou de existir.");
+      const atual=encDoc.data();
+
+      // Idempotência forte: se qualquer dos dois vínculos já existir,
+      // não ocorre novo débito.
+      if(tesDoc.exists || atual.movimentoTesourariaCompraId){
+        resultado="ja_existia";
+        return;
+      }
+
+      const custoAtual=Number(atual.custoCompra)||0;
+      if(!(custoAtual>0)) throw new Error("A encomenda não possui custo de compra registado.");
+      if(Math.abs(compra.custoDb-custoAtual)>0.05)
+        throw new Error("O pagamento/taxa não corresponde ao custo oficial da encomenda.");
+
+      if(!saldoDoc.exists) throw new Error(`Saldo de ${f622NomeConta(compra.conta)} não está inicializado.`);
+      const saldoAntes=Number(saldoDoc.data().saldo)||0;
+      if(saldoAntes+1e-7<compra.valor)
+        throw new Error(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
+
+      const saldoDepois=saldoAntes-compra.valor;
+      const agora=new Date();
+
+      tx.update(saldoRef,{
+        saldo:saldoDepois,
+        moeda:compra.moeda,
+        atualizadoEm:agora,
+        atualizadoPorUid:user.uid,
+        atualizadoPorUsuario:user.email||"",
+        origemCalculo:"ledger_tesouraria",
+        ultimaOperacao:"regularizacao_compra_encomenda",
+        ultimaEncomendaId:enc.id
+      });
+
+      tx.set(tesRef,{
+        ...f622MovCompra({
+          encId:enc.id,
+          solId:atual.solicitacaoId||null,
+          produto:atual.produto,
+          cliente:atual.cliente,
+          conta:compra.conta,
+          moeda:compra.moeda,
+          valor:compra.valor,
+          taxa:compra.taxa,
+          custoDb:custoAtual,
+          fornecedor,
+          user,
+          agora
+        }),
+        regularizacaoFinanceira:true,
+        tipoRegularizacao:"COMPRA_ENCOMENDA_ANTERIOR_6_22",
+        custoAnteriorPreservado:custoAtual
+      });
+
+      tx.update(encRef,{
+        contaPagamentoCompra:compra.conta,
+        moedaCompra:compra.moeda,
+        valorPagoCompra:compra.valor,
+        taxaReferenciaCompra:compra.taxa,
+        fornecedorCompra:fornecedor,
+        movimentoTesourariaCompraId:tesRef.id,
+        saldoContaCompraAntes:saldoAntes,
+        saldoContaCompraDepois:saldoDepois,
+        compraFinanceiraReconciliada:true,
+        compraFinanceiraReconciliadaEm:agora,
+        compraFinanceiraReconciliadaPorUid:user.uid,
+        compraFinanceiraReconciliadaPorUsuario:user.email||""
+      });
+    });
+
+    f6222FecharRegularizacaoCompra();
+    if(resultado==="ja_existia"){
+      alert("A compra já possuía vínculo financeiro. Nenhum débito foi repetido.");
+    }else{
+      alert(
+        `Compra regularizada com sucesso.\n\n`+
+        `${f622Fmt(compra.valor,compra.moeda)} debitados de ${f622NomeConta(compra.conta)}.\n`+
+        `Caixa, sinal e valor de venda permaneceram inalterados.`
+      );
+    }
+  }catch(e){
+    console.error("FASE 6.22.2 — regularização de compra:",e);
+    alert("Erro ao regularizar compra: "+(e.message||e));
+  }finally{
+    if(btn) btn.disabled=false;
+  }
+}
+
 function f622MovCompra({encId,solId,produto,cliente,conta,moeda,valor,taxa,custoDb,fornecedor,user,agora}){
   return {tipo:"compra_encomenda",natureza:"custo_encomenda",origem:conta,destino:"fornecedor_externo",
     moedaOrigem:moeda,moedaDestino:moeda,valorOrigem:Number(valor)||0,valorDestino:0,
