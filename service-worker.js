@@ -1,8 +1,8 @@
-/* Mundo Digital STP PWA — 2026.09.08-006
+/* Mundo Digital STP PWA — 2026.09.09-007
    Cache apenas da interface local.
    Firebase/Firestore e operações financeiras NÃO são simuladas offline. */
 
-const CACHE_NAME = 'mdstp-shell-2026.09.08-006';
+const CACHE_NAME = 'mdstp-shell-2026.09.09-007';
 const APP_SHELL = [
   './',
   './index.html',
@@ -36,11 +36,8 @@ self.addEventListener('fetch', event => {
   if(req.method !== 'GET') return;
 
   const url = new URL(req.url);
-
-  // Nunca interceptar Firebase, Google APIs ou outros domínios externos.
   if(url.origin !== self.location.origin) return;
 
-  // HTML/navegação: rede primeiro para receber sempre a versão publicada.
   if(req.mode === 'navigate') {
     event.respondWith(
       fetch(req, {cache:'no-store'})
@@ -56,16 +53,12 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // app-version deve vir sempre da rede.
   if(url.pathname.endsWith('/app-version.json')) {
     event.respondWith(fetch(req, {cache:'no-store'}));
     return;
   }
 
-  // Manifesto e ícones podem usar cache.
   if(url.pathname.endsWith('/manifest.json') || url.pathname.includes('/icons/')) {
-    event.respondWith(
-      caches.match(req).then(cached => cached || fetch(req))
-    );
+    event.respondWith(caches.match(req).then(cached => cached || fetch(req)));
   }
 });
