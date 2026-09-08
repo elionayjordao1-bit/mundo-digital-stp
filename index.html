@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.08-001">
+<meta name="mdstp-build" content="2026.09.08-003">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -1319,8 +1319,23 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <option value="Dinheiro">💵 Sinal em Dinheiro</option>
           <option value="Transferencia">🏦 Sinal por Transferência / DobraPay</option>
         </select>
-        <input id="f5EncCustoCompra" type="number" min="0" step="0.01" placeholder="Custo de Compra (Db)">
+        <input id="f5EncCustoCompra" class="hidden" type="number" min="0" step="0.01" placeholder="Custo de Compra (Db)">
         <input id="f5EncObservacao" placeholder="Observação (opcional)">
+
+        <div id="f622CompraFinanceiraAdmin" style="grid-column:1/-1;background:#fff7ed;border:1px solid #fed7aa;padding:14px;border-radius:10px;">
+          <div style="font-weight:800;color:#9a3412;margin-bottom:10px;">💳 Pagamento da compra ao fornecedor</div>
+          <div class="form-grid">
+            <select id="f622ContaCompra" onchange="f622AtualizarCompraUI()">
+              <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
+              <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+              <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+            </select>
+            <input id="f622ValorPagoCompra" type="number" min="0.01" step="0.000001" placeholder="Valor realmente pago" oninput="f622AtualizarCompraUI()">
+            <input id="f622TaxaCompra" type="number" min="0.01" step="0.000001" value="26" placeholder="Taxa Db/€" oninput="f622AtualizarCompraUI()">
+            <input id="f622FornecedorCompra" placeholder="Fornecedor / plataforma (ex.: AliExpress)">
+          </div>
+          <div id="f622ResumoCompra" style="margin-top:10px;font-size:12px;color:#7c2d12;line-height:1.6;">Selecione a conta e informe o valor realmente pago.</div>
+        </div>
 
         <div style="grid-column:1/-1;background:#ecfeff;border:1px solid #99f6e4;padding:14px;border-radius:10px;">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;text-align:center;">
@@ -1370,12 +1385,12 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <span id="f5KpiAReceber" class="kpi-value">0 Db</span>
         <span class="kpi-sub">Saldos das encomendas em trânsito</span>
       </div>
-      <div class="kpi-card green">
+      <div id="f622KpiLucroCard" class="kpi-card green">
         <span class="kpi-title">Lucro Realizado</span>
         <span id="f5KpiLucro" class="kpi-value">0 Db</span>
         <span class="kpi-sub">Encomendas já entregues</span>
       </div>
-      <div class="kpi-card orange">
+      <div id="f622KpiCustosCard" class="kpi-card orange">
         <span class="kpi-title">Custos de Chegada</span>
         <span id="f5KpiCustos" class="kpi-value">0 Db</span>
         <span class="kpi-sub">Correios / alfândega / levantamento / outros</span>
@@ -1389,7 +1404,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <thead>
             <tr>
               <th>Cliente</th><th>Produto</th><th>Qtd</th><th>Venda</th><th>Sinal</th><th>Falta</th>
-              <th>Custo Compra</th><th>Custos Chegada</th><th>Custo Real</th><th>Estado</th><th>Contacto</th><th>Ação</th>
+              <th class="f622-custo-sensivel">Custo Compra</th><th class="f622-custo-sensivel">Custos Chegada</th><th class="f622-custo-sensivel">Custo Real</th><th>Estado</th><th>Contacto</th><th>Ação</th>
             </tr>
           </thead>
           <tbody id="listaEncomendasFase5"></tbody>
@@ -1401,6 +1416,8 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <h4 style="margin-top:0;">ℹ️ Lógica financeira das encomendas</h4>
       <ul style="margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;">
         <li>O <b>sinal</b> entra no caixa somente quando realmente recebido.</li>
+        <li>O <b>custo de compra</b> debita a conta real usada no pagamento: <b>Portugal / EUR</b>, <b>Banco STP / DobraPay</b> ou <b>Responsável / Reserva</b>.</li>
+        <li>Compras pagas em EUR preservam o <b>valor real em euros + taxa Db/€</b>; o custo em Db é calculado sem misturar moedas.</li>
         <li>Ao chegar, podem ser registados <b>Correios, Alfândega, Levantamento e Outros custos</b>.</li>
         <li>Se o custo de chegada for pago em dinheiro, ele sai do <b>caixa físico aberto</b>.</li>
         <li>O pagamento final do cliente pode ser em <b>Dinheiro</b> ou <b>Transferência / DobraPay</b>.</li>
@@ -2021,6 +2038,30 @@ tr:nth-child(even) { background-color: #f8fafc; }
 </div>
 
 <!-- MODAL FASE 5 — CHEGADA / CUSTOS / PAGAMENTO FINAL DA ENCOMENDA -->
+
+<div id="modalAprovarEncomenda622" class="modal hidden">
+  <div class="modal-content" style="max-width:720px;">
+    <h3 style="margin-top:0;color:#9a3412;">✅ Aprovar Encomenda & Registar Compra</h3>
+    <input id="f622AprovarPedidoId" type="hidden">
+    <div id="f622AprovarResumoPedido" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
+    <div class="form-grid">
+      <select id="f622AprovarContaCompra" onchange="f622AtualizarModalAprovacao()">
+        <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
+        <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
+        <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
+      </select>
+      <input id="f622AprovarValorPago" type="number" min="0.01" step="0.000001" placeholder="Valor realmente pago" oninput="f622AtualizarModalAprovacao()">
+      <input id="f622AprovarTaxa" type="number" min="0.01" step="0.000001" value="26" placeholder="Taxa Db/€" oninput="f622AtualizarModalAprovacao()">
+      <input id="f622AprovarFornecedor" placeholder="Fornecedor / plataforma (ex.: AliExpress)">
+    </div>
+    <div id="f622AprovarResumoFinanceiro" style="margin-top:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;color:#7c2d12;line-height:1.6;"></div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button id="btnF622ConfirmarAprovacao" class="btn-success" style="flex:1;background:#0d9488;" onclick="f622ConfirmarAprovacaoEncomenda()">✅ Aprovar e Debitar Tesouraria</button>
+      <button class="btn-secondary" style="flex:1;" onclick="f622FecharModalAprovacao()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div id="modalFinalizarEncomendaFase5" class="modal-overlay hidden">
   <div class="modal-content large">
     <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f1f5f9;padding-bottom:8px;margin-bottom:15px;">
@@ -6459,9 +6500,9 @@ function f5RenderizarLista() {
       <td>${f5Moeda(venda)}</td>
       <td style="color:#059669;font-weight:700;">${f5Moeda(sinal)}</td>
       <td style="color:#dc2626;font-weight:700;">${f5Moeda(falta)}</td>
-      <td>${usuarioRole === 'admin' ? f5Moeda(compra) : '🔒'}</td>
-      <td style="color:#d97706;font-weight:700;">${usuarioRole === 'admin' ? f5Moeda(chegada) : '🔒'}</td>
-      <td>${usuarioRole === 'admin' ? f5Moeda(custoReal) : '🔒'}</td>
+      <td class="f622-custo-sensivel">${usuarioRole === 'admin' ? f5Moeda(compra) : '🔒'}</td>
+      <td class="f622-custo-sensivel" style="color:#d97706;font-weight:700;">${usuarioRole === 'admin' ? f5Moeda(chegada) : '🔒'}</td>
+      <td class="f622-custo-sensivel">${usuarioRole === 'admin' ? f5Moeda(custoReal) : '🔒'}</td>
       <td>${estado}</td>
       <td>${wa}</td>
       <td><div class="acoes-cell">${acao}</div></td>
@@ -6478,58 +6519,47 @@ function f5RenderizarLista() {
   if(kc) kc.innerText = f5Moeda(custos);
 }
 
-async function f5RegistrarEncomenda() {
-  if(!usuarioPodeEncomendasFase5()) return alert('Acesso restrito.');
-  if(!navigator.onLine) return alert('É necessária ligação à internet para registar a encomenda com segurança.');
-  const user = auth.currentUser;
-  if(!user) return alert('Sessão expirada.');
-  const cliente = document.getElementById('f5EncCliente').value.trim();
-  const telefone = document.getElementById('f5EncTelefone').value.trim();
-  const produto = document.getElementById('f5EncProduto').value.trim();
-  const quantidade = Math.max(1, Math.floor(f5Numero('f5EncQtd') || 1));
-  const valorTotal = f5Numero('f5EncValorTotal');
-  const sinalPago = f5Numero('f5EncSinalPago');
-  const formaSinal = document.getElementById('f5EncFormaSinal').value;
-  const custoCompra = f5Numero('f5EncCustoCompra');
-  const observacao = document.getElementById('f5EncObservacao').value.trim();
-  if(!cliente || !produto || valorTotal <= 0 || sinalPago <= 0) return alert('Preencha cliente, produto, valor total e sinal recebido.');
-  if(sinalPago > valorTotal) return alert('O sinal não pode ser maior que o valor total da encomenda.');
-  if(formaSinal === 'Dinheiro' && !caixaAtualObj) return alert('Para receber o sinal em dinheiro, abra primeiro um Caixa/Turno.');
-
-  const btn = document.querySelector('#paginaEncomendas button[onclick="f5RegistrarEncomenda()"]');
-  if(btn) btn.disabled = true;
-  try {
-    const encRef = db.collection('encomendas').doc();
-    const movRef = db.collection('movimentacoes').doc();
-    await db.runTransaction(async tx => {
-      let caixaId = null;
-      if(formaSinal === 'Dinheiro') {
-        const caixaRef = db.collection('caixas').doc(caixaAtualObj.id);
-        const caixaDoc = await tx.get(caixaRef);
-        if(!caixaDoc.exists || caixaDoc.data().estado !== 'aberto') throw new Error('O caixa atual não está aberto.');
-        if(usuarioRole !== 'admin' && caixaDoc.data().uid !== user.uid) throw new Error('O caixa aberto não pertence ao usuário atual.');
-        caixaId = caixaAtualObj.id;
-      }
-      tx.set(encRef, {
-        cliente, telefone, produto, quantidade, valorTotal, sinalPago, formaSinal,
-        custoCompra, custosChegada:0, custoTotalReal:custoCompra, lucroReal:null,
-        estado:'EM_TRANSITO', usuario:user.email, uid:user.uid, role:usuarioRole,
-        observacao, data:new Date()
-      });
-      tx.set(movRef, {
-        produto:`Sinal Encomenda: ${produto}`,
-        tipo:'saida', quantidade, valor:sinalPago,
-        formaPagamento:`${formaSinal} - Sinal Encomenda`, cliente,
-        usuario:user.email, uid:user.uid, role:usuarioRole, data:new Date(),
-        ...(caixaId ? {caixaId} : {}), encomendaId:encRef.id, origem:'encomenda'
-      });
+async function f5RegistrarEncomenda(){
+  if(usuarioRole!=="admin")return criarPedidoEncomenda651();
+  if(!navigator.onLine)return alert("É necessária ligação à internet.");
+  const user=auth.currentUser;if(!user)return alert("Sessão expirada.");
+  const cliente=document.getElementById("f5EncCliente").value.trim(),telefone=document.getElementById("f5EncTelefone").value.trim(),
+        produto=document.getElementById("f5EncProduto").value.trim(),quantidade=Math.max(1,Math.floor(f5Numero("f5EncQtd")||1)),
+        valorTotal=f5Numero("f5EncValorTotal"),sinalPago=f5Numero("f5EncSinalPago"),formaSinal=document.getElementById("f5EncFormaSinal").value,
+        observacao=document.getElementById("f5EncObservacao").value.trim(),fornecedor=(document.getElementById("f622FornecedorCompra")?.value||"").trim();
+  if(!cliente||!produto||valorTotal<=0||sinalPago<=0)return alert("Preencha cliente, produto, valor total e sinal recebido.");
+  if(sinalPago>valorTotal)return alert("O sinal não pode ser maior que o valor total.");
+  if(formaSinal==="Dinheiro"&&(!caixaAtualObj||caixaAtualObj.estado!=="aberto"))return alert("Abra primeiro o Caixa/Turno para receber sinal em dinheiro.");
+  let compra;try{compra=f622DadosCompra(document.getElementById("f622ContaCompra")?.value,document.getElementById("f622ValorPagoCompra")?.value,document.getElementById("f622TaxaCompra")?.value);}catch(e){return alert(e.message||e);}
+  if(f622SaldoLocal(compra.conta)+1e-7<compra.valor)return alert(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
+  if(!confirm(`REGISTAR ENCOMENDA E PAGAR COMPRA?\n\n${cliente} — ${produto}\nCompra: ${f622Fmt(compra.valor,compra.moeda)} de ${f622NomeConta(compra.conta)}\nCusto: ${compra.custoDb.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} Db`))return;
+  const btn=document.getElementById("btnF5RegistrarEncomenda");if(btn)btn.disabled=true;
+  try{
+    const encRef=db.collection("encomendas").doc(),tesRef=db.collection("tesouraria_movimentos").doc(`enccompra_${encRef.id}`),
+          saldoRef=db.collection("tesouraria_saldos").doc(compra.conta),movRef=db.collection("movimentacoes").doc();
+    await db.runTransaction(async tx=>{
+      const saldoDoc=await tx.get(saldoRef),tesDoc=await tx.get(tesRef);
+      let caixaId=null,caixaDoc=null;
+      if(formaSinal==="Dinheiro")caixaDoc=await tx.get(db.collection("caixas").doc(caixaAtualObj.id));
+      if(!saldoDoc.exists)throw new Error(`Saldo de ${f622NomeConta(compra.conta)} não está inicializado.`);
+      if(tesDoc.exists)throw new Error("Rastro financeiro da compra já existe.");
+      if(formaSinal==="Dinheiro"){if(!caixaDoc.exists||caixaDoc.data().estado!=="aberto")throw new Error("O Caixa já não está aberto.");if(caixaDoc.data().uid!==user.uid)throw new Error("ADMIN só pode usar o próprio turno.");caixaId=caixaAtualObj.id;}
+      const saldoAntes=Number(saldoDoc.data().saldo)||0;if(saldoAntes+1e-7<compra.valor)throw new Error(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
+      const saldoDepois=saldoAntes-compra.valor,agora=new Date();
+      tx.set(encRef,{cliente,telefone,produto,quantidade,valorTotal,sinalPago,formaSinal,custoCompra:compra.custoDb,custosChegada:0,custoTotalReal:compra.custoDb,lucroReal:null,
+        contaPagamentoCompra:compra.conta,moedaCompra:compra.moeda,valorPagoCompra:compra.valor,taxaReferenciaCompra:compra.taxa,fornecedorCompra:fornecedor,
+        movimentoTesourariaCompraId:tesRef.id,saldoContaCompraAntes:saldoAntes,saldoContaCompraDepois:saldoDepois,estado:"EM_TRANSITO",
+        usuario:user.email,nomeUsuario:usuarioNome||"",uid:user.uid,role:"admin",observacao,data:agora});
+      tx.update(saldoRef,{saldo:saldoDepois,moeda:compra.moeda,atualizadoEm:agora,atualizadoPorUid:user.uid,atualizadoPorUsuario:user.email||"",ultimaOperacao:"compra_encomenda",ultimaEncomendaId:encRef.id});
+      tx.set(tesRef,f622MovCompra({encId:encRef.id,solId:null,produto,cliente,conta:compra.conta,moeda:compra.moeda,valor:compra.valor,taxa:compra.taxa,custoDb:compra.custoDb,fornecedor,user,agora}));
+      tx.set(movRef,{produto:`Sinal Encomenda: ${produto}`,tipo:"saida",quantidade,valor:sinalPago,formaPagamento:`${formaSinal} - Sinal Encomenda`,cliente,
+        usuario:user.email,nomeUsuario:usuarioNome||"",uid:user.uid,role:"admin",data:agora,...(caixaId?{caixaId}:{}),encomendaId:encRef.id,origem:"encomenda"});
     });
-    ['f5EncCliente','f5EncTelefone','f5EncProduto','f5EncValorTotal','f5EncSinalPago','f5EncCustoCompra','f5EncObservacao'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-    document.getElementById('f5EncQtd').value='1';
-    document.getElementById('f5EncFormaSinal').value='Dinheiro';
-    alert('Encomenda registada com sucesso. O sinal foi lançado separadamente do valor total da encomenda.');
-  } catch(e) { alert('Erro ao registar encomenda: ' + (e.message||e)); }
-  finally { if(btn) btn.disabled=false; }
+    ["f5EncCliente","f5EncTelefone","f5EncProduto","f5EncValorTotal","f5EncSinalPago","f5EncObservacao","f622ValorPagoCompra","f622FornecedorCompra"].forEach(id=>{const x=document.getElementById(id);if(x)x.value="";});
+    document.getElementById("f5EncQtd").value="1";document.getElementById("f5EncFormaSinal").value="Dinheiro";f622AtualizarCompraUI();f5AtualizarResumoPagina();
+    alert(`Encomenda registada. ${f622Fmt(compra.valor,compra.moeda)} debitados de ${f622NomeConta(compra.conta)}.`);
+  }catch(e){alert("Erro ao registar encomenda: "+(e.message||e));}
+  finally{if(btn)btn.disabled=false;}
 }
 
 
@@ -8094,6 +8124,34 @@ async function reconciliarHistoricoTransferenciasDiretas620(){
   } finally {
     f620HistoricoTransferenciasEmCurso=false;
   }
+}
+
+
+
+let f622ReparacaoBateriaExecutada=false,f622ReparacaoBateriaEmCurso=false;
+async function f622RepararCompraBateriaAtual(){
+  if(usuarioRole!=="admin"||!auth.currentUser||f622ReparacaoBateriaExecutada||f622ReparacaoBateriaEmCurso||!navigator.onLine)return;
+  const enc=(todasEncomendas||[]).find(e=>String(e.cliente||"").trim().toLowerCase()==="etivaldo veloso"&&
+    String(e.produto||"").trim().toLowerCase()==="bateria de computador marca hp"&&Math.abs((Number(e.custoCompra)||0)-618.75)<0.001&&!e.movimentoTesourariaCompraId);
+  if(!enc)return;
+  f622ReparacaoBateriaEmCurso=true;
+  try{
+    const encRef=db.collection("encomendas").doc(enc.id),tesRef=db.collection("tesouraria_movimentos").doc(`enccompra_${enc.id}`),
+          saldoRef=db.collection("tesouraria_saldos").doc("portugal_eur"),valor=23.79807692307692,taxa=26,custoDb=618.75,user=auth.currentUser;
+    await db.runTransaction(async tx=>{
+      const ed=await tx.get(encRef),sd=await tx.get(saldoRef),td=await tx.get(tesRef);
+      if(!ed.exists)throw new Error("Encomenda não encontrada.");if(td.exists||ed.data().movimentoTesourariaCompraId)return;
+      if(!sd.exists)throw new Error("Saldo Portugal/EUR não está inicializado.");
+      const antes=Number(sd.data().saldo)||0;if(antes+1e-7<valor)throw new Error("Saldo Portugal/EUR insuficiente.");const depois=antes-valor,agora=new Date();
+      tx.update(saldoRef,{saldo:depois,moeda:"EUR",atualizadoEm:agora,atualizadoPorUid:user.uid,atualizadoPorUsuario:user.email||"",ultimaOperacao:"compra_encomenda_reparacao_6_22",ultimaEncomendaId:enc.id});
+      tx.set(tesRef,f622MovCompra({encId:enc.id,solId:enc.solicitacaoId||null,produto:enc.produto,cliente:enc.cliente,conta:"portugal_eur",moeda:"EUR",valor,taxa,custoDb,fornecedor:"AliExpress",user,agora}));
+      tx.update(encRef,{contaPagamentoCompra:"portugal_eur",moedaCompra:"EUR",valorPagoCompra:valor,taxaReferenciaCompra:taxa,fornecedorCompra:"AliExpress",
+        movimentoTesourariaCompraId:tesRef.id,saldoContaCompraAntes:antes,saldoContaCompraDepois:depois,compraFinanceiraReconciliada:true,compraFinanceiraReconciliadaEm:agora,compraFinanceiraReconciliadaPorUid:user.uid});
+    });
+    f622ReparacaoBateriaExecutada=true;
+    alert("Compra da encomenda reconciliada.\\n\\nBateria HP — AliExpress\\n23,79807692307692 € debitados de Portugal / EUR\\nTaxa: 26 Db/€ · Custo: 618,75 Db\\n\\nNenhum movimento de Caixa ou sinal foi repetido.");
+  }catch(e){console.warn("Fase 6.22 — reparação da bateria:",e);}
+  finally{f622ReparacaoBateriaEmCurso=false;}
 }
 
 
@@ -9775,8 +9833,10 @@ function carregarEncomendas() {
     // A interface oficial da Fase 5 usa esta lista.
     if(typeof f5RenderizarLista === "function") f5RenderizarLista();
     if(typeof f5AtualizarResumoPagina === "function") f5AtualizarResumoPagina();
+    if(typeof f622AplicarVisibilidade === "function") f622AplicarVisibilidade();
     // Mantém o Resumo Operacional & Comercial sincronizado também para a GERENTE.
     if(typeof processarDashboard === "function") processarDashboard();
+    if(usuarioRole==="admin" && typeof f622RepararCompraBateriaAtual==="function") setTimeout(()=>f622RepararCompraBateriaAtual(),350);
   }, err => console.warn("Encomendas: acesso/erro", err));
 }
 
@@ -9790,6 +9850,72 @@ navegarPara = function(paginaId) {
   return navegarParaAntes64(paginaId);
 };
 
+
+
+
+/* FASE 6.22 — ENCOMENDAS COM DÉBITO REAL DE TESOURARIA */
+function f622NomeConta(id){return ({portugal_eur:"Portugal / EUR",banco_stp:"Banco STP / DobraPay",responsavel_stp:"Responsável / Reserva"})[id]||id||"-";}
+function f622MoedaConta(id){return id==="portugal_eur"?"EUR":"STN";}
+function f622Fmt(v,m){const n=Number(v)||0;return n.toLocaleString("pt-PT",{minimumFractionDigits:m==="EUR"?2:0,maximumFractionDigits:6})+(m==="EUR"?" €":" Db");}
+function f622DadosCompra(contaId,valorRaw,taxaRaw){
+  const conta=String(contaId||""),moeda=f622MoedaConta(conta),valor=Number(valorRaw)||0,taxa=Number(taxaRaw)||0;
+  if(!["portugal_eur","banco_stp","responsavel_stp"].includes(conta))throw new Error("Selecione uma conta de pagamento válida.");
+  if(!(valor>0))throw new Error("Informe o valor realmente pago ao fornecedor.");
+  if(moeda==="EUR"&&!(taxa>0))throw new Error("Informe uma taxa Db/€ válida.");
+  const custoDb=moeda==="EUR"?valor*taxa:valor;
+  return {conta,moeda,valor,taxa:moeda==="EUR"?taxa:null,custoDb};
+}
+function f622SaldoLocal(c){try{return Number(saldoContaTes(c))||0;}catch(e){return 0;}}
+function f622AplicarVisibilidade(){
+  const vendedor=usuarioRole==="venda1"||usuarioRole==="venda2";
+  document.querySelectorAll(".f622-custo-sensivel").forEach(x=>x.classList.toggle("hidden",vendedor));
+  document.getElementById("f622KpiLucroCard")?.classList.toggle("hidden",vendedor);
+  document.getElementById("f622KpiCustosCard")?.classList.toggle("hidden",vendedor);
+  document.getElementById("f622CompraFinanceiraAdmin")?.classList.toggle("hidden",usuarioRole!=="admin");
+  document.getElementById("f5EncCustoCompra")?.classList.add("hidden");
+}
+function f622ResumoHtml(d){
+  return `<b>Pagamento:</b> ${f622Fmt(d.valor,d.moeda)} de ${f622NomeConta(d.conta)}<br>`+
+    `<b>Custo contabilístico:</b> ${d.custoDb.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} Db`+
+    (d.moeda==="EUR"?` · taxa ${Number(d.taxa).toLocaleString("pt-PT",{maximumFractionDigits:6})} Db/€`:"")+
+    `<br><b>Saldo atual:</b> ${f622Fmt(f622SaldoLocal(d.conta),d.moeda)}`;
+}
+function f622AtualizarCompraUI(){
+  const c=document.getElementById("f622ContaCompra")?.value||"portugal_eur",t=document.getElementById("f622TaxaCompra"),b=document.getElementById("f622ResumoCompra");
+  if(t)t.style.display=c==="portugal_eur"?"":"none"; if(!b)return;
+  try{b.innerHTML=f622ResumoHtml(f622DadosCompra(c,document.getElementById("f622ValorPagoCompra")?.value,t?.value));}
+  catch(e){b.textContent="Selecione a conta e informe o valor realmente pago.";}
+}
+function f622AtualizarModalAprovacao(){
+  const c=document.getElementById("f622AprovarContaCompra")?.value||"portugal_eur",t=document.getElementById("f622AprovarTaxa"),b=document.getElementById("f622AprovarResumoFinanceiro");
+  if(t)t.style.display=c==="portugal_eur"?"":"none"; if(!b)return;
+  try{
+    const d=f622DadosCompra(c,document.getElementById("f622AprovarValorPago")?.value,t?.value);
+    b.innerHTML=f622ResumoHtml(d)+`<br><b>Saldo estimado depois:</b> ${f622Fmt(f622SaldoLocal(d.conta)-d.valor,d.moeda)}`;
+  }catch(e){b.textContent="Informe a origem real do dinheiro e o valor efetivamente pago ao fornecedor.";}
+}
+function f622FecharModalAprovacao(){document.getElementById("modalAprovarEncomenda622")?.classList.add("hidden");}
+function f622AbrirAprovacaoEncomenda(id){
+  if(usuarioRole!=="admin")return alert("A aprovação financeira da compra é exclusiva do ADMIN.");
+  const p=(solicitacoesEncomenda651||[]).find(x=>x.id===id);
+  if(!p||p.estado!=="PENDENTE_APROVACAO")return alert("Pedido já processado ou não encontrado.");
+  document.getElementById("f622AprovarPedidoId").value=id;
+  document.getElementById("f622AprovarContaCompra").value="portugal_eur";
+  document.getElementById("f622AprovarValorPago").value="";
+  document.getElementById("f622AprovarTaxa").value="26";
+  document.getElementById("f622AprovarFornecedor").value="";
+  document.getElementById("f622AprovarResumoPedido").innerHTML=`<b>${p.cliente||"-"}</b> — ${p.produto||"-"}<br><small>Venda: ${f5Moeda(p.valorTotal)} · Sinal: ${f5Moeda(p.sinalInformado)} · Solicitado por: ${p.usuario||"-"}</small>`;
+  f622AtualizarModalAprovacao();
+  document.getElementById("modalAprovarEncomenda622").classList.remove("hidden");
+}
+function f622MovCompra({encId,solId,produto,cliente,conta,moeda,valor,taxa,custoDb,fornecedor,user,agora}){
+  return {tipo:"compra_encomenda",natureza:"custo_encomenda",origem:conta,destino:"fornecedor_externo",
+    moedaOrigem:moeda,moedaDestino:moeda,valorOrigem:Number(valor)||0,valorDestino:0,
+    taxaReferencia:taxa==null?null:Number(taxa),taxaAplicada:null,margemDb:0,custoEquivalenteStn:Number(custoDb)||0,
+    encomendaId:encId,solicitacaoEncomendaId:solId||null,fornecedor:fornecedor||"",
+    observacao:`Compra de encomenda — ${produto}${cliente?" — Cliente: "+cliente:""}${fornecedor?" — Fornecedor: "+fornecedor:""}`,
+    usuario:user.email||"",nomeUsuario:usuarioNome||"",uid:user.uid,role:"admin",data:agora};
+}
 
 
 /* =========================================================================
@@ -9820,19 +9946,13 @@ function configurarInterfaceAprovacoes651() {
   // sujeitas às guardas específicas de cada operação.
   const admin = usuarioRole === "admin" || usuarioRole === "gerente";
   const vendedor = ehVendedor651();
-
+  const precisaAprovacaoFinanceira = usuarioRole !== "admin";
   const custo = document.getElementById("f5EncCustoCompra");
-  if(custo) {
-    custo.classList.toggle("hidden", vendedor);
-    if(vendedor) custo.value = "";
-  }
-
-  const btnEnc = document.getElementById("btnF5RegistrarEncomenda");
-  if(btnEnc) {
-    btnEnc.innerText = vendedor
-      ? "📨 Enviar Encomenda para Aprovação"
-      : "📦 Registar Encomenda & Receber Sinal";
-  }
+  if(custo){custo.classList.add("hidden");if(usuarioRole!=="admin")custo.value="";}
+  const btnEnc=document.getElementById("btnF5RegistrarEncomenda");
+  if(btnEnc)btnEnc.innerText=precisaAprovacaoFinanceira?"📨 Enviar Encomenda para Aprovação":"📦 Registar Encomenda & Debitar Compra";
+  f622AplicarVisibilidade();
+  f622AtualizarCompraUI();
 
   const btnTransf = document.getElementById("btnRegistrarTransferencia651");
   if(btnTransf) {
@@ -9902,7 +10022,7 @@ function renderizarSolicitacoesEncomenda651() {
 
   tbody.innerHTML = solicitacoesEncomenda651.map(p => {
     const acao = usuarioRole === "admin" && p.estado === "PENDENTE_APROVACAO"
-      ? `<button class="btn-success btn-acao" onclick="aprovarEncomenda651('${p.id}')">✅ Aprovar</button>
+      ? `<button class="btn-success btn-acao" onclick="f622AbrirAprovacaoEncomenda('${p.id}')">✅ Aprovar</button>
          <button class="btn-danger btn-acao" onclick="rejeitarEncomenda651('${p.id}')">❌ Rejeitar</button>`
       : '<span style="font-size:11px;color:#64748b;">Aguardando decisão</span>';
     return `<tr>
@@ -10135,7 +10255,7 @@ async function criarPedidoTransferencia651() {
 // Mantém o fluxo direto para ADMIN; vendedor usa pedido.
 const f5RegistrarEncomendaDireta651 = f5RegistrarEncomenda;
 f5RegistrarEncomenda = async function() {
-  if(ehVendedor651()) return criarPedidoEncomenda651();
+  if(usuarioRole!=="admin") return criarPedidoEncomenda651();
   return f5RegistrarEncomendaDireta651();
 };
 
@@ -10145,68 +10265,54 @@ registrarTransferencia = async function() {
   return registrarTransferenciaDireta651();
 };
 
-async function aprovarEncomenda651(id) {
-  if(usuarioRole !== "admin") return alert("Acesso restrito.");
-  const p = solicitacoesEncomenda651.find(x=>x.id===id);
-  if(!p || p.estado !== "PENDENTE_APROVACAO") return alert("Pedido já processado ou não encontrado.");
+async function aprovarEncomenda651(id){return f622AbrirAprovacaoEncomenda(id);}
 
-  const custoRaw = prompt(
-    `Aprovar encomenda de ${p.cliente} — ${p.produto}\n\n` +
-    `Venda: ${f5Moeda(p.valorTotal)}\nSinal informado: ${f5Moeda(p.sinalInformado)}\n\n` +
-    `Informe o CUSTO DE COMPRA (Db):`,
-    "0"
-  );
-  if(custoRaw === null) return;
-  const custoCompra = Number(String(custoRaw).replace(",", "."));
-  if(!Number.isFinite(custoCompra) || custoCompra < 0) return alert("Custo de compra inválido.");
-
-  if(!confirm("Confirmar aprovação? A encomenda passará a ser oficial.")) return;
-
-  try {
-    const user = auth.currentUser;
-    const pedRef = db.collection("encomenda_solicitacoes").doc(id);
-    const encRef = db.collection("encomendas").doc();
-    const agora = new Date();
-
-    await db.runTransaction(async tx => {
-      const pedDoc = await tx.get(pedRef);
-      if(!pedDoc.exists || pedDoc.data().estado !== "PENDENTE_APROVACAO") throw new Error("Pedido já foi processado.");
-      const d = pedDoc.data();
-
-      tx.set(encRef, {
-        cliente:d.cliente, telefone:d.telefone, produto:d.produto,
-        quantidade:d.quantidade, valorTotal:d.valorTotal,
-        sinalPago:d.sinalInformado, formaSinal:d.formaSinal,
-        custoCompra, custosChegada:0, custoTotalReal:custoCompra, lucroReal:null,
-        estado:"EM_TRANSITO", usuario:d.usuario, uid:d.uid, role:d.role,
-        criadoPorUid:d.uid, criadoPorUsuario:d.usuario,
-        aprovadoPorUid:user.uid, aprovadoPorUsuario:user.email,
-        solicitacaoId:id, observacao:d.observacao || "", data:agora
-      });
-
-      tx.update(pedRef, {
-        estado:"APROVADA", encomendaId:encRef.id,
-        aprovadoPorUid:user.uid, aprovadoPorUsuario:user.email,
-        dataAprovacao:agora, efeitoFinanceiroDefinitivo:true, custoCompra
-      });
-
-      if(d.formaSinal === "Dinheiro" && d.caixaId) {
-        tx.set(db.collection("movimentacoes").doc(), {
-          produto:`Liberação de Sinal Aprovado — ${d.produto}`,
-          tipo:"liberacao_reserva_sinal_encomenda",
-          quantidade:1, valor:d.sinalInformado,
-          formaPagamento:"Controle Interno - Aprovação",
-          usuario:d.usuario, uid:d.uid, role:d.role,
-          executadoPorUid:user.uid, executadoPorUsuario:user.email,
-          data:agora, caixaId:d.caixaId, solicitacaoEncomendaId:id, encomendaId:encRef.id
-        });
-      }
+async function f622ConfirmarAprovacaoEncomenda(){
+  if(usuarioRole!=="admin")return alert("Acesso restrito.");
+  if(!navigator.onLine)return alert("É necessária ligação à internet.");
+  const id=document.getElementById("f622AprovarPedidoId")?.value||"";
+  const p=(solicitacoesEncomenda651||[]).find(x=>x.id===id);
+  if(!p||p.estado!=="PENDENTE_APROVACAO")return alert("Pedido já processado ou não encontrado.");
+  let compra; try{compra=f622DadosCompra(document.getElementById("f622AprovarContaCompra")?.value,document.getElementById("f622AprovarValorPago")?.value,document.getElementById("f622AprovarTaxa")?.value);}catch(e){return alert(e.message||e);}
+  const fornecedor=(document.getElementById("f622AprovarFornecedor")?.value||"").trim();
+  if(f622SaldoLocal(compra.conta)+1e-7<compra.valor)return alert(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
+  if(!confirm(`APROVAR E PAGAR COMPRA?\n\n${p.cliente} — ${p.produto}\n${f622Fmt(compra.valor,compra.moeda)} de ${f622NomeConta(compra.conta)}\nCusto: ${compra.custoDb.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} Db\n\nA aprovação e o débito serão atómicos.`))return;
+  const btn=document.getElementById("btnF622ConfirmarAprovacao");if(btn)btn.disabled=true;
+  try{
+    const user=auth.currentUser;if(!user)throw new Error("Sessão expirada.");
+    const pedRef=db.collection("encomenda_solicitacoes").doc(id),encRef=db.collection("encomendas").doc(),
+          tesRef=db.collection("tesouraria_movimentos").doc(`enccompra_${encRef.id}`),
+          saldoRef=db.collection("tesouraria_saldos").doc(compra.conta);
+    await db.runTransaction(async tx=>{
+      const pedDoc=await tx.get(pedRef),saldoDoc=await tx.get(saldoRef),tesDoc=await tx.get(tesRef);
+      if(!pedDoc.exists||pedDoc.data().estado!=="PENDENTE_APROVACAO")throw new Error("Pedido já processado.");
+      if(!saldoDoc.exists)throw new Error(`Saldo de ${f622NomeConta(compra.conta)} não está inicializado.`);
+      if(tesDoc.exists)throw new Error("Rastro financeiro da compra já existe.");
+      const d=pedDoc.data(),saldoAntes=Number(saldoDoc.data().saldo)||0;
+      if(saldoAntes+1e-7<compra.valor)throw new Error(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
+      const saldoDepois=saldoAntes-compra.valor,agora=new Date();
+      tx.set(encRef,{cliente:d.cliente,telefone:d.telefone,produto:d.produto,quantidade:d.quantidade,valorTotal:d.valorTotal,
+        sinalPago:d.sinalInformado,formaSinal:d.formaSinal,custoCompra:compra.custoDb,custosChegada:0,custoTotalReal:compra.custoDb,lucroReal:null,
+        contaPagamentoCompra:compra.conta,moedaCompra:compra.moeda,valorPagoCompra:compra.valor,taxaReferenciaCompra:compra.taxa,
+        fornecedorCompra:fornecedor,movimentoTesourariaCompraId:tesRef.id,saldoContaCompraAntes:saldoAntes,saldoContaCompraDepois:saldoDepois,
+        estado:"EM_TRANSITO",usuario:d.usuario,uid:d.uid,role:d.role,criadoPorUid:d.uid,criadoPorUsuario:d.usuario,
+        aprovadoPorUid:user.uid,aprovadoPorUsuario:user.email,solicitacaoId:id,observacao:d.observacao||"",data:agora});
+      tx.update(pedRef,{estado:"APROVADA",encomendaId:encRef.id,aprovadoPorUid:user.uid,aprovadoPorUsuario:user.email,dataAprovacao:agora,
+        efeitoFinanceiroDefinitivo:true,custoCompra:compra.custoDb,contaPagamentoCompra:compra.conta,moedaCompra:compra.moeda,
+        valorPagoCompra:compra.valor,taxaReferenciaCompra:compra.taxa,fornecedorCompra:fornecedor,movimentoTesourariaCompraId:tesRef.id});
+      tx.update(saldoRef,{saldo:saldoDepois,moeda:compra.moeda,atualizadoEm:agora,atualizadoPorUid:user.uid,atualizadoPorUsuario:user.email||"",
+        ultimaOperacao:"compra_encomenda",ultimaEncomendaId:encRef.id});
+      tx.set(tesRef,f622MovCompra({encId:encRef.id,solId:id,produto:d.produto,cliente:d.cliente,conta:compra.conta,moeda:compra.moeda,
+        valor:compra.valor,taxa:compra.taxa,custoDb:compra.custoDb,fornecedor,user,agora}));
+      if(d.formaSinal==="Dinheiro"&&d.caixaId)tx.set(db.collection("movimentacoes").doc(),{produto:`Liberação de Sinal Aprovado — ${d.produto}`,
+        tipo:"liberacao_reserva_sinal_encomenda",quantidade:1,valor:d.sinalInformado,formaPagamento:"Controle Interno - Aprovação",
+        usuario:d.usuario,uid:d.uid,role:d.role,executadoPorUid:user.uid,executadoPorUsuario:user.email,data:agora,caixaId:d.caixaId,
+        solicitacaoEncomendaId:id,encomendaId:encRef.id});
     });
-
-    alert("Encomenda aprovada e registada oficialmente.");
-  } catch(e) {
-    alert("Erro ao aprovar encomenda: " + (e.message || e));
-  }
+    f622FecharModalAprovacao();
+    alert(`Encomenda aprovada. ${f622Fmt(compra.valor,compra.moeda)} debitados de ${f622NomeConta(compra.conta)}.`);
+  }catch(e){alert("Erro ao aprovar encomenda: "+(e.message||e));}
+  finally{if(btn)btn.disabled=false;}
 }
 
 async function rejeitarEncomenda651(id) {
