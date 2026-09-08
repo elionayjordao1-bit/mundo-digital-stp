@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.08-003">
+<meta name="mdstp-build" content="2026.09.08-004">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -6509,6 +6509,10 @@ function f5RenderizarLista() {
     </tr>`;
   }).join('') || '<tr><td colspan="12" style="color:#94a3b8;">Nenhuma encomenda registada.</td></tr>';
 
+  // FASE 6.22.1 — reaplica a visibilidade DEPOIS de reconstruir a tabela.
+  // Isto evita que uma nova renderização volte a mostrar os cadeados/colunas.
+  if(typeof f622AplicarVisibilidade === "function") f622AplicarVisibilidade();
+
   const ka = document.getElementById('f5KpiAtivas');
   const kr = document.getElementById('f5KpiAReceber');
   const kl = document.getElementById('f5KpiLucro');
@@ -8129,29 +8133,161 @@ async function reconciliarHistoricoTransferenciasDiretas620(){
 
 
 let f622ReparacaoBateriaExecutada=false,f622ReparacaoBateriaEmCurso=false;
-async function f622RepararCompraBateriaAtual(){
-  if(usuarioRole!=="admin"||!auth.currentUser||f622ReparacaoBateriaExecutada||f622ReparacaoBateriaEmCurso||!navigator.onLine)return;
-  const enc=(todasEncomendas||[]).find(e=>String(e.cliente||"").trim().toLowerCase()==="etivaldo veloso"&&
-    String(e.produto||"").trim().toLowerCase()==="bateria de computador marca hp"&&Math.abs((Number(e.custoCompra)||0)-618.75)<0.001&&!e.movimentoTesourariaCompraId);
-  if(!enc)return;
+
+async function f622LocalizarBateriaOficial(){
+  // ADMIN pode ler todas as encomendas. A busca direta elimina dependência
+  // da ordem em que listeners/UI carregam.
+  const snap = await db.collection("encomendas").get();
+  let candidatos=[];
+  snap.forEach(d=>{
+    const e={id:d.id,...d.data()};
+    const cliente=String(e.cliente||"").trim().toLowerCase();
+    const produto=String(e.produto||"").trim().toLowerCase();
+    if(cliente==="etivaldo veloso" &&
+       produto==="bateria de computador marca hp" &&
+       Math.abs((Number(e.custoCompra)||0)-618.75)<0.01){
+      candidatos.push(e);
+    }
+  });
+  candidatos.sort((a,b)=>obterDataSegura(b.data)-obterDataSegura(a.data));
+  return candidatos[0]||null;
+}
+
+function f622GarantirBotaoReconciliacao(){
+  if(usuarioRole!=="admin") return;
+  const pagina=document.getElementById("paginaEncomendas");
+  if(!pagina || document.getElementById("f622CardReconciliacaoCompra")) return;
+
+  const logica=[...pagina.querySelectorAll("h3")].find(x=>
+    String(x.textContent||"").toLowerCase().includes("lógica financeira")
+  )?.parentElement;
+
+  const card=document.createElement("div");
+  card.id="f622CardReconciliacaoCompra";
+  card.style.cssText="margin:14px 0;padding:14px;border:1px solid #fbbf24;border-left:5px solid #f59e0b;border-radius:12px;background:#fffbeb;";
+  card.innerHTML=`
+    <div style="font-weight:800;color:#92400e;margin-bottom:5px;">🧾 Reconciliação de compra anterior à 6.22</div>
+    <div style="font-size:12px;color:#78350f;line-height:1.55;margin-bottom:10px;">
+      Use apenas para a bateria HP de Etivaldo Veloso já comprada no AliExpress.
+      A operação é idempotente: se o débito já existir, não será repetido.
+    </div>
+    <button id="f622BtnReconciliarBateria" class="btn-secondary" style="background:#d97706;color:#fff;"
+      onclick="f622RepararCompraBateriaAtual(true)">🔄 Reconciliar compra da bateria</button>
+    <div id="f622EstadoReconciliacao" style="font-size:12px;margin-top:8px;color:#78350f;"></div>`;
+  if(logica) logica.parentNode.insertBefore(card,logica);
+  else pagina.appendChild(card);
+}
+
+async function f622RepararCompraBateriaAtual(manual=false){
+  if(usuarioRole!=="admin"||!auth.currentUser||f622ReparacaoBateriaEmCurso||!navigator.onLine)return;
+  if(f622ReparacaoBateriaExecutada && !manual) return;
+
   f622ReparacaoBateriaEmCurso=true;
+  const estado=document.getElementById("f622EstadoReconciliacao");
+  const btn=document.getElementById("f622BtnReconciliarBateria");
+  if(btn) btn.disabled=true;
+  if(estado) estado.textContent="A verificar a encomenda e a Tesouraria...";
+
   try{
-    const encRef=db.collection("encomendas").doc(enc.id),tesRef=db.collection("tesouraria_movimentos").doc(`enccompra_${enc.id}`),
-          saldoRef=db.collection("tesouraria_saldos").doc("portugal_eur"),valor=23.79807692307692,taxa=26,custoDb=618.75,user=auth.currentUser;
+    const enc=await f622LocalizarBateriaOficial();
+    if(!enc){
+      throw new Error("Não encontrei a encomenda oficial da bateria HP de Etivaldo Veloso com custo de 618,75 Db.");
+    }
+
+    const encRef=db.collection("encomendas").doc(enc.id);
+    const tesRef=db.collection("tesouraria_movimentos").doc(`enccompra_${enc.id}`);
+    const saldoRef=db.collection("tesouraria_saldos").doc("portugal_eur");
+    const valor=23.79807692307692, taxa=26, custoDb=618.75, user=auth.currentUser;
+
+    let resultado="executado";
+
     await db.runTransaction(async tx=>{
-      const ed=await tx.get(encRef),sd=await tx.get(saldoRef),td=await tx.get(tesRef);
-      if(!ed.exists)throw new Error("Encomenda não encontrada.");if(td.exists||ed.data().movimentoTesourariaCompraId)return;
-      if(!sd.exists)throw new Error("Saldo Portugal/EUR não está inicializado.");
-      const antes=Number(sd.data().saldo)||0;if(antes+1e-7<valor)throw new Error("Saldo Portugal/EUR insuficiente.");const depois=antes-valor,agora=new Date();
-      tx.update(saldoRef,{saldo:depois,moeda:"EUR",atualizadoEm:agora,atualizadoPorUid:user.uid,atualizadoPorUsuario:user.email||"",ultimaOperacao:"compra_encomenda_reparacao_6_22",ultimaEncomendaId:enc.id});
-      tx.set(tesRef,f622MovCompra({encId:enc.id,solId:enc.solicitacaoId||null,produto:enc.produto,cliente:enc.cliente,conta:"portugal_eur",moeda:"EUR",valor,taxa,custoDb,fornecedor:"AliExpress",user,agora}));
-      tx.update(encRef,{contaPagamentoCompra:"portugal_eur",moedaCompra:"EUR",valorPagoCompra:valor,taxaReferenciaCompra:taxa,fornecedorCompra:"AliExpress",
-        movimentoTesourariaCompraId:tesRef.id,saldoContaCompraAntes:antes,saldoContaCompraDepois:depois,compraFinanceiraReconciliada:true,compraFinanceiraReconciliadaEm:agora,compraFinanceiraReconciliadaPorUid:user.uid});
+      const ed=await tx.get(encRef);
+      const sd=await tx.get(saldoRef);
+      const td=await tx.get(tesRef);
+
+      if(!ed.exists) throw new Error("A encomenda deixou de existir.");
+      if(!sd.exists) throw new Error("O saldo Portugal/EUR não está inicializado.");
+
+      // Idempotência forte: documento financeiro determinístico OU vínculo
+      // na encomenda impedem qualquer segundo débito.
+      if(td.exists || ed.data().movimentoTesourariaCompraId){
+        resultado="ja_existia";
+        return;
+      }
+
+      const antes=Number(sd.data().saldo)||0;
+      if(antes+1e-7<valor)
+        throw new Error(`Saldo Portugal/EUR insuficiente. Disponível: ${f622Fmt(antes,"EUR")}; necessário: ${f622Fmt(valor,"EUR")}.`);
+
+      const depois=antes-valor;
+      const agora=new Date();
+
+      tx.update(saldoRef,{
+        saldo:depois,
+        moeda:"EUR",
+        atualizadoEm:agora,
+        atualizadoPorUid:user.uid,
+        atualizadoPorUsuario:user.email||"",
+        origemCalculo:"ledger_tesouraria",
+        ultimaOperacao:"compra_encomenda_reparacao_6_22_1",
+        ultimaEncomendaId:enc.id
+      });
+
+      tx.set(tesRef,f622MovCompra({
+        encId:enc.id,
+        solId:enc.solicitacaoId||null,
+        produto:enc.produto,
+        cliente:enc.cliente,
+        conta:"portugal_eur",
+        moeda:"EUR",
+        valor,
+        taxa,
+        custoDb,
+        fornecedor:"AliExpress",
+        user,
+        agora
+      }));
+
+      tx.update(encRef,{
+        contaPagamentoCompra:"portugal_eur",
+        moedaCompra:"EUR",
+        valorPagoCompra:valor,
+        taxaReferenciaCompra:taxa,
+        fornecedorCompra:"AliExpress",
+        movimentoTesourariaCompraId:tesRef.id,
+        saldoContaCompraAntes:antes,
+        saldoContaCompraDepois:depois,
+        compraFinanceiraReconciliada:true,
+        compraFinanceiraReconciliadaEm:agora,
+        compraFinanceiraReconciliadaPorUid:user.uid
+      });
     });
+
     f622ReparacaoBateriaExecutada=true;
-    alert("Compra da encomenda reconciliada.\\n\\nBateria HP — AliExpress\\n23,79807692307692 € debitados de Portugal / EUR\\nTaxa: 26 Db/€ · Custo: 618,75 Db\\n\\nNenhum movimento de Caixa ou sinal foi repetido.");
-  }catch(e){console.warn("Fase 6.22 — reparação da bateria:",e);}
-  finally{f622ReparacaoBateriaEmCurso=false;}
+
+    if(resultado==="ja_existia"){
+      if(estado) estado.textContent="✅ A compra já possui vínculo financeiro. Nenhum valor foi debitado novamente.";
+      if(manual) alert("A compra da bateria já estava reconciliada. Nenhum débito foi repetido.");
+    }else{
+      if(estado) estado.textContent="✅ Reconciliação concluída: 23,79807692307692 € debitados de Portugal / EUR.";
+      alert(
+        "Compra da encomenda reconciliada.\n\n"+
+        "Bateria HP — AliExpress\n"+
+        "23,79807692307692 € debitados de Portugal / EUR\n"+
+        "Taxa: 26 Db/€ · Custo: 618,75 Db\n\n"+
+        "Nenhum movimento de Caixa ou sinal foi repetido."
+      );
+    }
+  }catch(e){
+    console.error("Fase 6.22.1 — reconciliação da bateria:",e);
+    const msg="Não foi possível reconciliar a compra da bateria: "+(e.message||e);
+    if(estado) estado.textContent="❌ "+msg;
+    if(manual) alert(msg);
+  }finally{
+    f622ReparacaoBateriaEmCurso=false;
+    if(btn) btn.disabled=false;
+  }
 }
 
 
@@ -8883,6 +9019,11 @@ function navegarPara(paginaId) {
   if(paginaId === "paginaEncomendas") {
     f5AtualizarResumoPagina();
     renderizarSolicitacoesEncomenda651();
+    if(typeof f622AplicarVisibilidade==="function") f622AplicarVisibilidade();
+    if(usuarioRole==="admin" && typeof f622GarantirBotaoReconciliacao==="function") {
+      f622GarantirBotaoReconciliacao();
+      setTimeout(()=>f622RepararCompraBateriaAtual(false),500);
+    }
   }
   if(paginaId === "paginaDespesas") {
     iniciarListenerDespesasFase52();
@@ -9836,7 +9977,10 @@ function carregarEncomendas() {
     if(typeof f622AplicarVisibilidade === "function") f622AplicarVisibilidade();
     // Mantém o Resumo Operacional & Comercial sincronizado também para a GERENTE.
     if(typeof processarDashboard === "function") processarDashboard();
-    if(usuarioRole==="admin" && typeof f622RepararCompraBateriaAtual==="function") setTimeout(()=>f622RepararCompraBateriaAtual(),350);
+    if(usuarioRole==="admin") {
+      if(typeof f622GarantirBotaoReconciliacao==="function") f622GarantirBotaoReconciliacao();
+      if(typeof f622RepararCompraBateriaAtual==="function") setTimeout(()=>f622RepararCompraBateriaAtual(false),350);
+    }
   }, err => console.warn("Encomendas: acesso/erro", err));
 }
 
@@ -9868,7 +10012,11 @@ function f622DadosCompra(contaId,valorRaw,taxaRaw){
 function f622SaldoLocal(c){try{return Number(saldoContaTes(c))||0;}catch(e){return 0;}}
 function f622AplicarVisibilidade(){
   const vendedor=usuarioRole==="venda1"||usuarioRole==="venda2";
-  document.querySelectorAll(".f622-custo-sensivel").forEach(x=>x.classList.toggle("hidden",vendedor));
+  document.querySelectorAll(".f622-custo-sensivel").forEach(x=>{
+    x.classList.toggle("hidden",vendedor);
+    if(vendedor) x.style.display="none";
+    else x.style.removeProperty("display");
+  });
   document.getElementById("f622KpiLucroCard")?.classList.toggle("hidden",vendedor);
   document.getElementById("f622KpiCustosCard")?.classList.toggle("hidden",vendedor);
   document.getElementById("f622CompraFinanceiraAdmin")?.classList.toggle("hidden",usuarioRole!=="admin");
