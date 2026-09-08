@@ -7171,7 +7171,8 @@ function rotuloTipoTesouraria(tipo) {
     retirada_socio: "RETIRADA SÓCIO",
     amortizacao_socio: "AMORTIZAÇÃO SÓCIO",
     amortizacao_banco: "AMORTIZAÇÃO BANCO",
-    despesa_operacional: "DESPESA OPERACIONAL"
+    despesa_operacional: "DESPESA OPERACIONAL",
+    movimento_interno: "MOV. INTERNO"
   })[tipo] || "MOV. INTERNO";
 }
 
@@ -7529,18 +7530,12 @@ async function registrarMovimentoTesouraria() {
 
   if(origem===destino) return alert("Origem e destino devem ser diferentes.");
   if(valorOrigem<=0) return alert("Informe um valor válido.");
+  if(!observacao) return alert("Informe a observação/motivo do movimento. Para regularizações, descreva o lançamento original e o motivo da correção.");
 
-  if((origem === "caixa_stp" || destino === "caixa_stp") && (!caixaAtualObj || caixaAtualObj.estado !== "aberto")) {
-    return alert("Para movimentar o Caixa Loja, abra primeiro o Caixa/Turno.");
-  }
-
-  const saldo = saldoContaTes(origem);
-  if(saldo < valorOrigem) {
-    return alert(
-      `Saldo insuficiente em ${nomeContaTes(origem)}.\n\n` +
-      `Disponível: ${saldo.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${moedaContaTes(origem)==="EUR"?"€":"Db"}\n` +
-      `Necessário: ${valorOrigem.toLocaleString("pt-PT",{maximumFractionDigits:2})}`
-    );
+  // FASE 6.22.3 — Caixa Loja não é movimentado por esta transferência manual.
+  // Suprimento/Sangria continuam exclusivamente no fluxo próprio, com Caixa/Turno e aprovação.
+  if(origem === "caixa_stp" || destino === "caixa_stp") {
+    return alert("Caixa Loja não pode ser movimentado por 'Transferir entre Contas'. Use Suprimento ou Sangria no módulo Gestão de Caixa.");
   }
 
   const mo = moedaContaTes(origem), md = moedaContaTes(destino);
@@ -7554,22 +7549,48 @@ async function registrarMovimentoTesouraria() {
     } else if(mo==="STN" && md==="EUR") {
       valorDestino = valorOrigem / aplicada;
       margemDb = valorDestino * (aplicada - ref);
+    } else {
+      return alert("Conversão de moedas não suportada para estas contas.");
     }
   }
 
   if(!confirm(
-    `Confirmar movimento de tesouraria?\n\n` +
+    `Confirmar movimento interno de tesouraria?\n\n` +
     `${nomeContaTes(origem)} → ${nomeContaTes(destino)}\n` +
     `Origem: ${valorOrigem.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${mo==="EUR"?"€":"Db"}\n` +
-    `Destino: ${valorDestino.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${md==="EUR"?"€":"Db"}`
+    `Destino: ${valorDestino.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${md==="EUR"?"€":"Db"}\n\n` +
+    `Motivo: ${observacao}`
   )) return;
 
   const movRef = db.collection("tesouraria_movimentos").doc();
+  const saldoOrigemRef = db.collection("tesouraria_saldos").doc(origem);
+  const saldoDestinoRef = db.collection("tesouraria_saldos").doc(destino);
   const agora = new Date();
 
   try {
     await db.runTransaction(async tx => {
+      // TODAS AS LEITURAS PRIMEIRO. A transação pode ser repetida automaticamente pelo Firestore.
+      const [saldoOrigemDoc, saldoDestinoDoc] = await Promise.all([
+        tx.get(saldoOrigemRef),
+        tx.get(saldoDestinoRef)
+      ]);
+
+      if(!saldoOrigemDoc.exists) throw new Error(`Saldo de ${nomeContaTes(origem)} não está inicializado.`);
+      if(!saldoDestinoDoc.exists) throw new Error(`Saldo de ${nomeContaTes(destino)} não está inicializado.`);
+
+      const saldoOrigemAntes = Number(saldoOrigemDoc.data().saldo)||0;
+      const saldoDestinoAntes = Number(saldoDestinoDoc.data().saldo)||0;
+      if(saldoOrigemAntes + 1e-7 < valorOrigem) {
+        throw new Error(`Saldo insuficiente em ${nomeContaTes(origem)}. Disponível: ${saldoOrigemAntes.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${mo==="EUR"?"€":"Db"}.`);
+      }
+
+      const saldoOrigemDepois = saldoOrigemAntes - valorOrigem;
+      const saldoDestinoDepois = saldoDestinoAntes + valorDestino;
+      if(saldoOrigemDepois < -1e-7) throw new Error("A operação produziria saldo negativo na conta de origem.");
+
       tx.set(movRef, {
+        tipo: "movimento_interno",
+        natureza: "movimento_interno",
         origem, destino,
         moedaOrigem: mo,
         moedaDestino: md,
@@ -7579,44 +7600,46 @@ async function registrarMovimentoTesouraria() {
         taxaAplicada: mo===md ? null : aplicada,
         margemDb,
         observacao,
-        usuario: user.email,
+        saldoOrigemAntes,
+        saldoOrigemDepois,
+        saldoDestinoAntes,
+        saldoDestinoDepois,
+        usuario: user.email || "",
         nomeUsuario: usuarioNome || "",
         uid: user.uid,
         role: usuarioRole,
-        data: agora
+        data: agora,
+        versaoOperacao: "6.22.3"
       });
 
-      // Se o Caixa Loja participa, cria movimento físico correspondente.
-      if(origem === "caixa_stp" || destino === "caixa_stp") {
-        const movCaixaRef = db.collection("movimentacoes").doc();
-        const ehSaida = origem === "caixa_stp";
-        tx.set(movCaixaRef, {
-          produto: `Tesouraria: ${nomeContaTes(origem)} → ${nomeContaTes(destino)}`,
-          tipo: ehSaida ? "sangria_caixa" : "suprimento_caixa",
-          quantidade: 1,
-          valor: ehSaida ? valorOrigem : valorDestino,
-          formaPagamento: ehSaida ? "Dinheiro - Sangria Tesouraria" : "Dinheiro - Suprimento Tesouraria",
-          origemTesouraria: origem,
-          destinoTesouraria: destino,
-          tesourariaMovId: movRef.id,
-          usuario: user.email,
-          nomeUsuario: usuarioNome || "",
-          uid: user.uid,
-          role: usuarioRole,
-          data: agora,
-          caixaId: caixaAtualObj?.id || null
-        });
-      }
+      tx.update(saldoOrigemRef, {
+        saldo: saldoOrigemDepois,
+        moeda: mo,
+        atualizadoEm: agora,
+        atualizadoPorUid: user.uid,
+        atualizadoPorUsuario: user.email || "",
+        ultimoMovimentoTesourariaId: movRef.id,
+        ultimaOperacao: "movimento_interno"
+      });
+
+      tx.update(saldoDestinoRef, {
+        saldo: saldoDestinoDepois,
+        moeda: md,
+        atualizadoEm: agora,
+        atualizadoPorUid: user.uid,
+        atualizadoPorUsuario: user.email || "",
+        ultimoMovimentoTesourariaId: movRef.id,
+        ultimaOperacao: "movimento_interno"
+      });
     });
 
     tesValorOrigem.value = "";
     tesObservacao.value = "";
-    alert("Movimento de tesouraria registado com sucesso.");
+    alert("Movimento interno registado e saldos atualizados atomicamente com sucesso.");
   } catch(e) {
     alert("Erro ao registar movimento: " + (e.message || e));
   }
 }
-
 function renderizarTesouraria() {
   const tbody = document.getElementById("listaTesouraria");
   if(!tbody) return;
@@ -9613,7 +9636,8 @@ function rotuloTipoTesouraria(tipo) {
     amortizacao_socio: "AMORTIZAÇÃO SÓCIO",
     amortizacao_banco: "AMORTIZAÇÃO BANCO",
     despesa_operacional: "DESPESA OPERACIONAL",
-    prestacao_contas: "PRESTAÇÃO CONTAS"
+    prestacao_contas: "PRESTAÇÃO CONTAS",
+    movimento_interno: "MOV. INTERNO"
   })[tipo] || "MOV. INTERNO";
 }
 
