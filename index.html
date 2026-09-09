@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.09-007">
+<meta name="mdstp-build" content="2026.09.09-008">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -13311,7 +13311,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 
 <script>
-/* FASE 6.22.4 — PWA: build local alinhado ao app-version para impedir alerta permanente. */
+/* FASE 6.22.5 — PWA: build local alinhado ao app-version para impedir alerta permanente. */
 /* =========================================================================
    PWA MUNDO DIGITAL STP — INSTALAÇÃO + ATUALIZAÇÃO CONTROLADA
    - Não altera Caixa, Tesouraria, Vendas, Estoque ou Firebase.
@@ -13671,6 +13671,427 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       }
     },250);
   });
+})();
+</script>
+
+
+
+<!-- ========================================================================
+     FASE 6.22.5 — CENTRAL DE NOTIFICAÇÕES 2.0
+     Camada aditiva: NÃO altera cálculos, Caixa, Tesouraria, Encomendas,
+     Transferências, Armazém ou regras financeiras existentes.
+     As notificações são derivadas do estado real dos módulos; somente o
+     estado de leitura/visualização é persistido em notificacao_leituras.
+     ======================================================================== -->
+<script>
+(function(){
+  "use strict";
+
+  const MD_NOTIF_RELEASE = "6.22.5";
+  const MD_NOTIF_MAX = 100;
+  let mdNotifLeituras = new Map();
+  let mdNotifUnsub = null;
+  let mdNotifUid = null;
+  let mdNotifAuditoriaExec = 0;
+
+  function mdNotifEsc(v){
+    return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+  function mdNotifData(v){
+    try{
+      if(!v) return null;
+      if(v.toDate && typeof v.toDate === "function") return v.toDate();
+      const d=v instanceof Date?v:new Date(v);
+      return isNaN(d.getTime())?null:d;
+    }catch(e){ return null; }
+  }
+  function mdNotifMs(v){ const d=mdNotifData(v); return d?d.getTime():0; }
+  function mdNotifRecente(v,dias=30){ const m=mdNotifMs(v); return !!m && (Date.now()-m)<=dias*86400000; }
+  function mdNotifAgo(v){
+    const d=mdNotifData(v); if(!d) return "";
+    const sec=Math.max(0,Math.floor((Date.now()-d.getTime())/1000));
+    if(sec<60) return "agora";
+    const min=Math.floor(sec/60); if(min<60) return `há ${min} min`;
+    const h=Math.floor(min/60); if(h<24) return `há ${h} h`;
+    const dias=Math.floor(h/24); if(dias<30) return `há ${dias} dia${dias===1?"":"s"}`;
+    return d.toLocaleDateString("pt-PT");
+  }
+  function mdNotifHash(txt){
+    let h=2166136261;
+    for(let i=0;i<txt.length;i++){ h^=txt.charCodeAt(i); h=Math.imul(h,16777619); }
+    return (h>>>0).toString(36);
+  }
+  function mdNotifDocId(uid,chave){ return `${uid}_${mdNotifHash(chave)}`; }
+  function mdNotifRole(){ try{return String(usuarioRole||"").toLowerCase();}catch(e){return "";} }
+  function mdNotifEhGestor(){ const r=mdNotifRole(); return r==="admin"||r==="gerente"; }
+  function mdNotifPodeCentral(){ return ["admin","gerente","estoque","venda1","venda2"].includes(mdNotifRole()); }
+  function mdNotifValorDb(v){ return `${(Number(v)||0).toLocaleString("pt-PT",{maximumFractionDigits:2})} Db`; }
+  function mdNotifValorEur(v){ return `${(Number(v)||0).toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €`; }
+
+  function mdNotifAdd(lista, o){
+    if(!o || !o.chave || !o.titulo) return;
+    const estado=mdNotifLeituras.get(o.chave)||{};
+    lista.push({
+      tipo:o.tipo||"INFO", modulo:o.modulo||"Sistema", titulo:o.titulo,
+      mensagem:o.mensagem||"", pagina:o.pagina||"", ref:o.ref||"",
+      acao:o.acao||"PAGINA", ativo:o.ativo!==false, data:o.data||null,
+      chave:o.chave, vistaEm:estado.vistaEm||null, lidaEm:estado.lidaEm||null,
+      prioridade:Number(o.prioridade)||0
+    });
+  }
+
+  function mdNotifConstruir(){
+    const lista=[];
+    const role=mdNotifRole();
+    const u=(typeof auth!=="undefined"?auth.currentUser:null);
+    if(!u || !mdNotifPodeCentral()) return lista;
+
+    // ---------------- ADMIN: aprovações reais ----------------
+    if(role==="admin"){
+      (typeof solicitacoesEncomenda651!=="undefined"?solicitacoesEncomenda651:[])
+        .filter(x=>x && x.estado==="PENDENTE_APROVACAO")
+        .forEach(x=>mdNotifAdd(lista,{
+          chave:`enc:pend:${x.id}`,tipo:"ACAO",modulo:"Encomendas",prioridade:100,
+          titulo:"Nova encomenda aguardando aprovação",
+          mensagem:`${x.cliente||"Cliente"} — ${x.produto||"Produto"} — ${mdNotifValorDb(x.valorTotal)} — ${x.usuario||"Vendedor"}`,
+          pagina:"paginaEncomendas",ref:x.id,acao:"APROVAR_ENCOMENDA",data:x.data,ativo:true
+        }));
+
+      (typeof solicitacoesTransferencia651!=="undefined"?solicitacoesTransferencia651:[])
+        .filter(x=>x && x.estado==="PENDENTE_APROVACAO")
+        .forEach(x=>mdNotifAdd(lista,{
+          chave:`transf:pend:${x.id}`,tipo:"ACAO",modulo:"Transferências",prioridade:100,
+          titulo:"Transferência aguardando decisão",
+          mensagem:`${x.cliente||"Cliente"} — ${mdNotifValorEur(x.qtdEur)} = ${mdNotifValorDb(x.totalDb)} — ${x.usuario||"Vendedor"}`,
+          pagina:"paginaTransferencias",ref:x.id,acao:"PAGINA",data:x.data,ativo:true
+        }));
+
+      const armCompra=(typeof solicitacoesCompraArmazem!=="undefined"?solicitacoesCompraArmazem:[]);
+      armCompra.filter(x=>x&&x.estado==="PENDENTE_APROVACAO").forEach(x=>mdNotifAdd(lista,{
+        chave:`arm:compra:${x.id}`,tipo:"ACAO",modulo:"Armazém",prioridade:95,
+        titulo:"Compra do Armazém aguardando aprovação",
+        mensagem:`${x.quantidade||0} × ${x.nome||"artigo"}${typeof armFmtValor==="function"?` — ${armFmtValor(x.total,x.moeda)}`:""}`,
+        pagina:"paginaArmazemPT",ref:x.id,acao:"PAGINA",data:x.data||x.dataSolicitacao,ativo:true
+      }));
+      const armDesp=(typeof solicitacoesDespachoArmazem!=="undefined"?solicitacoesDespachoArmazem:[]);
+      armDesp.filter(x=>x&&x.estado==="PENDENTE_APROVACAO").forEach(x=>mdNotifAdd(lista,{
+        chave:`arm:desp:${x.id}`,tipo:"ACAO",modulo:"Armazém",prioridade:95,
+        titulo:"Despacho aguardando aprovação",mensagem:`${x.identificador||"Lote"} — frete ${x.freteValor||0} ${x.freteMoeda||""}`,
+        pagina:"paginaArmazemPT",ref:x.id,acao:"PAGINA",data:x.data||x.dataSolicitacao,ativo:true
+      }));
+      const armAcerto=(typeof solicitacoesAcertoArmazem!=="undefined"?solicitacoesAcertoArmazem:[]);
+      armAcerto.filter(x=>x&&x.estado==="PENDENTE_APROVACAO").forEach(x=>mdNotifAdd(lista,{
+        chave:`arm:acerto:${x.id}`,tipo:"ACAO",modulo:"Armazém",prioridade:95,
+        titulo:"Acerto aguardando aprovação",mensagem:`${x.identificadorLote||"Lote"} — ${x.valor||0} ${x.moeda||""}`,
+        pagina:"paginaArmazemPT",ref:x.id,acao:"PAGINA",data:x.data||x.dataSolicitacao,ativo:true
+      }));
+      const lotes=(typeof todosLotesPT!=="undefined"?todosLotesPT:[]);
+      lotes.filter(x=>x&&x.estado==="EM_TRANSITO").forEach(x=>mdNotifAdd(lista,{
+        chave:`arm:receber:${x.id}`,tipo:"ACAO",modulo:"Armazém",prioridade:85,
+        titulo:"Lote aguardando receção em São Tomé",mensagem:`${x.identificador||"Lote"} — confirmar chegada e custo final`,
+        pagina:"paginaArmazemPT",ref:x.id,acao:"PAGINA",data:x.dataDespacho||x.data,ativo:true
+      }));
+
+      // Encomenda oficial com custo, mas sem débito/rastro de compra.
+      (typeof todasEncomendas!=="undefined"?todasEncomendas:[])
+        .filter(x=>x && Number(x.custoCompra)>0 && !x.movimentoTesourariaCompraId)
+        .forEach(x=>mdNotifAdd(lista,{
+          chave:`enc:regularizar:${x.id}`,tipo:"ALERTA",modulo:"Encomendas",prioridade:90,
+          titulo:"Compra de encomenda ainda não contabilizada",
+          mensagem:`${x.cliente||"Cliente"} — ${x.produto||"Produto"} — custo ${mdNotifValorDb(x.custoCompra)}`,
+          pagina:"paginaEncomendas",ref:x.id,acao:"PAGINA",data:x.data,ativo:true
+        }));
+    }
+
+    // ---------------- CAIXA: pedidos formais + prestações ----------------
+    const pedidosCaixa=(typeof window!=="undefined" && Array.isArray(window.f612SolicitacoesCaixa))?window.f612SolicitacoesCaixa:[];
+    pedidosCaixa.filter(x=>x&&x.estado==="PENDENTE_APROVACAO").forEach(x=>{
+      let pode=false;
+      if(role==="admin") pode=true;
+      if(role==="gerente" && x.solicitanteUid!==u.uid){
+        pode=(x.tipo==="SUPRIMENTO"&&x.origemConta==="responsavel_stp") || (x.tipo==="SANGRIA"&&x.destinoConta==="responsavel_stp");
+      }
+      if(pode) mdNotifAdd(lista,{
+        chave:`caixa:pedido:${x.id}`,tipo:"ACAO",modulo:"Caixa",prioridade:100,
+        titulo:`${x.tipo==="SUPRIMENTO"?"Suprimento":"Sangria"} aguardando decisão`,
+        mensagem:`${x.solicitanteNome||x.solicitanteUsuario||"Operador"} — ${mdNotifValorDb(x.valor)}${x.motivo?` — ${x.motivo}`:""}`,
+        pagina:"paginaCaixa",ref:x.id,acao:"PAGINA",data:x.dataSolicitacao,ativo:true
+      });
+    });
+
+    const caixas=(typeof todosCaixasAuditoria!=="undefined"?todosCaixasAuditoria:[]);
+    caixas.filter(c=>c&&c.estado==="fechado"&&c.prestacaoObrigatoria===true&&String(c.estadoPrestacao||"PENDENTE")!=="PRESTADA")
+      .forEach(c=>{
+        const ehVenda=["venda1","venda2"].includes(String(c.role||"").toLowerCase());
+        const pode=role==="admin" || (role==="gerente" && c.uid!==u.uid && ehVenda);
+        if(!pode) return;
+        const pend=Math.max(0,Number(c.valorPrestacaoPendente ?? c.dinheiroContado ?? 0)||0);
+        mdNotifAdd(lista,{
+          chave:`caixa:prest:${c.id}`,tipo:"ACAO",modulo:"Caixa",prioridade:92,
+          titulo:"Prestação de contas pendente",mensagem:`${c.nomeUsuario||c.usuario||"Operador"} — ${mdNotifValorDb(pend)}`,
+          pagina:"paginaCaixa",ref:c.id,acao:"PAGINA",data:c.dataFechamento||c.dataAbertura,ativo:true
+        });
+      });
+
+    // ---------------- ESTOQUE: alerta ativo, mas não conta eternamente como NOVO ----------------
+    if(["admin","gerente","estoque"].includes(role)){
+      (typeof todosProdutos!=="undefined"?todosProdutos:[])
+        .filter(p=>p && (Number(p.estoque)||0)<=(Number(p.minimo)||0))
+        .slice(0,40)
+        .forEach(p=>{
+          const qtd=Number(p.estoque)||0, min=Number(p.minimo)||0;
+          mdNotifAdd(lista,{
+            chave:`stock:${p.id}:${qtd}:${min}`,tipo:"ALERTA",modulo:"Estoque",prioridade:qtd<=0?80:70,
+            titulo:qtd<=0?"Stock esgotado":"Stock crítico",
+            mensagem:`${p.nome||"Produto"}: ${qtd} un (mín. ${min})`,
+            pagina:"paginaPrincipal",ref:p.id,acao:"PAGINA",data:null,ativo:true
+          });
+        });
+    }
+
+    // ---------------- ADMIN: ocorrências relevantes recentes de stock/rastreabilidade ----------------
+    if(role==="admin" && typeof rastreabilidadeProdutos610!=="undefined"){
+      (rastreabilidadeProdutos610||[])
+        .filter(r=>r&&r.uid!==u.uid&&["PRODUTO_EDITADO","ESTOQUE_ENTRADA","PRODUTO_CRIADO"].includes(r.acao))
+        .filter(r=>!r.data || mdNotifRecente(r.data,7))
+        .slice(0,12)
+        .forEach(r=>mdNotifAdd(lista,{
+          chave:`rastro:${r.id}`,tipo:r.acao==="PRODUTO_EDITADO"?"ALERTA":"INFO",modulo:"Rastreabilidade",prioridade:30,
+          titulo:String(r.acao||"Ocorrência").replaceAll("_"," "),
+          mensagem:`${r.produtoNome||"Produto"} — ${r.nomeUsuario||r.usuario||"Utilizador"}`,
+          pagina:"paginaRastreabilidade",ref:r.id,acao:"PAGINA",data:r.data,ativo:false
+        }));
+    }
+
+    // ---------------- AUDITORIA: críticos identificados na última execução ----------------
+    if(role==="admin" && typeof resultadosAuditoria61!=="undefined"){
+      (resultadosAuditoria61||[]).filter(a=>a&&a.nivel==="CRITICO").slice(0,20).forEach(a=>mdNotifAdd(lista,{
+        chave:`audit:${a.modulo}:${a.referencia}:${a.regra}`,tipo:"ACAO",modulo:"Auditoria",prioridade:110,
+        titulo:`CRÍTICO — ${a.regra||"Integridade"}`,mensagem:`${a.modulo||"Sistema"} · ${a.referencia||"-"} · ${a.detalhe||""}`,
+        pagina:"paginaAuditoria",ref:a.referencia||"",acao:"PAGINA",data:null,ativo:true
+      }));
+    }
+
+    // ---------------- SOLICITANTE: retorno das suas decisões (30 dias) ----------------
+    if(["venda1","venda2"].includes(role)){
+      (typeof solicitacoesEncomenda651!=="undefined"?solicitacoesEncomenda651:[])
+        .filter(x=>x&&x.uid===u.uid&&["APROVADA","REJEITADA"].includes(x.estado))
+        .filter(x=>mdNotifRecente(x.dataAprovacao||x.dataRejeicao||x.data,30))
+        .forEach(x=>mdNotifAdd(lista,{
+          chave:`enc:dec:${x.id}:${x.estado}`,tipo:"INFO",modulo:"Encomendas",prioridade:60,
+          titulo:x.estado==="APROVADA"?"✅ Encomenda aprovada":"❌ Encomenda rejeitada",
+          mensagem:`${x.cliente||"Cliente"} — ${x.produto||"Produto"}${x.motivoRejeicao?` — Motivo: ${x.motivoRejeicao}`:""}`,
+          pagina:"paginaEncomendas",ref:x.id,acao:"PAGINA",data:x.dataAprovacao||x.dataRejeicao||x.data,ativo:false
+        }));
+      (typeof solicitacoesTransferencia651!=="undefined"?solicitacoesTransferencia651:[])
+        .filter(x=>x&&x.uid===u.uid&&["APROVADA","REJEITADA"].includes(x.estado))
+        .filter(x=>mdNotifRecente(x.dataAprovacao||x.dataRejeicao||x.data,30))
+        .forEach(x=>mdNotifAdd(lista,{
+          chave:`transf:dec:${x.id}:${x.estado}`,tipo:"INFO",modulo:"Transferências",prioridade:60,
+          titulo:x.estado==="APROVADA"?"✅ Transferência aprovada":"❌ Transferência rejeitada",
+          mensagem:`${x.cliente||"Cliente"} — ${mdNotifValorEur(x.qtdEur)}${x.motivoRejeicao?` — Motivo: ${x.motivoRejeicao}`:""}`,
+          pagina:"paginaTransferencias",ref:x.id,acao:"PAGINA",data:x.dataAprovacao||x.dataRejeicao||x.data,ativo:false
+        }));
+    }
+
+    // Todos os solicitantes recebem decisão dos pedidos de Caixa que lhes pertencem.
+    pedidosCaixa.filter(x=>x&&x.solicitanteUid===u.uid&&["APROVADA_EXECUTADA","REJEITADA"].includes(x.estado))
+      .filter(x=>mdNotifRecente(x.dataDecisao||x.dataSolicitacao,30))
+      .forEach(x=>mdNotifAdd(lista,{
+        chave:`caixa:dec:${x.id}:${x.estado}`,tipo:"INFO",modulo:"Caixa",prioridade:55,
+        titulo:x.estado==="APROVADA_EXECUTADA"?`✅ ${x.tipo} aprovado`:`❌ ${x.tipo} rejeitado`,
+        mensagem:`${mdNotifValorDb(x.valor)}${x.motivoRejeicao?` — Motivo: ${x.motivoRejeicao}`:""}`,
+        pagina:"paginaCaixa",ref:x.id,acao:"PAGINA",data:x.dataDecisao||x.dataSolicitacao,ativo:false
+      }));
+
+    // Deduplica por chave e limita a central.
+    const unicos=new Map(); lista.forEach(n=>{if(!unicos.has(n.chave))unicos.set(n.chave,n);});
+    return [...unicos.values()].sort((a,b)=>{
+      const an=a.ativo?1:0,bn=b.ativo?1:0;if(an!==bn)return bn-an;
+      const al=a.lidaEm?0:1,bl=b.lidaEm?0:1;if(al!==bl)return bl-al;
+      if(a.prioridade!==b.prioridade)return b.prioridade-a.prioridade;
+      return mdNotifMs(b.data)-mdNotifMs(a.data);
+    }).slice(0,MD_NOTIF_MAX);
+  }
+
+  function mdNotifGarantirListener(){
+    const u=(typeof auth!=="undefined"?auth.currentUser:null);
+    if(!u || !mdNotifPodeCentral()){
+      if(mdNotifUnsub){try{mdNotifUnsub();}catch(e){} mdNotifUnsub=null;}
+      mdNotifUid=null; mdNotifLeituras.clear(); return;
+    }
+    if(mdNotifUid===u.uid && mdNotifUnsub) return;
+    if(mdNotifUnsub){try{mdNotifUnsub();}catch(e){}}
+    mdNotifUid=u.uid; mdNotifLeituras.clear();
+    try{
+      mdNotifUnsub=db.collection("notificacao_leituras").where("uid","==",u.uid).onSnapshot(s=>{
+        if(!auth.currentUser || auth.currentUser.uid!==u.uid) return;
+        const m=new Map(); s.forEach(d=>{const x=d.data()||{}; if(x.chave)m.set(x.chave,{vistaEm:x.vistaEm||null,lidaEm:x.lidaEm||null});});
+        mdNotifLeituras=m;
+        try{atualizarCentralNotificacoes();}catch(e){}
+        if(!document.getElementById("modalCentralNotificacoes")?.classList.contains("hidden")) try{renderizarCentralNotificacoes();}catch(e){}
+      },e=>console.warn("Leituras de notificações:",e));
+    }catch(e){ console.warn("Central 2.0 listener:",e); }
+  }
+
+  function mdNotifSetLocal(chave,campos){
+    const cur=mdNotifLeituras.get(chave)||{}; mdNotifLeituras.set(chave,{...cur,...campos});
+  }
+  async function mdNotifPersistir(chave,{vista=false,lida=false}={}){
+    const u=auth.currentUser; if(!u||!chave)return;
+    const agora=new Date();
+    const dados={uid:u.uid,chave,atualizadoEm:agora};
+    if(vista)dadoVista(dados,agora);
+    if(lida){dadoVista(dados,agora);dados.lidaEm=agora;}
+    mdNotifSetLocal(chave,{...(vista?{vistaEm:agora}:{}),...(lida?{vistaEm:agora,lidaEm:agora}:{})});
+    try{await db.collection("notificacao_leituras").doc(mdNotifDocId(u.uid,chave)).set(dados,{merge:true});}
+    catch(e){console.warn("Não foi possível guardar leitura da notificação:",e);}
+  }
+  function dadoVista(obj,agora){ obj.vistaEm=agora; }
+
+  async function mdNotifMarcarVistas(lista){
+    const u=auth.currentUser;if(!u)return;
+    const novas=(lista||[]).filter(n=>!n.vistaEm); if(!novas.length)return;
+    const agora=new Date();
+    try{
+      const batch=db.batch();
+      novas.forEach(n=>{
+        mdNotifSetLocal(n.chave,{vistaEm:agora});
+        const ref=db.collection("notificacao_leituras").doc(mdNotifDocId(u.uid,n.chave));
+        batch.set(ref,{uid:u.uid,chave:n.chave,vistaEm:agora,atualizadoEm:agora},{merge:true});
+      });
+      await batch.commit();
+    }catch(e){console.warn("Não foi possível marcar notificações como vistas:",e);}
+  }
+  async function mdNotifMarcarTodasLidas(){
+    const u=auth.currentUser;if(!u)return;
+    const lista=mdNotifConstruir().filter(n=>!n.lidaEm); if(!lista.length)return;
+    const agora=new Date();
+    try{
+      const batch=db.batch();
+      lista.forEach(n=>{
+        mdNotifSetLocal(n.chave,{vistaEm:agora,lidaEm:agora});
+        batch.set(db.collection("notificacao_leituras").doc(mdNotifDocId(u.uid,n.chave)),{uid:u.uid,chave:n.chave,vistaEm:agora,lidaEm:agora,atualizadoEm:agora},{merge:true});
+      });
+      await batch.commit();
+      atualizarCentralNotificacoes(); renderizarCentralNotificacoes();
+    }catch(e){alert("Não foi possível marcar todas como lidas: "+(e.message||e));}
+  }
+
+  function mdNotifPrepararUI(){
+    const sel=document.getElementById("notifFiltro");
+    if(sel && sel.dataset.v2!=="1"){
+      sel.dataset.v2="1";
+      sel.innerHTML=`<option value="">Tudo</option><option value="NOVAS">Novas</option><option value="NAO_LIDAS">Não lidas</option><option value="ACAO">Ações necessárias</option><option value="ALERTA">Alertas ativos</option><option value="INFO">Informações</option><option value="HISTORICO">Histórico</option>`;
+      sel.onchange=()=>renderizarCentralNotificacoes();
+      const resumo=document.getElementById("notifResumo");
+      if(resumo && !document.getElementById("btnNotifMarcarTodas")){
+        const b=document.createElement("button"); b.id="btnNotifMarcarTodas"; b.className="btn-secondary"; b.style.cssText="padding:7px 10px;font-size:12px;margin-left:auto;";
+        b.textContent="✓ Marcar todas como lidas"; b.onclick=mdNotifMarcarTodasLidas;
+        resumo.parentElement?.appendChild(b);
+      }
+    }
+  }
+
+  function mdNotifCor(n){
+    if(n.tipo==="ACAO")return "#dc2626";
+    if(n.tipo==="ALERTA")return "#f59e0b";
+    return "#2563eb";
+  }
+  function mdNotifRotulo(n){ return n.tipo==="ACAO"?"AÇÃO NECESSÁRIA":n.tipo==="ALERTA"?"ALERTA":"INFORMAÇÃO"; }
+
+  // Substitui a central antiga sem tocar nos módulos de negócio.
+  window.construirNotificacoesAdmin=function(){ return mdNotifConstruir(); };
+
+  window.atualizarCentralNotificacoes=function(){
+    const btn=document.getElementById("btnCentralNotificacoes"),badge=document.getElementById("notifBadge"); if(!btn)return;
+    if(!mdNotifPodeCentral()){btn.classList.add("hidden");if(badge)badge.style.display="none";return;}
+    btn.classList.remove("hidden"); mdNotifGarantirListener();
+    const lista=mdNotifConstruir();
+    const novas=lista.filter(x=>!x.vistaEm).length;
+    if(badge){badge.textContent=novas>99?"99+":String(novas);badge.style.display=novas?"block":"none";badge.title=`${novas} notificação(ões) nova(s)`;}
+    btn.title=`Central de Notificações — ${novas} nova(s)`;
+  };
+
+  window.abrirCentralNotificacoes=async function(){
+    if(!mdNotifPodeCentral())return;
+    mdNotifGarantirListener(); mdNotifPrepararUI();
+    document.getElementById("modalCentralNotificacoes")?.classList.remove("hidden");
+    renderizarCentralNotificacoes();
+    // Abrir a central significa "visto": o badge de novidades não fica eterno.
+    const lista=mdNotifConstruir();
+    await mdNotifMarcarVistas(lista);
+    atualizarCentralNotificacoes(); renderizarCentralNotificacoes();
+  };
+
+  window.renderizarCentralNotificacoes=function(){
+    mdNotifPrepararUI();
+    const box=document.getElementById("listaCentralNotificacoes");if(!box)return;
+    const filtro=document.getElementById("notifFiltro")?.value||"";
+    let lista=mdNotifConstruir();
+    if(filtro==="NOVAS")lista=lista.filter(x=>!x.vistaEm);
+    else if(filtro==="NAO_LIDAS")lista=lista.filter(x=>!x.lidaEm);
+    else if(filtro==="ACAO")lista=lista.filter(x=>x.tipo==="ACAO"&&x.ativo);
+    else if(filtro==="ALERTA")lista=lista.filter(x=>x.tipo==="ALERTA"&&x.ativo);
+    else if(filtro==="INFO")lista=lista.filter(x=>x.tipo==="INFO");
+    else if(filtro==="HISTORICO")lista=lista.filter(x=>!x.ativo);
+
+    const total=mdNotifConstruir(), novas=total.filter(x=>!x.vistaEm).length, naoLidas=total.filter(x=>!x.lidaEm).length, acoes=total.filter(x=>x.tipo==="ACAO"&&x.ativo).length;
+    const resumo=document.getElementById("notifResumo");if(resumo)resumo.textContent=`${lista.length} item(ns) • ${novas} nova(s) • ${naoLidas} não lida(s) • ${acoes} ação(ões) pendente(s)`;
+
+    box.innerHTML=lista.length?lista.map(n=>{
+      const naoLida=!n.lidaEm, nova=!n.vistaEm;
+      const estado=nova?'<span style="background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:800;">NOVA</span>':naoLida?'<span style="background:#f1f5f9;color:#475569;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:800;">NÃO LIDA</span>':'<span style="color:#94a3b8;font-size:10px;">LIDA</span>';
+      const ativo=n.ativo?'<span style="background:#fff7ed;color:#9a3412;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:800;">ATIVA</span>':'<span style="color:#64748b;font-size:10px;">HISTÓRICO</span>';
+      return `<div style="border:1px solid #e2e8f0;border-left:5px solid ${mdNotifCor(n)};padding:12px;border-radius:10px;margin-bottom:9px;background:${naoLida?'#fff':'#f8fafc'};opacity:${n.ativo?'1':'0.88'};">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+          <div style="min-width:0;flex:1;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;"><small style="font-weight:800;color:#64748b;">${mdNotifRotulo(n)} • ${mdNotifEsc(n.modulo)}</small>${estado}${ativo}</div>
+            <div style="font-weight:850;margin:4px 0;color:#0f172a;">${mdNotifEsc(n.titulo)}</div>
+            <div style="font-size:12px;color:#475569;line-height:1.45;">${mdNotifEsc(n.mensagem)}</div>
+            ${n.data?`<div style="font-size:10px;color:#94a3b8;margin-top:5px;">${mdNotifEsc(mdNotifAgo(n.data))}</div>`:""}
+          </div>
+          <div style="display:flex;gap:6px;flex-direction:column;min-width:88px;">
+            ${n.pagina?`<button class="btn-primary btn-acao" onclick="mdNotifAbrir('${mdNotifEsc(n.chave)}')">${n.tipo==='ACAO'?'Analisar':'Abrir'}</button>`:""}
+            ${naoLida?`<button class="btn-secondary btn-acao" onclick="mdNotifSomenteLer('${mdNotifEsc(n.chave)}')" style="font-size:10px;">✓ Lida</button>`:""}
+          </div>
+        </div>
+      </div>`;
+    }).join(""):'<div style="padding:30px;text-align:center;color:#64748b;">✅ Nada para mostrar neste filtro.</div>';
+  };
+
+  window.mdNotifSomenteLer=async function(chave){ await mdNotifPersistir(chave,{vista:true,lida:true}); atualizarCentralNotificacoes(); renderizarCentralNotificacoes(); };
+  window.mdNotifAbrir=async function(chave){
+    const n=mdNotifConstruir().find(x=>x.chave===chave); if(!n)return;
+    await mdNotifPersistir(chave,{vista:true,lida:true});
+    try{fecharCentralNotificacoes();}catch(e){document.getElementById("modalCentralNotificacoes")?.classList.add("hidden");}
+    if(n.pagina && typeof navegarPara==="function") navegarPara(n.pagina);
+    if(n.acao==="APROVAR_ENCOMENDA" && mdNotifRole()==="admin" && typeof f622AbrirAprovacaoEncomenda==="function"){
+      setTimeout(()=>{try{f622AbrirAprovacaoEncomenda(n.ref);}catch(e){}},220);
+    }
+    if(n.pagina==="paginaCaixa") setTimeout(()=>{document.getElementById("cardAprovacoesCaixa612")?.scrollIntoView({behavior:"smooth",block:"start"});},250);
+    if(n.pagina==="paginaAuditoria" && typeof executarAuditoriaIntegridade==="function") setTimeout(()=>{try{executarAuditoriaIntegridade();}catch(e){}},250);
+    atualizarCentralNotificacoes();
+  };
+
+  // Sempre que a auditoria for executada, atualiza a Central após o resultado.
+  if(typeof executarAuditoriaIntegridade==="function"){
+    const oldAud=executarAuditoriaIntegridade;
+    window.executarAuditoriaIntegridade=function(){
+      const r=oldAud.apply(this,arguments); mdNotifAuditoriaExec++;
+      Promise.resolve(r).finally(()=>setTimeout(()=>{try{atualizarCentralNotificacoes();}catch(e){}},80));
+      return r;
+    };
+  }
+
+  // Atualizações dos snapshots dos módulos são refletidas em poucos segundos,
+  // sem criar qualquer escrita financeira ou duplicar listeners de negócio.
+  document.addEventListener("DOMContentLoaded",()=>setTimeout(()=>{mdNotifPrepararUI();mdNotifGarantirListener();atualizarCentralNotificacoes();},800));
+  setTimeout(()=>{try{mdNotifPrepararUI();mdNotifGarantirListener();atualizarCentralNotificacoes();}catch(e){}},1600);
+  setInterval(()=>{try{mdNotifGarantirListener();atualizarCentralNotificacoes();}catch(e){}},3000);
+
+  window.mdNotifMarcarTodasLidas=mdNotifMarcarTodasLidas;
+  window.mdNotifConstruir=mdNotifConstruir;
 })();
 </script>
 
