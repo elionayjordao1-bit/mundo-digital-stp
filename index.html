@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.09-008">
+<meta name="mdstp-build" content="2026.09.14-009">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -6808,6 +6808,21 @@ function atualizarResumoDespesaFase52() {
   }
 }
 
+// FASE 6.22.6 — saldo real para Despesas Operacionais.
+// Não depende de o utilizador ter aberto antes a página Tesouraria.
+// O snapshot é lido diretamente do Firestore e o débito é revalidado na transação.
+async function obterSaldoRealDespesa626(conta) {
+  if(conta === "caixa_stp") return saldoFisicoAtualFase52();
+  const ref = db.collection("tesouraria_saldos").doc(conta);
+  let snap;
+  try { snap = await ref.get({source:"server"}); }
+  catch(e) { snap = await ref.get(); }
+  if(!snap.exists) throw new Error(`Saldo de ${nomeContaTes(conta)} ainda não está inicializado.`);
+  const saldo = Number(snap.data()?.saldo);
+  if(!Number.isFinite(saldo)) throw new Error(`Saldo inválido em ${nomeContaTes(conta)}.`);
+  return saldo;
+}
+
 async function registrarDespesaFase52() {
   if(!usuarioPodeDespesasFase52()) return alert("Acesso restrito: apenas o Administrador pode registar despesas operacionais.");
   if(!navigator.onLine) return alert("O registo de despesas exige ligação à internet.");
@@ -6848,8 +6863,16 @@ async function registrarDespesaFase52() {
       );
     }
   } else {
-    const saldo = saldoContaTes(conta);
-    if(saldo < valorPagamento) {
+    // 6.22.6: confirma o saldo REAL no Firestore em vez de usar apenas o cache local.
+    // Isto elimina o falso "Disponível: 0 €" ao entrar diretamente em Despesas.
+    let saldo;
+    try {
+      saldo = await obterSaldoRealDespesa626(conta);
+      if(typeof contasTesouraria === "object") contasTesouraria[conta] = saldo;
+    } catch(e) {
+      return alert("Não foi possível confirmar o saldo da Tesouraria.\n\n" + (e.message || e));
+    }
+    if(saldo + 0.0000001 < valorPagamento) {
       const simbolo = moedaPagamento === "EUR" ? "€" : "Db";
       return alert(
         `Saldo insuficiente em ${nomeContaTes(conta)}.\n\n` +
@@ -6877,7 +6900,24 @@ async function registrarDespesaFase52() {
   const agora = new Date();
 
   try {
+    let saldoDepoisConfirmado = null;
     await db.runTransaction(async tx => {
+      // Firestore exige todas as leituras antes das escritas.
+      // Para contas não físicas, o saldo-resumo é lido e revalidado dentro da mesma transação.
+      let saldoRef = null, saldoAntesTx = null;
+      if(conta !== "caixa_stp") {
+        saldoRef = db.collection("tesouraria_saldos").doc(conta);
+        const saldoDoc = await tx.get(saldoRef);
+        if(!saldoDoc.exists) throw new Error(`Saldo de ${nomeContaTes(conta)} ainda não está inicializado.`);
+        saldoAntesTx = Number(saldoDoc.data()?.saldo);
+        if(!Number.isFinite(saldoAntesTx)) throw new Error(`Saldo inválido em ${nomeContaTes(conta)}.`);
+        if(saldoAntesTx + 0.0000001 < valorPagamento) {
+          const sig = moedaPagamento === "EUR" ? "€" : "Db";
+          throw new Error(`Saldo insuficiente em ${nomeContaTes(conta)}. Disponível: ${saldoAntesTx.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${sig}.`);
+        }
+        saldoDepoisConfirmado = saldoAntesTx - valorPagamento;
+      }
+
       tx.set(despRef, {
         descricao,
         categoria,
@@ -6941,8 +6981,25 @@ async function registrarDespesaFase52() {
           role: usuarioRole,
           data: agora
         });
+
+        // Snapshot operacional atualizado atomicamente com o movimento.
+        // O razão tesouraria_movimentos continua sendo a fonte de verdade.
+        tx.update(saldoRef, {
+          saldo: saldoDepoisConfirmado,
+          moeda: moedaPagamento,
+          atualizadoEm: agora,
+          atualizadoPorUid: user.uid,
+          atualizadoPorUsuario: user.email || "",
+          ultimaOperacao: "despesa_operacional",
+          ultimaDespesaId: despRef.id
+        });
       }
     });
+
+    if(conta !== "caixa_stp" && saldoDepoisConfirmado !== null && typeof contasTesouraria === "object") {
+      contasTesouraria[conta] = saldoDepoisConfirmado;
+      try { renderizarTesouraria(); processarFinanceiro(); } catch(e) {}
+    }
 
     document.getElementById("desp52Descricao").value = "";
     document.getElementById("desp52Valor").value = "";
@@ -13311,7 +13368,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 
 <script>
-/* FASE 6.22.5 — PWA: build local alinhado ao app-version para impedir alerta permanente. */
+/* FASE 6.22.6 — PWA: build local alinhado ao app-version para impedir alerta permanente. */
 /* =========================================================================
    PWA MUNDO DIGITAL STP — INSTALAÇÃO + ATUALIZAÇÃO CONTROLADA
    - Não altera Caixa, Tesouraria, Vendas, Estoque ou Firebase.
