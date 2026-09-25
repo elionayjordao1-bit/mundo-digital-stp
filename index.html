@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.25-010">
+<meta name="mdstp-build" content="2026.09.25-011">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -2039,7 +2039,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 <!-- MODAL FASE 5 — CHEGADA / CUSTOS / PAGAMENTO FINAL DA ENCOMENDA -->
 
-<div id="modalAprovarEncomenda622" class="modal hidden">
+<div id="modalAprovarEncomenda622" class="modal-overlay hidden">
   <div class="modal-content" style="max-width:720px;">
     <h3 style="margin-top:0;color:#0f766e;">✅ Aprovar Encomenda</h3>
     <input id="f622AprovarPedidoId" type="hidden">
@@ -2055,7 +2055,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
-<div id="modalRegistarCompra6227" class="modal hidden">
+<div id="modalRegistarCompra6227" class="modal-overlay hidden">
   <div class="modal-content" style="max-width:760px;">
     <h3 style="margin-top:0;color:#92400e;">🛒 Registar Compra da Encomenda</h3>
     <input id="f6227CompraEncId" type="hidden">
@@ -2079,7 +2079,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 </div>
 
 
-<div id="modalRegularizarCompra6222" class="modal hidden">
+<div id="modalRegularizarCompra6222" class="modal-overlay hidden">
   <div class="modal-content" style="max-width:760px;">
     <h3 style="margin-top:0;color:#92400e;">🧾 Regularizar Compra da Encomenda</h3>
     <input id="f6222RegularizarEncId" type="hidden">
@@ -10012,7 +10012,7 @@ function f622AtualizarCompraUI(){
   try{b.innerHTML=f622ResumoHtml(f622DadosCompra(c,document.getElementById("f622ValorPagoCompra")?.value,t?.value));}
   catch(e){b.textContent="Selecione a conta e informe o valor realmente pago.";}
 }
-function f622AtualizarModalAprovacao(){ /* 6.22.7: aprovação já não exige dados de compra */ }
+function f622AtualizarModalAprovacao(){ /* 6.22.8: aprovação já não exige dados de compra */ }
 function f622FecharModalAprovacao(){document.getElementById("modalAprovarEncomenda622")?.classList.add("hidden");}
 function f622AbrirAprovacaoEncomenda(id){
   if(usuarioRole!=="admin")return alert("A aprovação da encomenda é exclusiva do ADMIN.");
@@ -10023,7 +10023,7 @@ function f622AbrirAprovacaoEncomenda(id){
   document.getElementById("modalAprovarEncomenda622").classList.remove("hidden");
 }
 
-/* FASE 6.22.7 — COMPRA POSTERIOR À APROVAÇÃO
+/* FASE 6.22.8 — COMPRA POSTERIOR À APROVAÇÃO
    Aprovar o pedido não significa que o fornecedor já foi pago.
    Só este fluxo debita a Tesouraria e muda AGUARDANDO_COMPRA -> EM_TRANSITO. */
 function f6227FecharCompra(){document.getElementById("modalRegistarCompra6227")?.classList.add("hidden");}
@@ -13895,7 +13895,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
         pagina:"paginaArmazemPT",ref:x.id,acao:"PAGINA",data:x.dataDespacho||x.data,ativo:true
       }));
 
-      // FASE 6.22.7 — encomenda aprovada, mas ainda não comprada ao fornecedor.
+      // FASE 6.22.8 — encomenda aprovada, mas ainda não comprada ao fornecedor.
       (typeof todasEncomendas!=="undefined"?todasEncomendas:[])
         .filter(x=>x && x.estado==="AGUARDANDO_COMPRA" && !(Number(x.custoCompra)>0) && !x.movimentoTesourariaCompraId)
         .forEach(x=>mdNotifAdd(lista,{
