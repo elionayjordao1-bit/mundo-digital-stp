@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.14-009">
+<meta name="mdstp-build" content="2026.09.25-010">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -2041,23 +2041,39 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
 <div id="modalAprovarEncomenda622" class="modal hidden">
   <div class="modal-content" style="max-width:720px;">
-    <h3 style="margin-top:0;color:#9a3412;">✅ Aprovar Encomenda & Registar Compra</h3>
+    <h3 style="margin-top:0;color:#0f766e;">✅ Aprovar Encomenda</h3>
     <input id="f622AprovarPedidoId" type="hidden">
     <div id="f622AprovarResumoPedido" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
+    <div style="margin-top:12px;background:#ecfeff;border:1px solid #a5f3fc;border-radius:10px;padding:12px;color:#155e75;line-height:1.6;">
+      <b>Esta etapa apenas aprova o pedido do cliente.</b><br>
+      A compra ao fornecedor será registada depois, quando a negociação estiver concluída. Nenhuma conta da Tesouraria será debitada agora.
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button id="btnF622ConfirmarAprovacao" class="btn-success" style="flex:1;background:#0d9488;" onclick="f622ConfirmarAprovacaoEncomenda()">✅ Aprovar Encomenda</button>
+      <button class="btn-secondary" style="flex:1;" onclick="f622FecharModalAprovacao()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalRegistarCompra6227" class="modal hidden">
+  <div class="modal-content" style="max-width:760px;">
+    <h3 style="margin-top:0;color:#92400e;">🛒 Registar Compra da Encomenda</h3>
+    <input id="f6227CompraEncId" type="hidden">
+    <div id="f6227CompraResumoEnc" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
     <div class="form-grid">
-      <select id="f622AprovarContaCompra" onchange="f622AtualizarModalAprovacao()">
+      <select id="f6227CompraConta" onchange="f6227AtualizarCompraUI()">
         <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
         <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
         <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
       </select>
-      <input id="f622AprovarValorPago" type="number" min="0.01" step="0.000001" placeholder="Valor realmente pago" oninput="f622AtualizarModalAprovacao()">
-      <input id="f622AprovarTaxa" type="number" min="0.01" step="0.000001" value="26" placeholder="Taxa Db/€" oninput="f622AtualizarModalAprovacao()">
-      <input id="f622AprovarFornecedor" placeholder="Fornecedor / plataforma (ex.: AliExpress)">
+      <input id="f6227CompraValor" type="number" min="0.01" step="0.000001" placeholder="Valor realmente pago" oninput="f6227AtualizarCompraUI()">
+      <input id="f6227CompraTaxa" type="number" min="0.01" step="0.000001" value="26" placeholder="Taxa Db/€" oninput="f6227AtualizarCompraUI()">
+      <input id="f6227CompraFornecedor" placeholder="Fornecedor / plataforma (ex.: AliExpress)">
     </div>
-    <div id="f622AprovarResumoFinanceiro" style="margin-top:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;color:#7c2d12;line-height:1.6;"></div>
+    <div id="f6227CompraResumoFinanceiro" style="margin-top:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:12px;color:#78350f;line-height:1.6;"></div>
     <div style="display:flex;gap:10px;margin-top:14px;">
-      <button id="btnF622ConfirmarAprovacao" class="btn-success" style="flex:1;background:#0d9488;" onclick="f622ConfirmarAprovacaoEncomenda()">✅ Aprovar e Debitar Tesouraria</button>
-      <button class="btn-secondary" style="flex:1;" onclick="f622FecharModalAprovacao()">Cancelar</button>
+      <button id="btnF6227ConfirmarCompra" class="btn-success" style="flex:1;background:#d97706;" onclick="f6227ConfirmarCompra()">🛒 Registar Compra e Debitar Tesouraria</button>
+      <button class="btn-secondary" style="flex:1;" onclick="f6227FecharCompra()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -6514,8 +6530,8 @@ function f5RenderizarLista() {
     if(enc.estado === 'EM_TRANSITO') { ativas++; aReceber += falta; }
     if(enc.estado === 'CONCLUIDO') { lucro += lucroReal; custos += chegada; }
     const wa = enc.telefone ? `<a href="https://wa.me/${String(enc.telefone).replace(/[^0-9]/g,'')}" target="_blank" style="text-decoration:none;"><button class="btn-success btn-acao" style="background:#25d366;">📲 WA</button></a>` : '-';
-    const estado = enc.estado === 'CONCLUIDO' ? '<span class="badge-concluido">CONCLUÍDO</span>' : '<span class="badge-em-transito">EM TRÂNSITO</span>';
-    const comprovativo = enc.estado === 'EM_TRANSITO'
+    const estado = enc.estado === 'CONCLUIDO' ? '<span class="badge-concluido">CONCLUÍDO</span>' : (enc.estado === 'AGUARDANDO_COMPRA' ? '<span style="display:inline-block;background:#fef3c7;color:#92400e;border-radius:999px;padding:4px 8px;font-weight:800;font-size:11px;">🛒 AGUARDANDO COMPRA</span>' : '<span class="badge-em-transito">EM TRÂNSITO</span>');
+    const comprovativo = (enc.estado === 'EM_TRANSITO' || enc.estado === 'AGUARDANDO_COMPRA')
       ? `<button class="btn-secondary btn-acao" onclick="f620EmitirComprovativoEncomenda('${enc.id}')" title="Imprimir ou guardar comprovativo da encomenda">🧾 Comprovativo</button>`
       : '';
     let acao;
@@ -6523,9 +6539,11 @@ function f5RenderizarLista() {
       const compraFinanceiraLigada = !!enc.movimentoTesourariaCompraId;
       const precisaRegularizarCompra = compra > 0 && !compraFinanceiraLigada;
 
-      acao = enc.estado === 'EM_TRANSITO'
-        ? `${comprovativo} <button class="btn-success btn-acao" style="background:#0d9488;" onclick="f5AbrirFinalizacao('${enc.id}')">📦 Chegou / Entregar</button>`
-        : `<span style="font-size:11px;color:#64748b;">Lucro: <b style="color:#059669;">${f5Moeda(lucroReal)}</b></span>`;
+      acao = enc.estado === 'AGUARDANDO_COMPRA'
+        ? `${comprovativo} <button class="btn-success btn-acao" style="background:#d97706;" onclick="f6227AbrirCompra('${enc.id}')">🛒 Registar Compra</button>`
+        : (enc.estado === 'EM_TRANSITO'
+          ? `${comprovativo} <button class="btn-success btn-acao" style="background:#0d9488;" onclick="f5AbrirFinalizacao('${enc.id}')">📦 Chegou / Entregar</button>`
+          : `<span style="font-size:11px;color:#64748b;">Lucro: <b style="color:#059669;">${f5Moeda(lucroReal)}</b></span>`);
 
       if(precisaRegularizarCompra) {
         acao += ` <button class="btn-secondary btn-acao" style="background:#d97706;color:white;" onclick="f6222AbrirRegularizacaoCompra('${enc.id}')">🧾 Regularizar Compra</button>`;
@@ -6638,7 +6656,7 @@ async function f620EmitirComprovativoEncomenda(id){
   document.getElementById("encCompSinal").textContent=sinal.toLocaleString("pt-PT",{maximumFractionDigits:2});
   document.getElementById("encCompFalta").textContent=falta.toLocaleString("pt-PT",{maximumFractionDigits:2});
   document.getElementById("encCompForma").textContent=String(enc.formaSinal||"-");
-  document.getElementById("encCompEstado").textContent=enc.estado==="CONCLUIDO"?"CONCLUÍDA":"EM TRÂNSITO";
+  document.getElementById("encCompEstado").textContent=enc.estado==="CONCLUIDO"?"CONCLUÍDA":(enc.estado==="AGUARDANDO_COMPRA"?"APROVADA — AGUARDANDO COMPRA":"EM TRÂNSITO");
   document.getElementById("encCompObs").textContent=String(enc.observacao||"Sem observações.");
 
   document.body.classList.add("print-encomenda");
@@ -9994,27 +10012,74 @@ function f622AtualizarCompraUI(){
   try{b.innerHTML=f622ResumoHtml(f622DadosCompra(c,document.getElementById("f622ValorPagoCompra")?.value,t?.value));}
   catch(e){b.textContent="Selecione a conta e informe o valor realmente pago.";}
 }
-function f622AtualizarModalAprovacao(){
-  const c=document.getElementById("f622AprovarContaCompra")?.value||"portugal_eur",t=document.getElementById("f622AprovarTaxa"),b=document.getElementById("f622AprovarResumoFinanceiro");
-  if(t)t.style.display=c==="portugal_eur"?"":"none"; if(!b)return;
-  try{
-    const d=f622DadosCompra(c,document.getElementById("f622AprovarValorPago")?.value,t?.value);
-    b.innerHTML=f622ResumoHtml(d)+`<br><b>Saldo estimado depois:</b> ${f622Fmt(f622SaldoLocal(d.conta)-d.valor,d.moeda)}`;
-  }catch(e){b.textContent="Informe a origem real do dinheiro e o valor efetivamente pago ao fornecedor.";}
-}
+function f622AtualizarModalAprovacao(){ /* 6.22.7: aprovação já não exige dados de compra */ }
 function f622FecharModalAprovacao(){document.getElementById("modalAprovarEncomenda622")?.classList.add("hidden");}
 function f622AbrirAprovacaoEncomenda(id){
-  if(usuarioRole!=="admin")return alert("A aprovação financeira da compra é exclusiva do ADMIN.");
+  if(usuarioRole!=="admin")return alert("A aprovação da encomenda é exclusiva do ADMIN.");
   const p=(solicitacoesEncomenda651||[]).find(x=>x.id===id);
   if(!p||p.estado!=="PENDENTE_APROVACAO")return alert("Pedido já processado ou não encontrado.");
   document.getElementById("f622AprovarPedidoId").value=id;
-  document.getElementById("f622AprovarContaCompra").value="portugal_eur";
-  document.getElementById("f622AprovarValorPago").value="";
-  document.getElementById("f622AprovarTaxa").value="26";
-  document.getElementById("f622AprovarFornecedor").value="";
   document.getElementById("f622AprovarResumoPedido").innerHTML=`<b>${p.cliente||"-"}</b> — ${p.produto||"-"}<br><small>Venda: ${f5Moeda(p.valorTotal)} · Sinal: ${f5Moeda(p.sinalInformado)} · Solicitado por: ${p.usuario||"-"}</small>`;
-  f622AtualizarModalAprovacao();
   document.getElementById("modalAprovarEncomenda622").classList.remove("hidden");
+}
+
+/* FASE 6.22.7 — COMPRA POSTERIOR À APROVAÇÃO
+   Aprovar o pedido não significa que o fornecedor já foi pago.
+   Só este fluxo debita a Tesouraria e muda AGUARDANDO_COMPRA -> EM_TRANSITO. */
+function f6227FecharCompra(){document.getElementById("modalRegistarCompra6227")?.classList.add("hidden");}
+function f6227AbrirCompra(encId){
+  if(usuarioRole!=="admin")return alert("O registo da compra é exclusivo do ADMIN.");
+  const enc=(todasEncomendas||[]).find(x=>x.id===encId);
+  if(!enc)return alert("Encomenda não encontrada.");
+  if(enc.estado!=="AGUARDANDO_COMPRA")return alert("Esta encomenda não está a aguardar compra.");
+  if(enc.movimentoTesourariaCompraId||(Number(enc.custoCompra)||0)>0)return alert("A compra desta encomenda já foi registada.");
+  document.getElementById("f6227CompraEncId").value=encId;
+  document.getElementById("f6227CompraConta").value="portugal_eur";
+  document.getElementById("f6227CompraValor").value="";
+  document.getElementById("f6227CompraTaxa").value="26";
+  document.getElementById("f6227CompraFornecedor").value="";
+  document.getElementById("f6227CompraResumoEnc").innerHTML=`<b>${enc.cliente||"-"}</b> — ${enc.produto||"-"}<br><small>Venda: ${f5Moeda(enc.valorTotal)} · Sinal: ${f5Moeda(enc.sinalPago)} · Estado: AGUARDANDO COMPRA</small>`;
+  f6227AtualizarCompraUI();
+  document.getElementById("modalRegistarCompra6227").classList.remove("hidden");
+}
+function f6227AtualizarCompraUI(){
+  const c=document.getElementById("f6227CompraConta")?.value||"portugal_eur",t=document.getElementById("f6227CompraTaxa"),b=document.getElementById("f6227CompraResumoFinanceiro");
+  if(t)t.style.display=c==="portugal_eur"?"":"none"; if(!b)return;
+  try{const d=f622DadosCompra(c,document.getElementById("f6227CompraValor")?.value,t?.value);b.innerHTML=f622ResumoHtml(d)+`<br><b>Saldo estimado depois:</b> ${f622Fmt(f622SaldoLocal(d.conta)-d.valor,d.moeda)}`;}
+  catch(e){b.textContent="Informe a conta real usada, o valor efetivamente pago e, se for EUR, a taxa Db/€.";}
+}
+async function f6227ConfirmarCompra(){
+  if(usuarioRole!=="admin")return alert("Acesso restrito.");
+  if(!navigator.onLine)return alert("É necessária ligação à internet.");
+  const encId=document.getElementById("f6227CompraEncId")?.value||"";
+  const enc=(todasEncomendas||[]).find(x=>x.id===encId);
+  if(!enc||enc.estado!=="AGUARDANDO_COMPRA")return alert("Encomenda já processada ou não encontrada.");
+  let compra;try{compra=f622DadosCompra(document.getElementById("f6227CompraConta")?.value,document.getElementById("f6227CompraValor")?.value,document.getElementById("f6227CompraTaxa")?.value);}catch(e){return alert(e.message||e);}
+  const fornecedor=(document.getElementById("f6227CompraFornecedor")?.value||"").trim();
+  if(!fornecedor)return alert("Informe o fornecedor / plataforma da compra.");
+  if(f622SaldoLocal(compra.conta)+1e-7<compra.valor)return alert(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
+  if(!confirm(`REGISTAR COMPRA?\n\n${enc.cliente} — ${enc.produto}\n${f622Fmt(compra.valor,compra.moeda)} de ${f622NomeConta(compra.conta)}\nCusto: ${compra.custoDb.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} Db\nFornecedor: ${fornecedor}\n\nA Tesouraria será debitada e a encomenda passará para EM TRÂNSITO.`))return;
+  const btn=document.getElementById("btnF6227ConfirmarCompra");if(btn)btn.disabled=true;
+  try{
+    const user=auth.currentUser;if(!user)throw new Error("Sessão expirada.");
+    const encRef=db.collection("encomendas").doc(encId),tesRef=db.collection("tesouraria_movimentos").doc(`enccompra_${encId}`),saldoRef=db.collection("tesouraria_saldos").doc(compra.conta);
+    await db.runTransaction(async tx=>{
+      const encDoc=await tx.get(encRef),saldoDoc=await tx.get(saldoRef),tesDoc=await tx.get(tesRef);
+      if(!encDoc.exists)throw new Error("Encomenda não encontrada.");
+      const d=encDoc.data();
+      if(d.estado!=="AGUARDANDO_COMPRA")throw new Error("A encomenda já não está a aguardar compra.");
+      if((Number(d.custoCompra)||0)>0||d.movimentoTesourariaCompraId||tesDoc.exists)throw new Error("A compra já foi registada; nenhum débito foi repetido.");
+      if(!saldoDoc.exists)throw new Error(`Saldo de ${f622NomeConta(compra.conta)} não está inicializado.`);
+      const saldoAntes=Number(saldoDoc.data().saldo)||0;if(saldoAntes+1e-7<compra.valor)throw new Error(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
+      const saldoDepois=saldoAntes-compra.valor,agora=new Date();
+      tx.update(saldoRef,{saldo:saldoDepois,moeda:compra.moeda,atualizadoEm:agora,atualizadoPorUid:user.uid,atualizadoPorUsuario:user.email||"",ultimaOperacao:"compra_encomenda",ultimaEncomendaId:encId});
+      tx.set(tesRef,f622MovCompra({encId,solId:d.solicitacaoId||null,produto:d.produto,cliente:d.cliente,conta:compra.conta,moeda:compra.moeda,valor:compra.valor,taxa:compra.taxa,custoDb:compra.custoDb,fornecedor,user,agora}));
+      tx.update(encRef,{custoCompra:compra.custoDb,custoTotalReal:compra.custoDb,lucroReal:null,contaPagamentoCompra:compra.conta,moedaCompra:compra.moeda,valorPagoCompra:compra.valor,taxaReferenciaCompra:compra.taxa,fornecedorCompra:fornecedor,movimentoTesourariaCompraId:tesRef.id,saldoContaCompraAntes:saldoAntes,saldoContaCompraDepois:saldoDepois,estado:"EM_TRANSITO",dataCompra:agora,compraRegistadaPorUid:user.uid,compraRegistadaPorUsuario:user.email||""});
+    });
+    f6227FecharCompra();
+    alert(`Compra registada com sucesso.\n\n${f622Fmt(compra.valor,compra.moeda)} debitados de ${f622NomeConta(compra.conta)}.\nA encomenda está agora EM TRÂNSITO.`);
+  }catch(e){alert("Erro ao registar compra: "+(e.message||e));}
+  finally{if(btn)btn.disabled=false;}
 }
 
 /* FASE 6.22.2 — Regularização oficial de compra já existente.
@@ -10599,44 +10664,25 @@ async function f622ConfirmarAprovacaoEncomenda(){
   const id=document.getElementById("f622AprovarPedidoId")?.value||"";
   const p=(solicitacoesEncomenda651||[]).find(x=>x.id===id);
   if(!p||p.estado!=="PENDENTE_APROVACAO")return alert("Pedido já processado ou não encontrado.");
-  let compra; try{compra=f622DadosCompra(document.getElementById("f622AprovarContaCompra")?.value,document.getElementById("f622AprovarValorPago")?.value,document.getElementById("f622AprovarTaxa")?.value);}catch(e){return alert(e.message||e);}
-  const fornecedor=(document.getElementById("f622AprovarFornecedor")?.value||"").trim();
-  if(f622SaldoLocal(compra.conta)+1e-7<compra.valor)return alert(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
-  if(!confirm(`APROVAR E PAGAR COMPRA?\n\n${p.cliente} — ${p.produto}\n${f622Fmt(compra.valor,compra.moeda)} de ${f622NomeConta(compra.conta)}\nCusto: ${compra.custoDb.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} Db\n\nA aprovação e o débito serão atómicos.`))return;
+  if(!confirm(`APROVAR ENCOMENDA?\n\n${p.cliente} — ${p.produto}\nVenda: ${f5Moeda(p.valorTotal)}\nSinal: ${f5Moeda(p.sinalInformado)}\n\nA compra ao fornecedor NÃO será registada agora e nenhuma conta da Tesouraria será debitada.`))return;
   const btn=document.getElementById("btnF622ConfirmarAprovacao");if(btn)btn.disabled=true;
   try{
     const user=auth.currentUser;if(!user)throw new Error("Sessão expirada.");
-    const pedRef=db.collection("encomenda_solicitacoes").doc(id),encRef=db.collection("encomendas").doc(),
-          tesRef=db.collection("tesouraria_movimentos").doc(`enccompra_${encRef.id}`),
-          saldoRef=db.collection("tesouraria_saldos").doc(compra.conta);
+    const pedRef=db.collection("encomenda_solicitacoes").doc(id),encRef=db.collection("encomendas").doc();
     await db.runTransaction(async tx=>{
-      const pedDoc=await tx.get(pedRef),saldoDoc=await tx.get(saldoRef),tesDoc=await tx.get(tesRef);
+      const pedDoc=await tx.get(pedRef);
       if(!pedDoc.exists||pedDoc.data().estado!=="PENDENTE_APROVACAO")throw new Error("Pedido já processado.");
-      if(!saldoDoc.exists)throw new Error(`Saldo de ${f622NomeConta(compra.conta)} não está inicializado.`);
-      if(tesDoc.exists)throw new Error("Rastro financeiro da compra já existe.");
-      const d=pedDoc.data(),saldoAntes=Number(saldoDoc.data().saldo)||0;
-      if(saldoAntes+1e-7<compra.valor)throw new Error(`Saldo insuficiente em ${f622NomeConta(compra.conta)}.`);
-      const saldoDepois=saldoAntes-compra.valor,agora=new Date();
+      const d=pedDoc.data(),agora=new Date();
       tx.set(encRef,{cliente:d.cliente,telefone:d.telefone,produto:d.produto,quantidade:d.quantidade,valorTotal:d.valorTotal,
-        sinalPago:d.sinalInformado,formaSinal:d.formaSinal,custoCompra:compra.custoDb,custosChegada:0,custoTotalReal:compra.custoDb,lucroReal:null,
-        contaPagamentoCompra:compra.conta,moedaCompra:compra.moeda,valorPagoCompra:compra.valor,taxaReferenciaCompra:compra.taxa,
-        fornecedorCompra:fornecedor,movimentoTesourariaCompraId:tesRef.id,saldoContaCompraAntes:saldoAntes,saldoContaCompraDepois:saldoDepois,
-        estado:"EM_TRANSITO",usuario:d.usuario,uid:d.uid,role:d.role,criadoPorUid:d.uid,criadoPorUsuario:d.usuario,
-        aprovadoPorUid:user.uid,aprovadoPorUsuario:user.email,solicitacaoId:id,observacao:d.observacao||"",data:agora});
-      tx.update(pedRef,{estado:"APROVADA",encomendaId:encRef.id,aprovadoPorUid:user.uid,aprovadoPorUsuario:user.email,dataAprovacao:agora,
-        efeitoFinanceiroDefinitivo:true,custoCompra:compra.custoDb,contaPagamentoCompra:compra.conta,moedaCompra:compra.moeda,
-        valorPagoCompra:compra.valor,taxaReferenciaCompra:compra.taxa,fornecedorCompra:fornecedor,movimentoTesourariaCompraId:tesRef.id});
-      tx.update(saldoRef,{saldo:saldoDepois,moeda:compra.moeda,atualizadoEm:agora,atualizadoPorUid:user.uid,atualizadoPorUsuario:user.email||"",
-        ultimaOperacao:"compra_encomenda",ultimaEncomendaId:encRef.id});
-      tx.set(tesRef,f622MovCompra({encId:encRef.id,solId:id,produto:d.produto,cliente:d.cliente,conta:compra.conta,moeda:compra.moeda,
-        valor:compra.valor,taxa:compra.taxa,custoDb:compra.custoDb,fornecedor,user,agora}));
-      if(d.formaSinal==="Dinheiro"&&d.caixaId)tx.set(db.collection("movimentacoes").doc(),{produto:`Liberação de Sinal Aprovado — ${d.produto}`,
-        tipo:"liberacao_reserva_sinal_encomenda",quantidade:1,valor:d.sinalInformado,formaPagamento:"Controle Interno - Aprovação",
-        usuario:d.usuario,uid:d.uid,role:d.role,executadoPorUid:user.uid,executadoPorUsuario:user.email,data:agora,caixaId:d.caixaId,
-        solicitacaoEncomendaId:id,encomendaId:encRef.id});
+        sinalPago:d.sinalInformado,formaSinal:d.formaSinal,custoCompra:0,custosChegada:0,custoTotalReal:0,lucroReal:null,
+        estado:"AGUARDANDO_COMPRA",usuario:d.usuario,uid:d.uid,role:d.role,criadoPorUid:d.uid,criadoPorUsuario:d.usuario,
+        aprovadoPorUid:user.uid,aprovadoPorUsuario:user.email,solicitacaoId:id,observacao:d.observacao||"",data:agora,
+        compraPendente:true});
+      tx.update(pedRef,{estado:"APROVADA",encomendaId:encRef.id,aprovadoPorUid:user.uid,aprovadoPorUsuario:user.email,dataAprovacao:agora,efeitoFinanceiroDefinitivo:false});
+      if(d.formaSinal==="Dinheiro"&&d.caixaId)tx.set(db.collection("movimentacoes").doc(),{produto:`Liberação de Sinal Aprovado — ${d.produto}`,tipo:"liberacao_reserva_sinal_encomenda",quantidade:1,valor:d.sinalInformado,formaPagamento:"Controle Interno - Aprovação",usuario:d.usuario,uid:d.uid,role:d.role,executadoPorUid:user.uid,executadoPorUsuario:user.email,data:agora,caixaId:d.caixaId,solicitacaoEncomendaId:id,encomendaId:encRef.id});
     });
     f622FecharModalAprovacao();
-    alert(`Encomenda aprovada. ${f622Fmt(compra.valor,compra.moeda)} debitados de ${f622NomeConta(compra.conta)}.`);
+    alert("Encomenda aprovada com sucesso.\n\nEstado: AGUARDANDO COMPRA.\nNenhuma conta da Tesouraria foi debitada. Quando concluir a negociação com o fornecedor, use 🛒 Registar Compra.");
   }catch(e){alert("Erro ao aprovar encomenda: "+(e.message||e));}
   finally{if(btn)btn.disabled=false;}
 }
@@ -13848,6 +13894,16 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
         titulo:"Lote aguardando receção em São Tomé",mensagem:`${x.identificador||"Lote"} — confirmar chegada e custo final`,
         pagina:"paginaArmazemPT",ref:x.id,acao:"PAGINA",data:x.dataDespacho||x.data,ativo:true
       }));
+
+      // FASE 6.22.7 — encomenda aprovada, mas ainda não comprada ao fornecedor.
+      (typeof todasEncomendas!=="undefined"?todasEncomendas:[])
+        .filter(x=>x && x.estado==="AGUARDANDO_COMPRA" && !(Number(x.custoCompra)>0) && !x.movimentoTesourariaCompraId)
+        .forEach(x=>mdNotifAdd(lista,{
+          chave:`enc:comprar:${x.id}`,tipo:"ACAO",modulo:"Encomendas",prioridade:96,
+          titulo:"Encomenda aprovada aguardando compra",
+          mensagem:`${x.cliente||"Cliente"} — ${x.produto||"Produto"} — venda ${mdNotifValorDb(x.valorTotal)}`,
+          pagina:"paginaEncomendas",ref:x.id,acao:"PAGINA",data:x.data,ativo:true
+        }));
 
       // Encomenda oficial com custo, mas sem débito/rastro de compra.
       (typeof todasEncomendas!=="undefined"?todasEncomendas:[])
