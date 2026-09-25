@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.25-011">
+<meta name="mdstp-build" content="2026.09.25-012">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -1305,7 +1305,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <div class="card" style="border-top:4px solid #0d9488;">
       <h3 style="color:#0f766e;">🚚 Módulo de Encomendas & Importações</h3>
       <p style="margin-top:-6px;color:#64748b;font-size:13px;">
-        Registe a encomenda, o sinal, os custos reais de chegada e o pagamento final. O lucro só é considerado realizado quando a encomenda é entregue.
+        Registe a encomenda e o sinal recebido. A compra ao fornecedor é registada posteriormente, depois da negociação. O lucro só é considerado realizado quando a encomenda é entregue.
       </p>
 
       <div class="form-grid">
@@ -14205,6 +14205,120 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
   window.mdNotifMarcarTodasLidas=mdNotifMarcarTodasLidas;
   window.mdNotifConstruir=mdNotifConstruir;
+})();
+</script>
+
+
+<style id="f6229-admin-registo-sem-compra-css">
+/* FASE 6.22.9 — a compra ao fornecedor nunca faz parte do formulário inicial. */
+#f622CompraFinanceiraAdmin{display:none !important;}
+</style>
+<script>
+/* =========================================================================
+   FASE 6.22.9 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
+   - ADMIN regista diretamente a encomenda oficial, sem autoaprovação.
+   - Nenhuma conta da Tesouraria é debitada no registo.
+   - A encomenda nasce AGUARDANDO_COMPRA.
+   - A compra continua exclusivamente no botão "Registar Compra" (6.22.8).
+   - Fluxos de VENDA/GERENTE permanecem exatamente como estavam.
+   ========================================================================= */
+(function(){
+  const fluxoAnterior6229 = window.f5RegistrarEncomenda;
+
+  function aplicarUI6229(){
+    const painel=document.getElementById("f622CompraFinanceiraAdmin");
+    if(painel){ painel.classList.add("hidden"); painel.style.display="none"; }
+    const btn=document.getElementById("btnF5RegistrarEncomenda");
+    if(btn && usuarioRole==="admin") btn.innerText="📦 Registar Encomenda";
+  }
+
+  // Preserva toda a configuração anterior e corrige apenas a apresentação ADMIN.
+  if(typeof window.configurarInterfaceAprovacoes651==="function"){
+    const oldCfg6229=window.configurarInterfaceAprovacoes651;
+    window.configurarInterfaceAprovacoes651=function(){
+      const r=oldCfg6229.apply(this,arguments);
+      aplicarUI6229();
+      return r;
+    };
+  }
+
+  window.f5RegistrarEncomenda = async function(){
+    if(usuarioRole!=="admin") return fluxoAnterior6229.apply(this,arguments);
+    if(!navigator.onLine) return alert("É necessária ligação à internet.");
+    const user=auth.currentUser;
+    if(!user) return alert("Sessão expirada.");
+
+    const cliente=document.getElementById("f5EncCliente")?.value.trim()||"";
+    const telefone=document.getElementById("f5EncTelefone")?.value.trim()||"";
+    const produto=document.getElementById("f5EncProduto")?.value.trim()||"";
+    const quantidade=Math.max(1,Math.floor(f5Numero("f5EncQtd")||1));
+    const valorTotal=f5Numero("f5EncValorTotal");
+    const sinalPago=f5Numero("f5EncSinalPago");
+    const formaSinal=document.getElementById("f5EncFormaSinal")?.value||"Dinheiro";
+    const observacao=document.getElementById("f5EncObservacao")?.value.trim()||"";
+
+    if(!cliente||!produto||valorTotal<=0||sinalPago<=0)
+      return alert("Preencha cliente, produto, valor total e sinal recebido.");
+    if(sinalPago>valorTotal)
+      return alert("O sinal não pode ser maior que o valor total.");
+    if(formaSinal==="Dinheiro"&&(!caixaAtualObj||caixaAtualObj.estado!=="aberto"))
+      return alert("Abra primeiro o Caixa/Turno para receber sinal em dinheiro.");
+
+    if(!confirm(
+      `REGISTAR ENCOMENDA?\n\n${cliente} — ${produto}\nVenda: ${f5Moeda(valorTotal)}\nSinal recebido: ${f5Moeda(sinalPago)} (${formaSinal})\n\n`+
+      `A encomenda ficará AGUARDANDO COMPRA. Nenhuma conta da Tesouraria será debitada agora.`
+    )) return;
+
+    const btn=document.getElementById("btnF5RegistrarEncomenda");
+    if(btn) btn.disabled=true;
+    try{
+      const encRef=db.collection("encomendas").doc();
+      const movRef=db.collection("movimentacoes").doc();
+      await db.runTransaction(async tx=>{
+        let caixaId=null, caixaDoc=null;
+        if(formaSinal==="Dinheiro"){
+          caixaId=caixaAtualObj.id;
+          caixaDoc=await tx.get(db.collection("caixas").doc(caixaId));
+          if(!caixaDoc.exists||caixaDoc.data().estado!=="aberto") throw new Error("O Caixa já não está aberto.");
+          if(caixaDoc.data().uid!==user.uid) throw new Error("ADMIN só pode usar o próprio turno.");
+        }
+        const agora=new Date();
+        tx.set(encRef,{
+          cliente,telefone,produto,quantidade,valorTotal,sinalPago,formaSinal,
+          custoCompra:0,custosChegada:0,custoTotalReal:0,lucroReal:null,
+          estado:"AGUARDANDO_COMPRA",compraPendente:true,
+          usuario:user.email||"",nomeUsuario:usuarioNome||"",uid:user.uid,role:"admin",
+          criadoPorUid:user.uid,criadoPorUsuario:user.email||"",
+          observacao,data:agora
+        });
+        // Mantém exatamente o rastro de sinal que o fluxo ADMIN já utilizava.
+        tx.set(movRef,{
+          produto:`Sinal Encomenda: ${produto}`,tipo:"saida",quantidade,valor:sinalPago,
+          formaPagamento:`${formaSinal} - Sinal Encomenda`,cliente,
+          usuario:user.email||"",nomeUsuario:usuarioNome||"",uid:user.uid,role:"admin",data:agora,
+          ...(caixaId?{caixaId}:{}),encomendaId:encRef.id,origem:"encomenda"
+        });
+      });
+
+      ["f5EncCliente","f5EncTelefone","f5EncProduto","f5EncValorTotal","f5EncSinalPago","f5EncObservacao"].forEach(id=>{
+        const x=document.getElementById(id); if(x)x.value="";
+      });
+      const qtd=document.getElementById("f5EncQtd"); if(qtd)qtd.value="1";
+      const forma=document.getElementById("f5EncFormaSinal"); if(forma)forma.value="Dinheiro";
+      try{f5CalcularSinal();}catch(e){}
+      try{f5AtualizarResumoPagina();}catch(e){}
+      aplicarUI6229();
+      alert("Encomenda registada com sucesso.\n\nEstado: AGUARDANDO COMPRA.\nNenhuma conta da Tesouraria foi debitada. Quando concluir a negociação com o fornecedor, use 🛒 Registar Compra.");
+    }catch(e){
+      console.error("FASE 6.22.9 — registo ADMIN sem compra:",e);
+      alert("Erro ao registar encomenda: "+(e.message||e));
+    }finally{
+      if(btn)btn.disabled=false;
+    }
+  };
+
+  document.addEventListener("DOMContentLoaded",()=>setTimeout(aplicarUI6229,500));
+  setTimeout(aplicarUI6229,1200);
 })();
 </script>
 

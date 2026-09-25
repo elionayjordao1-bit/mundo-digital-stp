@@ -1,6 +1,6 @@
 {
-  "build": "2026.09.25-011",
+  "build": "2026.09.25-012",
   "name": "Mundo Digital STP",
   "channel": "production",
-  "release": "6.22.8"
+  "release": "6.22.9"
 }
