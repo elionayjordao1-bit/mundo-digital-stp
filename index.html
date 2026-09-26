@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.26-014">
+<meta name="mdstp-build" content="2026.09.26-015">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -694,7 +694,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
             <input id="produtoTemVariantes" type="checkbox" onchange="v6230AlternarVariantesProduto()"> Este produto possui variantes
           </label>
           <div id="produtoVariantesArea" class="hidden" style="margin-top:12px;">
-            <div style="font-size:12px;color:#64748b;margin-bottom:8px;">Use Cor + Tamanho/Opção. Exemplos: Preto + XL, Dourado + 7, Azul + 256 GB. O estoque total será a soma das variantes.</div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:8px;">Use Cor + Tamanho/Opção. Exemplos: Preto + XL, Dourado + 7, Azul + 256 GB. A soma das variantes deve coincidir exatamente com o Estoque Inicial informado acima.</div>
             <div id="produtoVariantesLinhas"></div>
             <button type="button" class="btn-secondary" onclick="v6230AdicionarLinhaProduto()" style="margin-top:8px;">＋ Adicionar variante</button>
             <div id="produtoVariantesResumo" style="font-size:12px;font-weight:800;margin-top:8px;color:#475569;"></div>
@@ -14259,12 +14259,12 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 
 <style id="f6229-admin-registo-sem-compra-css">
-/* FASE 6.23.1 — a compra ao fornecedor nunca faz parte do formulário inicial. */
+/* FASE 6.23.2 — a compra ao fornecedor nunca faz parte do formulário inicial. */
 #f622CompraFinanceiraAdmin{display:none !important;}
 </style>
 <script>
 /* =========================================================================
-   FASE 6.23.1 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
+   FASE 6.23.2 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
    - ADMIN regista diretamente a encomenda oficial, sem autoaprovação.
    - Nenhuma conta da Tesouraria é debitada no registo.
    - A encomenda nasce AGUARDANDO_COMPRA.
@@ -14359,7 +14359,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       aplicarUI6229();
       alert("Encomenda registada com sucesso.\n\nEstado: AGUARDANDO COMPRA.\nNenhuma conta da Tesouraria foi debitada. Quando concluir a negociação com o fornecedor, use 🛒 Registar Compra.");
     }catch(e){
-      console.error("FASE 6.23.1 — registo ADMIN sem compra:",e);
+      console.error("FASE 6.23.2 — registo ADMIN sem compra:",e);
       alert("Erro ao registar encomenda: "+(e.message||e));
     }finally{
       if(btn)btn.disabled=false;
@@ -14374,7 +14374,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 <script>
 /* =========================================================================
-   FASE 6.23.1 — VARIANTES DE PRODUTO
+   FASE 6.23.2 — VARIANTES DE PRODUTO
    Camada aditiva e retrocompatível. Não altera fórmulas financeiras.
    Produto simples continua exatamente suportado.
    ========================================================================= */
@@ -14477,7 +14477,7 @@ function v6230ValidarVariantes(arr,total){
   if(new Set(keys).size!==keys.length)return {ok:false,msg:"Existem variantes repetidas."};
   const soma=v6230TotalVariantes(a);
   if(soma!==Math.floor(Number(total)||0)){
-    const declarado=Math.floor(Number(total)||0, diff=declarado-soma;
+    const declarado=Math.floor(Number(total)||0); const diff=declarado-soma;
     return {ok:false,msg:diff>0
       ?`Estoque inicial: ${declarado} un. Variantes: ${soma} un. Faltam distribuir ${diff} unidade(s).`
       :`Estoque inicial: ${declarado} un. Variantes: ${soma} un. Existem ${Math.abs(diff)} unidade(s) a mais.`};
