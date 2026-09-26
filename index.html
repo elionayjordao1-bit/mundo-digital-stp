@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.26-015">
+<meta name="mdstp-build" content="2026.09.26-016">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -11213,6 +11213,35 @@ function armSaldoSuficiente(conta, valor){
   const saldo = typeof saldoContaTes === "function" ? saldoContaTes(conta) : 0;
   return saldo + 0.0001 >= Number(valor||0);
 }
+let armTesourariaAtualizando6233 = null;
+async function armAtualizarTesouraria6233(){
+  if(!usuarioPodeTesouraria()) return;
+  if(armTesourariaAtualizando6233) return armTesourariaAtualizando6233;
+  armTesourariaAtualizando6233=(async()=>{
+    const snap=await db.collection("tesouraria_movimentos").orderBy("data","desc").get();
+    const novos=[];
+    snap.forEach(d=>novos.push({id:d.id,...(d.data()||{})}));
+    movimentosTesouraria=novos;
+    recalcularSaldosTesouraria();
+    try{renderizarTesouraria();}catch(e){}
+    try{processarFinanceiro();}catch(e){}
+    try{atualizarResumoCompraArmazem();}catch(e){}
+    try{atualizarResumoDespachoArmazem();}catch(e){}
+  })().finally(()=>{armTesourariaAtualizando6233=null;});
+  return armTesourariaAtualizando6233;
+}
+function armLimparDespacho6233(){
+  const ids=["loteNomeIdentificador","loteFreteEuro","loteTransportador","loteObservacao"];
+  ids.forEach(id=>{const e=document.getElementById(id);if(e)e.value="";});
+  const moeda=document.getElementById("loteFreteMoeda"); if(moeda)moeda.value="EUR";
+  const taxa=document.getElementById("loteFreteTaxa"); if(taxa)taxa.value="26.00";
+  document.querySelectorAll(".chk-item-pt").forEach(c=>c.checked=false);
+  document.querySelectorAll(".preco-venda-lote").forEach(e=>{ /* preços ficam associados à seleção atual e serão recriados pelo listener */ });
+  try{atualizarPagamentoFreteArmazemUI();}catch(e){}
+  try{armRenderSelecaoDespachoPT();}catch(e){}
+  try{atualizarResumoDespachoArmazem();}catch(e){}
+}
+
 function armHistoricoPayload(tipo, dados={}){
   return {
     tipo,
@@ -11325,8 +11354,14 @@ async function cadastrarItemSoltoPT(){
   }
 
   if(!(usuarioRole==="admin"||usuarioRole==="gerente")) return alert("Perfil sem permissão.");
-  if(!armSaldoSuficiente(contaPagamento,total)) return alert(`Saldo insuficiente em ${armNomeConta(contaPagamento)} para pagar ${armFmtValor(total,moeda)}.`);
-  if(!confirm(`Confirmar compra administrativa?\n\n${quantidade} × ${nome}\nTotal: ${armFmtValor(total,moeda)}\nSerá debitado de ${armNomeConta(contaPagamento)}.`)) return;
+  const btnCompra6233=document.getElementById("btnCadastrarItemPT");
+  if(btnCompra6233?.dataset.processando==="1") return alert("A operação já está em processamento. Aguarde a conclusão.");
+  if(btnCompra6233){btnCompra6233.dataset.processando="1";btnCompra6233.disabled=true;btnCompra6233.dataset.textoOriginal=btnCompra6233.innerText;btnCompra6233.innerText="⏳ A validar saldo...";}
+  try{ await armAtualizarTesouraria6233(); }
+  catch(e){ if(btnCompra6233){btnCompra6233.dataset.processando="";btnCompra6233.disabled=false;btnCompra6233.innerText=btnCompra6233.dataset.textoOriginal||"📥 Registar Compra & Debitar Tesouraria";} return alert("Não foi possível atualizar o saldo da Tesouraria. Verifique a ligação e tente novamente."); }
+  if(!armSaldoSuficiente(contaPagamento,total)){ if(btnCompra6233){btnCompra6233.dataset.processando="";btnCompra6233.disabled=false;btnCompra6233.innerText=btnCompra6233.dataset.textoOriginal||"📥 Registar Compra & Debitar Tesouraria";} return alert(`Saldo insuficiente em ${armNomeConta(contaPagamento)} para pagar ${armFmtValor(total,moeda)}.`); }
+  if(!confirm(`Confirmar compra administrativa?\n\n${quantidade} × ${nome}\nTotal: ${armFmtValor(total,moeda)}\nSerá debitado de ${armNomeConta(contaPagamento)}.`)){ if(btnCompra6233){btnCompra6233.dataset.processando="";btnCompra6233.disabled=false;btnCompra6233.innerText=btnCompra6233.dataset.textoOriginal||"📥 Registar Compra & Debitar Tesouraria";} return; }
+  if(btnCompra6233)btnCompra6233.innerText="⏳ A registar compra...";
   const itemRef=db.collection("armazem_pt").doc();
   const tesRef=db.collection("tesouraria_movimentos").doc();
   const histRef=db.collection("armazem_movimentos").doc();
@@ -11339,6 +11374,7 @@ async function cadastrarItemSoltoPT(){
     });
     armLimparCompra(); alert("Compra registada. Artigo entrou no Armazém PT e o pagamento foi debitado da Tesouraria.");
   }catch(e){alert("Erro ao registar compra: "+(e.message||e));}
+  finally{if(btnCompra6233){btnCompra6233.dataset.processando="";btnCompra6233.disabled=false;btnCompra6233.innerText=btnCompra6233.dataset.textoOriginal||"📥 Registar Compra & Debitar Tesouraria";}}
 }
 
 function armIdsItensDespachoPendente(){
@@ -11396,6 +11432,8 @@ function armItensLoteComRateio(itens,freteEuro){
 }
 async function despacharLotePT(){
   if(!usuarioPodeArmazemPT()) return alert("Acesso restrito ao Administrador / Estoque.");
+  const btnDesp6233=document.getElementById("btnDespacharLotePT");
+  if(btnDesp6233?.dataset.processando==="1") return alert("O despacho já está em processamento. Aguarde a conclusão.");
   const identificador=document.getElementById("loteNomeIdentificador")?.value.trim()||"";
   const chks=[...document.querySelectorAll(".chk-item-pt:checked")];
   const freteValor=Number(document.getElementById("loteFreteEuro")?.value)||0;
@@ -11436,9 +11474,19 @@ async function despacharLotePT(){
   }
 
   if(!(usuarioRole==="admin"||usuarioRole==="gerente")) return alert("Perfil sem permissão.");
-  if(freteValor>0&&!armSaldoSuficiente(contaPagamento,freteValor)) return alert(`Saldo insuficiente em ${armNomeConta(contaPagamento)} para o frete.`);
-  if(!confirm(`Confirmar despacho administrativo do lote ${identificador}?${freteValor>0?`\nFrete: ${armFmtValor(freteValor,freteMoeda)} — ${armNomeConta(contaPagamento)}`:""}`))return;
-  try{ await armExecutarDespachoAdmin({identificador,idsItens,freteValor,freteMoeda,freteEuro,contaPagamento,taxaCambioFrete:freteMoeda==="STN"?taxaCambio:null,transportador,observacao},null); alert("Lote despachado e custos financeiros registados."); }catch(e){alert("Erro ao despachar: "+(e.message||e));}
+  if(btnDesp6233){btnDesp6233.dataset.processando="1";btnDesp6233.disabled=true;btnDesp6233.dataset.textoOriginal=btnDesp6233.innerText;btnDesp6233.innerText="⏳ A validar saldo...";}
+  try{ await armAtualizarTesouraria6233(); }
+  catch(e){ if(btnDesp6233){btnDesp6233.dataset.processando="";btnDesp6233.disabled=false;btnDesp6233.innerText=btnDesp6233.dataset.textoOriginal||"✈️ Despachar Lote & Registar Custos";} return alert("Não foi possível atualizar o saldo da Tesouraria. Verifique a ligação e tente novamente."); }
+  if(freteValor>0&&!armSaldoSuficiente(contaPagamento,freteValor)){ if(btnDesp6233){btnDesp6233.dataset.processando="";btnDesp6233.disabled=false;btnDesp6233.innerText=btnDesp6233.dataset.textoOriginal||"✈️ Despachar Lote & Registar Custos";} return alert(`Saldo insuficiente em ${armNomeConta(contaPagamento)} para o frete.`); }
+  if(!confirm(`Confirmar despacho administrativo do lote ${identificador}?${freteValor>0?`\nFrete: ${armFmtValor(freteValor,freteMoeda)} — ${armNomeConta(contaPagamento)}`:""}`)){ if(btnDesp6233){btnDesp6233.dataset.processando="";btnDesp6233.disabled=false;btnDesp6233.innerText=btnDesp6233.dataset.textoOriginal||"✈️ Despachar Lote & Registar Custos";} return; }
+  if(btnDesp6233)btnDesp6233.innerText="⏳ A despachar lote... Aguarde";
+  try{
+    await armExecutarDespachoAdmin({identificador,idsItens,freteValor,freteMoeda,freteEuro,contaPagamento,taxaCambioFrete:freteMoeda==="STN"?taxaCambio:null,transportador,observacao},null);
+    armLimparDespacho6233();
+    await armAtualizarTesouraria6233().catch(()=>{});
+    alert("Lote despachado e custos financeiros registados.");
+  }catch(e){alert("Erro ao despachar: "+(e.message||e));}
+  finally{if(btnDesp6233){btnDesp6233.dataset.processando="";btnDesp6233.disabled=false;btnDesp6233.innerText=btnDesp6233.dataset.textoOriginal||"✈️ Despachar Lote & Registar Custos";}}
 }
 
 async function armExecutarDespachoAdmin(dados, solicitacaoId){
@@ -11805,6 +11853,9 @@ function armIniciarListenerHistorico(){
 }
 function carregarArmazemPTTresPassos(){
   if(!usuarioPodeArmazemPT())return;
+  // 6.23.3: Armazém não depende de abrir Financeiro para conhecer o saldo atual.
+  try{ iniciarListenerTesouraria(); }catch(e){ console.warn("Tesouraria no Armazém:",e); }
+  armAtualizarTesouraria6233().catch(e=>console.warn("Atualização de saldo no Armazém:",e));
   if(listenerArmazemPT)listenerArmazemPT(); if(listenerLotesPT)listenerLotesPT();
   listenerArmazemPT=db.collection("armazem_pt").orderBy("dataRegisto","desc").onSnapshot(s=>{todosItensSoltosPT=[]; let h=""; s.forEach(d=>{const i={id:d.id,...d.data()}; if(i.estado!=="EM_LISBOA")return; todosItensSoltosPT.push(i); const eur=Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0; const subtotalEur=(Number(i.quantidade)||0)*eur; const original=Number(i.custoUnitarioOriginal)||eur; const moeda=i.moedaCompra||"EUR"; h+=`<tr><td><b>${i.nome}</b>${i.temVariantes?`<div style="font-size:10px;color:#64748b;margin-top:3px;">${v6230Esc(v6230ResumoVariantes(i.variantes||[]))}</div>`:""}</td><td>${i.categoria||"Geral"}</td><td><b>${i.quantidade} un</b></td><td>${armFmtValor(original,moeda)}</td><td>${subtotalEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${i.fornecedor||"-"}</td><td><small>${armData(i.dataRegisto)}</small></td></tr>`;}); listaItensSoltosPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo oficial aguardando lote.</td></tr>'; armRenderSelecaoDespachoPT();},e=>console.warn("Armazém PT",e));
   listenerLotesPT=db.collection("lotes_pt").orderBy("dataEnvio","desc").onSnapshot(s=>{todosLotesPT=[];let h="";s.forEach(d=>{const l={id:d.id,...d.data()};todosLotesPT.push(l);const st=l.estado==="EM_TRANSITO"?'<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>':'<span class="badge-concluido">RECEBIDO</span>'; const btn=l.estado==="EM_TRANSITO"?((usuarioRole==="admin"||usuarioRole==="gerente")?`<button class="btn-success btn-acao" onclick="abrirModalRecebimentoLoteST('${l.id}')">🛬 Receber e consolidar</button>`:`<span style="color:#92400e;font-weight:700;font-size:11px;">⏳ Aguardando receção pelo ADMIN/GERENTE</span>`):"—"; const nomes=(l.itens||[]).map(i=>`${i.nome} (${i.quantidade}un)`).join(", "); const compra=Number(l.custoTotalItensEuro)||0; const frete=Number(l.custoFreteEuro)||0; const taxaRec=Number(l.taxaCambioRecebimento)||0; const acertoSTN=Number(l.acertoIncorporadoSTN)||0; const acertoEUR=taxaRec>0?acertoSTN/taxaRec:0; const custoFinal=compra+frete+acertoEUR; h+=`<tr><td><b>${l.identificador}</b></td><td><small>${nomes}</small></td><td>${compra.toFixed(2)} €</td><td>${frete.toFixed(2)} €</td><td>${l.estado==="RECEBIDO"?acertoEUR.toFixed(2)+" €":"—"}</td><td><b>${custoFinal.toFixed(2)} €</b></td><td>${st}</td><td><small>${armData(l.dataEnvio)}</small></td><td>${btn}</td></tr>`;});listaLotesEmTransitoPT.innerHTML=h||'<tr><td colspan="9" style="color:#94a3b8;">Nenhum lote enviado.</td></tr>';},e=>console.warn("Lotes PT",e));
@@ -14259,12 +14310,12 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 
 <style id="f6229-admin-registo-sem-compra-css">
-/* FASE 6.23.2 — a compra ao fornecedor nunca faz parte do formulário inicial. */
+/* FASE 6.23.3 — a compra ao fornecedor nunca faz parte do formulário inicial. */
 #f622CompraFinanceiraAdmin{display:none !important;}
 </style>
 <script>
 /* =========================================================================
-   FASE 6.23.2 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
+   FASE 6.23.3 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
    - ADMIN regista diretamente a encomenda oficial, sem autoaprovação.
    - Nenhuma conta da Tesouraria é debitada no registo.
    - A encomenda nasce AGUARDANDO_COMPRA.
@@ -14359,7 +14410,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       aplicarUI6229();
       alert("Encomenda registada com sucesso.\n\nEstado: AGUARDANDO COMPRA.\nNenhuma conta da Tesouraria foi debitada. Quando concluir a negociação com o fornecedor, use 🛒 Registar Compra.");
     }catch(e){
-      console.error("FASE 6.23.2 — registo ADMIN sem compra:",e);
+      console.error("FASE 6.23.3 — registo ADMIN sem compra:",e);
       alert("Erro ao registar encomenda: "+(e.message||e));
     }finally{
       if(btn)btn.disabled=false;
@@ -14374,7 +14425,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 <script>
 /* =========================================================================
-   FASE 6.23.2 — VARIANTES DE PRODUTO
+   FASE 6.23.3 — VARIANTES DE PRODUTO
    Camada aditiva e retrocompatível. Não altera fórmulas financeiras.
    Produto simples continua exatamente suportado.
    ========================================================================= */
