@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.25-012">
+<meta name="mdstp-build" content="2026.09.26-014">
 </head>
 <body>
 <!-- PWA: atualização controlada -->
@@ -668,6 +668,16 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <input id="minimo" type="number" placeholder="Estoque Mínimo">
         <input id="compra" type="number" placeholder="Preço Compra Unitário">
         <input id="venda" type="number" placeholder="Preço Venda Unitário">
+        <div id="varProdutoBox" style="grid-column:1/-1;border:1px solid #cbd5e1;border-radius:10px;padding:12px;background:#f8fafc;">
+          <label style="display:flex;align-items:center;gap:8px;font-weight:800;color:#334155;">
+            <input id="produtoTemVariantes" type="checkbox" onchange="v6230AlternarVariantesProduto()"> Este produto possui variantes
+          </label>
+          <div id="produtoVariantesArea" class="hidden" style="margin-top:12px;">
+            <div style="font-size:12px;color:#64748b;margin-bottom:8px;">Use Cor + Tamanho/Opção. Exemplos: Preto + XL, Dourado + 7, Azul + 256 GB. O estoque total será a soma das variantes.</div>
+            <div id="produtoVariantesLinhas"></div>
+            <button type="button" class="btn-secondary" onclick="v6230AdicionarLinhaProduto()" style="margin-top:8px;">＋ Adicionar variante</button>
+          </div>
+        </div>
         
         <div class="img-preview-box" style="grid-column: 1 / -1;">
           <input type="file" id="fotoInput" accept="image/*" onchange="processarFotoOtimizada(event)" style="font-size: 12px; min-height: auto;">
@@ -1905,6 +1915,17 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <input id="ptTaxaCambioItem" type="number" min="0.01" step="0.01" value="26.00" placeholder="Taxa Db/€ (usada se o custo for em Db)" oninput="atualizarResumoCompraArmazem()">
         <input id="ptFornecedorItem" placeholder="Fornecedor / Loja">
         <input id="ptObservacaoItem" placeholder="Observação / referência (opcional)" style="grid-column:1/-1;">
+        <div id="ptVariantesBox" style="grid-column:1/-1;border:1px solid #bfdbfe;border-radius:10px;padding:12px;background:#f8fafc;">
+          <label style="display:flex;align-items:center;gap:8px;font-weight:800;color:#334155;">
+            <input id="ptTemVariantes" type="checkbox" onchange="v6230AlternarVariantesPT()"> Artigo possui variantes
+          </label>
+          <div id="ptVariantesArea" class="hidden" style="margin-top:10px;">
+            <div style="font-size:12px;color:#64748b;margin-bottom:8px;">Distribua a quantidade comprada por Cor + Tamanho/Opção. A soma deve ser igual à quantidade total.</div>
+            <div id="ptVariantesLinhas"></div>
+            <button type="button" class="btn-secondary" onclick="v6230AdicionarLinhaPT()" style="margin-top:8px;">＋ Adicionar variante</button>
+            <div id="ptVariantesResumo" style="font-size:12px;font-weight:700;margin-top:8px;color:#475569;"></div>
+          </div>
+        </div>
         <div id="ptResumoCompraArmazem" style="grid-column:1/-1;background:#eff6ff;border:1px solid #bfdbfe;padding:12px;border-radius:9px;font-size:13px;line-height:1.7;">
           Informe quantidade e custo para ver o resumo.
         </div>
@@ -2166,7 +2187,13 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <h3 style="margin-top:0; color:#1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">🛒 Registrar Venda (POS)</h3>
     <p style="margin: 5px 0 15px 0;">Produto: <b id="modalProdNome" style="color:#2563eb;"></b></p>
     
-    <label style="font-size: 12px; font-weight:600;">Quantidade:</label>
+    
+    <div id="modalVarianteBox" class="hidden" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:10px;margin-bottom:12px;">
+      <label style="font-size:12px;font-weight:800;">Variante:</label>
+      <select id="modalVarianteVenda" onchange="v6230AtualizarVariantePOS()" style="margin-top:5px;"></select>
+      <div id="modalVarianteDisponivel" style="font-size:12px;color:#475569;margin-top:5px;"></div>
+    </div>
+<label style="font-size: 12px; font-weight:600;">Quantidade:</label>
     <input type="number" id="modalProdQtd" value="1" min="1" oninput="calcularTotalVendaModal()" style="margin-bottom: 10px;">
     
     <label style="font-size: 12px; font-weight:600;">Forma de Pagamento:</label>
@@ -11215,7 +11242,7 @@ function armMovTesPayload(tipo, conta, moeda, valor, ref, obs){
     data:new Date()
   };
 }
-function armLimparCompra(){
+function armLimparCompra(){ window.v6230VariantesPTPendentes=[]; const _vchk=document.getElementById("ptTemVariantes"); if(_vchk)_vchk.checked=false; const _vbox=document.getElementById("ptVariantesLinhas"); if(_vbox)_vbox.innerHTML=""; setTimeout(()=>{try{v6230AlternarVariantesPT();}catch(e){}},0);
   ["ptNomeItem","ptCategoriaItem","ptQtdItem","ptCustoUnitItem","ptFornecedorItem","ptObservacaoItem"].forEach(id=>{const e=document.getElementById(id); if(e)e.value="";});
   const t=document.getElementById("ptTaxaCambioItem"); if(t)t.value="26.00";
   atualizarResumoCompraArmazem();
@@ -11266,7 +11293,7 @@ async function cadastrarItemSoltoPT(){
     const agora=new Date();
     try{
       const batch=db.batch();
-      batch.set(reqRef,{nome,categoria,quantidade,custoUnitario,moeda,contaPagamento,taxaCambio:moeda==="STN"?taxaCambio:null,custoEuroUnitario,total,fornecedor,observacao,estado:"PENDENTE_APROVACAO",usuario:user.email,nomeUsuario:usuarioNome||"",uid:user.uid,role:usuarioRole,data:agora});
+      batch.set(reqRef,{nome,categoria,quantidade,custoUnitario,moeda,contaPagamento,taxaCambio:moeda==="STN"?taxaCambio:null,custoEuroUnitario,total,fornecedor,observacao,temVariantes:Array.isArray(window.v6230VariantesPTPendentes)&&window.v6230VariantesPTPendentes.length>0,variantes:v6230NormalizarVariantes(window.v6230VariantesPTPendentes||[]),estado:"PENDENTE_APROVACAO",usuario:user.email,nomeUsuario:usuarioNome||"",uid:user.uid,role:usuarioRole,data:agora});
       batch.set(histRef,{...armHistoricoPayload("COMPRA_SOLICITADA",{referencia:nome,compraSolicitacaoId:reqRef.id,quantidade,valor:total,moeda,contaPagamento,fornecedor,estado:"PENDENTE_APROVACAO",observacao}),data:agora});
       await batch.commit();
       armLimparCompra();
@@ -11284,7 +11311,7 @@ async function cadastrarItemSoltoPT(){
   try{
     await db.runTransaction(async tx=>{
       const agora=new Date();
-      tx.set(itemRef,{nome,categoria,quantidade,custoUnitarioOriginal:custoUnitario,moedaCompra:moeda,taxaCambioCompra:moeda==="STN"?taxaCambio:null,custoEuroUnitario,custoEuroUnitarioBase:custoEuroUnitario,fornecedor,contaPagamento,estado:"EM_LISBOA",usuario:user.email,nomeUsuario:usuarioNome||"",uid:user.uid,role:usuarioRole,dataRegisto:agora});
+      tx.set(itemRef,{nome,categoria,quantidade,custoUnitarioOriginal:custoUnitario,moedaCompra:moeda,taxaCambioCompra:moeda==="STN"?taxaCambio:null,custoEuroUnitario,custoEuroUnitarioBase:custoEuroUnitario,fornecedor,contaPagamento,temVariantes:Array.isArray(window.v6230VariantesPTPendentes)&&window.v6230VariantesPTPendentes.length>0,variantes:v6230NormalizarVariantes(window.v6230VariantesPTPendentes||[]),estado:"EM_LISBOA",usuario:user.email,nomeUsuario:usuarioNome||"",uid:user.uid,role:usuarioRole,dataRegisto:agora});
       tx.set(tesRef,armMovTesPayload("compra_estoque",contaPagamento,moeda,total,itemRef.id,`Compra Armazém PT — ${nome}${fornecedor?" — "+fornecedor:""}`));
       tx.set(histRef,{...armHistoricoPayload("COMPRA_APROVADA",{referencia:nome,itemId:itemRef.id,quantidade,valor:total,moeda,contaPagamento,fornecedor,estado:"APROVADA",observacao}),data:agora});
     });
@@ -11310,7 +11337,7 @@ function armRenderSelecaoDespachoPT(){
     const eur=Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0;
     const subtotalEur=(Number(i.quantidade)||0)*eur;
     const vendaSug=Math.round(eur*26*1.3);
-    sel+=`<tr><td><input type="checkbox" class="chk-item-pt" value="${i.id}" data-custototal="${subtotalEur}" onchange="atualizarResumoDespachoArmazem()"></td><td><b>${i.nome}</b> (${i.categoria||"Geral"})</td><td>${i.quantidade} un</td><td><b>${subtotalEur.toFixed(2)} €</b></td><td><input class="preco-venda-lote" data-id="${i.id}" type="number" min="0" step="1" value="${vendaSug}" style="width:120px;" oninput="atualizarResumoDespachoArmazem()"></td><td class="margem-venda-lote" data-id="${i.id}">—</td></tr>`;
+    sel+=`<tr><td><input type="checkbox" class="chk-item-pt" value="${i.id}" data-custototal="${subtotalEur}" onchange="atualizarResumoDespachoArmazem()"></td><td><b>${i.nome}</b> (${i.categoria||"Geral"})${i.temVariantes?`<div style="font-size:10px;color:#64748b;">${v6230Esc(v6230ResumoVariantes(i.variantes||[]))}</div>`:""}</td><td>${i.quantidade} un</td><td><b>${subtotalEur.toFixed(2)} €</b></td><td><input class="preco-venda-lote" data-id="${i.id}" type="number" min="0" step="1" value="${vendaSug}" style="width:120px;" oninput="atualizarResumoDespachoArmazem()"></td><td class="margem-venda-lote" data-id="${i.id}">—</td></tr>`;
   });
   tabela.innerHTML=sel||'<tr><td colspan="6" style="color:#94a3b8;">Nenhum artigo disponível para novo despacho. Itens com despacho pendente ficam reservados até decisão do ADMIN.</td></tr>';
   atualizarResumoDespachoArmazem();
@@ -11376,7 +11403,7 @@ async function despacharLotePT(){
     const agora=new Date();
     try{
       const batch=db.batch();
-      batch.set(reqRef,{identificador,idsItens,itensSnapshot:itens.map(i=>({id:i.id,nome:i.nome,categoria:i.categoria||"Geral",quantidade:Number(i.quantidade)||0,custoEuroUnitario:Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0,precoVendaPretendido:Number(document.querySelector(`.preco-venda-lote[data-id="${i.id}"]`)?.value)||0})),custoTotalItensEuro,freteValor,freteMoeda,freteEuro,contaPagamento:freteValor>0?contaPagamento:null,taxaCambioFrete:freteMoeda==="STN"?taxaCambio:null,transportador,observacao,estado:"PENDENTE_APROVACAO",usuario:user.email,nomeUsuario:usuarioNome||"",uid:user.uid,role:usuarioRole,data:agora});
+      batch.set(reqRef,{identificador,idsItens,itensSnapshot:itens.map(i=>({id:i.id,nome:i.nome,categoria:i.categoria||"Geral",quantidade:Number(i.quantidade)||0,custoEuroUnitario:Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0,precoVendaPretendido:Number(document.querySelector(`.preco-venda-lote[data-id="${i.id}"]`)?.value)||0,temVariantes:!!i.temVariantes,variantes:v6230NormalizarVariantes(i.variantes||[])})),custoTotalItensEuro,freteValor,freteMoeda,freteEuro,contaPagamento:freteValor>0?contaPagamento:null,taxaCambioFrete:freteMoeda==="STN"?taxaCambio:null,transportador,observacao,estado:"PENDENTE_APROVACAO",usuario:user.email,nomeUsuario:usuarioNome||"",uid:user.uid,role:usuarioRole,data:agora});
       batch.set(histRef,{...armHistoricoPayload("DESPACHO_SOLICITADO",{referencia:identificador,despachoSolicitacaoId:reqRef.id,quantidade:itens.reduce((s,i)=>s+(Number(i.quantidade)||0),0),valor:freteValor,moeda:freteMoeda,contaPagamento:freteValor>0?contaPagamento:"",fornecedor:transportador,estado:"PENDENTE_APROVACAO",observacao}),data:agora});
       await batch.commit();
       document.getElementById("loteNomeIdentificador").value=""; document.getElementById("loteFreteEuro").value=""; document.getElementById("loteTransportador").value=""; document.getElementById("loteObservacao").value="";
@@ -11420,7 +11447,7 @@ async function aprovarCompraArmazem(id){
   if(!armSaldoSuficiente(r.contaPagamento,r.total))return alert(`Saldo insuficiente em ${armNomeConta(r.contaPagamento)}. A aprovação foi bloqueada.`);
   if(!confirm(`Aprovar compra?\n${r.quantidade} × ${r.nome}\n${armFmtValor(r.total,r.moeda)} de ${armNomeConta(r.contaPagamento)}`))return;
   const reqRef=db.collection("armazem_compra_solicitacoes").doc(id), itemRef=db.collection("armazem_pt").doc(), tesRef=db.collection("tesouraria_movimentos").doc(), histRef=db.collection("armazem_movimentos").doc();
-  try{await db.runTransaction(async tx=>{const doc=await tx.get(reqRef); if(!doc.exists||doc.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida."); const d=doc.data(), agora=new Date(); tx.set(itemRef,{nome:d.nome,categoria:d.categoria||"Geral",quantidade:Number(d.quantidade)||0,custoUnitarioOriginal:Number(d.custoUnitario)||0,moedaCompra:d.moeda,taxaCambioCompra:d.taxaCambio||null,custoEuroUnitario:Number(d.custoEuroUnitario)||0,custoEuroUnitarioBase:Number(d.custoEuroUnitario)||0,fornecedor:d.fornecedor||"",contaPagamento:d.contaPagamento,estado:"EM_LISBOA",usuario:d.usuario,nomeUsuario:d.nomeUsuario||"",uid:d.uid,role:d.role||"estoque",dataRegisto:agora,solicitacaoCompraId:id}); tx.set(tesRef,armMovTesPayload("compra_estoque",d.contaPagamento,d.moeda,Number(d.total)||0,itemRef.id,`Compra Armazém PT — ${d.nome}${d.fornecedor?" — "+d.fornecedor:""}`)); tx.update(reqRef,{estado:"APROVADA",itemId:itemRef.id,aprovadoPorUid:auth.currentUser.uid,aprovadoPorUsuario:auth.currentUser.email,dataAprovacao:agora}); tx.set(histRef,{...armHistoricoPayload("COMPRA_APROVADA",{referencia:d.nome,compraSolicitacaoId:id,itemId:itemRef.id,quantidade:d.quantidade,valor:d.total,moeda:d.moeda,contaPagamento:d.contaPagamento,fornecedor:d.fornecedor,estado:"APROVADA",observacao:d.observacao||""}),data:agora});}); alert("Compra aprovada. O saldo foi debitado e o artigo entrou no Armazém PT.");}catch(e){alert("Erro ao aprovar compra: "+(e.message||e));}
+  try{await db.runTransaction(async tx=>{const doc=await tx.get(reqRef); if(!doc.exists||doc.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida."); const d=doc.data(), agora=new Date(); tx.set(itemRef,{nome:d.nome,categoria:d.categoria||"Geral",quantidade:Number(d.quantidade)||0,custoUnitarioOriginal:Number(d.custoUnitario)||0,moedaCompra:d.moeda,taxaCambioCompra:d.taxaCambio||null,custoEuroUnitario:Number(d.custoEuroUnitario)||0,custoEuroUnitarioBase:Number(d.custoEuroUnitario)||0,fornecedor:d.fornecedor||"",contaPagamento:d.contaPagamento,temVariantes:!!d.temVariantes,variantes:v6230NormalizarVariantes(d.variantes||[]),estado:"EM_LISBOA",usuario:d.usuario,nomeUsuario:d.nomeUsuario||"",uid:d.uid,role:d.role||"estoque",dataRegisto:agora,solicitacaoCompraId:id}); tx.set(tesRef,armMovTesPayload("compra_estoque",d.contaPagamento,d.moeda,Number(d.total)||0,itemRef.id,`Compra Armazém PT — ${d.nome}${d.fornecedor?" — "+d.fornecedor:""}`)); tx.update(reqRef,{estado:"APROVADA",itemId:itemRef.id,aprovadoPorUid:auth.currentUser.uid,aprovadoPorUsuario:auth.currentUser.email,dataAprovacao:agora}); tx.set(histRef,{...armHistoricoPayload("COMPRA_APROVADA",{referencia:d.nome,compraSolicitacaoId:id,itemId:itemRef.id,quantidade:d.quantidade,valor:d.total,moeda:d.moeda,contaPagamento:d.contaPagamento,fornecedor:d.fornecedor,estado:"APROVADA",observacao:d.observacao||""}),data:agora});}); alert("Compra aprovada. O saldo foi debitado e o artigo entrou no Armazém PT.");}catch(e){alert("Erro ao aprovar compra: "+(e.message||e));}
 }
 async function rejeitarCompraArmazem(id){
   if(usuarioRole!=="admin")return; const r=solicitacoesCompraArmazem.find(x=>x.id===id); if(!r)return; const motivo=prompt("Motivo da rejeição (obrigatório):",""); if(!motivo?.trim())return alert("Informe o motivo."); const reqRef=db.collection("armazem_compra_solicitacoes").doc(id), histRef=db.collection("armazem_movimentos").doc(); try{await db.runTransaction(async tx=>{const d=await tx.get(reqRef); if(!d.exists||d.data().estado!=="PENDENTE_APROVACAO")throw new Error("Solicitação já decidida."); const agora=new Date(); tx.update(reqRef,{estado:"REJEITADA",motivoRejeicao:motivo.trim(),rejeitadoPorUid:auth.currentUser.uid,rejeitadoPorUsuario:auth.currentUser.email,dataRejeicao:agora}); tx.set(histRef,{...armHistoricoPayload("COMPRA_REJEITADA",{referencia:r.nome,compraSolicitacaoId:id,quantidade:r.quantidade,valor:r.total,moeda:r.moeda,contaPagamento:r.contaPagamento,fornecedor:r.fornecedor,estado:"REJEITADA",observacao:motivo.trim()}),data:agora});});}catch(e){alert("Erro: "+(e.message||e));}
@@ -11562,13 +11589,13 @@ async function confirmarRecebimentoLoteST(){
           const custoMedio=novoEstoque>0
             ? Math.round(((estoqueAntigo*custoAntigo)+(qtd*custoNovo))/novoEstoque)
             : custoNovo;
-          const payload={estoque:novoEstoque,compra:custoMedio};
+          const payload={estoque:novoEstoque,compra:custoMedio}; if(item.temVariantes&&Array.isArray(item.variantes)){payload.temVariantes=true;payload.variantes=v6230MesclarVariantes(existente.variantes||[],item.variantes);}
           if(decisaoVenda[existente.id]===true) payload.venda=vendaPretendida;
           tx.update(db.collection("produtos").doc(existente.id),payload);
         }else{
           tx.set(db.collection("produtos").doc(),{
             nome:item.nome||"Importado PT",barcode:"",categoria:item.categoria||"Importado PT",
-            estoque:qtd,minimo:2,compra:custoNovo,venda:vendaPretendida,foto:""
+            estoque:qtd,minimo:2,compra:custoNovo,venda:vendaPretendida,foto:"",temVariantes:!!item.temVariantes,variantes:v6230NormalizarVariantes(item.variantes||[])
           });
         }
 
@@ -11576,7 +11603,7 @@ async function confirmarRecebimentoLoteST(){
           produto:item.nome||"Importado PT",tipo:"entrada",quantidade:qtd,valor:custoNovo*qtd,
           formaPagamento:`Entrada Stock Lote PT (${ld.identificador||loteId})`,
           usuario:auth.currentUser.email,uid:auth.currentUser.uid,role:usuarioRole,data:agora,
-          loteId,precoVendaPretendido:vendaPretendida,custoUnitarioConsolidadoSTN:custoNovo
+          loteId,precoVendaPretendido:vendaPretendida,custoUnitarioConsolidadoSTN:custoNovo,variantes:v6230NormalizarVariantes(item.variantes||[]),variantesResumo:v6230ResumoVariantes(item.variantes||[])
         });
       }
 
@@ -11757,7 +11784,7 @@ function armIniciarListenerHistorico(){
 function carregarArmazemPTTresPassos(){
   if(!usuarioPodeArmazemPT())return;
   if(listenerArmazemPT)listenerArmazemPT(); if(listenerLotesPT)listenerLotesPT();
-  listenerArmazemPT=db.collection("armazem_pt").orderBy("dataRegisto","desc").onSnapshot(s=>{todosItensSoltosPT=[]; let h=""; s.forEach(d=>{const i={id:d.id,...d.data()}; if(i.estado!=="EM_LISBOA")return; todosItensSoltosPT.push(i); const eur=Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0; const subtotalEur=(Number(i.quantidade)||0)*eur; const original=Number(i.custoUnitarioOriginal)||eur; const moeda=i.moedaCompra||"EUR"; h+=`<tr><td><b>${i.nome}</b></td><td>${i.categoria||"Geral"}</td><td><b>${i.quantidade} un</b></td><td>${armFmtValor(original,moeda)}</td><td>${subtotalEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${i.fornecedor||"-"}</td><td><small>${armData(i.dataRegisto)}</small></td></tr>`;}); listaItensSoltosPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo oficial aguardando lote.</td></tr>'; armRenderSelecaoDespachoPT();},e=>console.warn("Armazém PT",e));
+  listenerArmazemPT=db.collection("armazem_pt").orderBy("dataRegisto","desc").onSnapshot(s=>{todosItensSoltosPT=[]; let h=""; s.forEach(d=>{const i={id:d.id,...d.data()}; if(i.estado!=="EM_LISBOA")return; todosItensSoltosPT.push(i); const eur=Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0; const subtotalEur=(Number(i.quantidade)||0)*eur; const original=Number(i.custoUnitarioOriginal)||eur; const moeda=i.moedaCompra||"EUR"; h+=`<tr><td><b>${i.nome}</b>${i.temVariantes?`<div style="font-size:10px;color:#64748b;margin-top:3px;">${v6230Esc(v6230ResumoVariantes(i.variantes||[]))}</div>`:""}</td><td>${i.categoria||"Geral"}</td><td><b>${i.quantidade} un</b></td><td>${armFmtValor(original,moeda)}</td><td>${subtotalEur.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} €</td><td>${i.fornecedor||"-"}</td><td><small>${armData(i.dataRegisto)}</small></td></tr>`;}); listaItensSoltosPT.innerHTML=h||'<tr><td colspan="7" style="color:#94a3b8;">Nenhum artigo oficial aguardando lote.</td></tr>'; armRenderSelecaoDespachoPT();},e=>console.warn("Armazém PT",e));
   listenerLotesPT=db.collection("lotes_pt").orderBy("dataEnvio","desc").onSnapshot(s=>{todosLotesPT=[];let h="";s.forEach(d=>{const l={id:d.id,...d.data()};todosLotesPT.push(l);const st=l.estado==="EM_TRANSITO"?'<span class="badge-em-transito">EM TRÂNSITO P/ STP</span>':'<span class="badge-concluido">RECEBIDO</span>'; const btn=l.estado==="EM_TRANSITO"?((usuarioRole==="admin"||usuarioRole==="gerente")?`<button class="btn-success btn-acao" onclick="abrirModalRecebimentoLoteST('${l.id}')">🛬 Receber e consolidar</button>`:`<span style="color:#92400e;font-weight:700;font-size:11px;">⏳ Aguardando receção pelo ADMIN/GERENTE</span>`):"—"; const nomes=(l.itens||[]).map(i=>`${i.nome} (${i.quantidade}un)`).join(", "); const compra=Number(l.custoTotalItensEuro)||0; const frete=Number(l.custoFreteEuro)||0; const taxaRec=Number(l.taxaCambioRecebimento)||0; const acertoSTN=Number(l.acertoIncorporadoSTN)||0; const acertoEUR=taxaRec>0?acertoSTN/taxaRec:0; const custoFinal=compra+frete+acertoEUR; h+=`<tr><td><b>${l.identificador}</b></td><td><small>${nomes}</small></td><td>${compra.toFixed(2)} €</td><td>${frete.toFixed(2)} €</td><td>${l.estado==="RECEBIDO"?acertoEUR.toFixed(2)+" €":"—"}</td><td><b>${custoFinal.toFixed(2)} €</b></td><td>${st}</td><td><small>${armData(l.dataEnvio)}</small></td><td>${btn}</td></tr>`;});listaLotesEmTransitoPT.innerHTML=h||'<tr><td colspan="9" style="color:#94a3b8;">Nenhum lote enviado.</td></tr>';},e=>console.warn("Lotes PT",e));
   armIniciarListenersSolicitacoes(); armIniciarListenerHistorico();
   atualizarPagamentoCompraArmazemUI(); atualizarPagamentoFreteArmazemUI(); atualizarPagamentoAcertoArmazemUI();
@@ -14210,12 +14237,12 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 
 <style id="f6229-admin-registo-sem-compra-css">
-/* FASE 6.22.9 — a compra ao fornecedor nunca faz parte do formulário inicial. */
+/* FASE 6.23.1 — a compra ao fornecedor nunca faz parte do formulário inicial. */
 #f622CompraFinanceiraAdmin{display:none !important;}
 </style>
 <script>
 /* =========================================================================
-   FASE 6.22.9 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
+   FASE 6.23.1 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
    - ADMIN regista diretamente a encomenda oficial, sem autoaprovação.
    - Nenhuma conta da Tesouraria é debitada no registo.
    - A encomenda nasce AGUARDANDO_COMPRA.
@@ -14310,7 +14337,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       aplicarUI6229();
       alert("Encomenda registada com sucesso.\n\nEstado: AGUARDANDO COMPRA.\nNenhuma conta da Tesouraria foi debitada. Quando concluir a negociação com o fornecedor, use 🛒 Registar Compra.");
     }catch(e){
-      console.error("FASE 6.22.9 — registo ADMIN sem compra:",e);
+      console.error("FASE 6.23.1 — registo ADMIN sem compra:",e);
       alert("Erro ao registar encomenda: "+(e.message||e));
     }finally{
       if(btn)btn.disabled=false;
@@ -14320,6 +14347,284 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   document.addEventListener("DOMContentLoaded",()=>setTimeout(aplicarUI6229,500));
   setTimeout(aplicarUI6229,1200);
 })();
+</script>
+
+
+<script>
+/* =========================================================================
+   FASE 6.23.1 — VARIANTES DE PRODUTO
+   Camada aditiva e retrocompatível. Não altera fórmulas financeiras.
+   Produto simples continua exatamente suportado.
+   ========================================================================= */
+let v6230ProdutoVarianteAtual = null;
+
+function v6230Esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+function v6230Id(){return "v_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,7);}
+function v6230NormalizarVariantes(arr){
+  return (Array.isArray(arr)?arr:[]).map(v=>({
+    id:String(v.id||v6230Id()),
+    cor:String(v.cor||"").trim(),
+    opcao:String(v.opcao||v.tamanho||"").trim(),
+    quantidade:Math.max(0,Math.floor(Number(v.quantidade)||0)),
+    ativo:v.ativo!==false
+  })).filter(v=>v.cor||v.opcao);
+}
+function v6230TotalVariantes(arr){return v6230NormalizarVariantes(arr).reduce((s,v)=>s+(Number(v.quantidade)||0),0);}
+function v6230Rotulo(v){return [v.cor,v.opcao].filter(Boolean).join(" / ")||"Variante";}
+function v6230ResumoVariantes(arr){
+  const a=v6230NormalizarVariantes(arr);
+  return a.length?a.map(v=>`${v6230Rotulo(v)}: ${v.quantidade}`).join(" · "):"";
+}
+function v6230MesclarVariantes(base, entrada){
+  const out=v6230NormalizarVariantes(base).map(v=>({...v}));
+  for(const x of v6230NormalizarVariantes(entrada)){
+    const k=(x.cor+"|"+x.opcao).toLowerCase();
+    const ach=out.find(v=>(v.cor+"|"+v.opcao).toLowerCase()===k);
+    if(ach) ach.quantidade=(Number(ach.quantidade)||0)+(Number(x.quantidade)||0);
+    else out.push({...x,id:x.id||v6230Id()});
+  }
+  return out;
+}
+function v6230LinhaHtml(prefix,v={}){
+  return `<div class="${prefix}-var-row" data-id="${v6230Esc(v.id||v6230Id())}" style="display:grid;grid-template-columns:1fr 1fr 110px 44px;gap:7px;margin-bottom:7px;">
+    <input class="${prefix}-var-cor" placeholder="Cor (ex: Preto)" value="${v6230Esc(v.cor||"")}">
+    <input class="${prefix}-var-opcao" placeholder="Tamanho / Opção (ex: XL, 7, 256 GB)" value="${v6230Esc(v.opcao||v.tamanho||"")}">
+    <input class="${prefix}-var-qtd" type="number" min="0" step="1" placeholder="Qtd" value="${Number(v.quantidade)||0}" oninput="${prefix==='pt'?'v6230AtualizarResumoPT()':'v6230SincronizarEstoqueProduto()'}">
+    <button type="button" class="btn-danger" onclick="this.parentElement.remove();${prefix==='pt'?'v6230AtualizarResumoPT()':'v6230SincronizarEstoqueProduto()'}">×</button>
+  </div>`;
+}
+function v6230LerLinhas(prefix){
+  return [...document.querySelectorAll(`.${prefix}-var-row`)].map(r=>({
+    id:r.dataset.id||v6230Id(),
+    cor:r.querySelector(`.${prefix}-var-cor`)?.value.trim()||"",
+    opcao:r.querySelector(`.${prefix}-var-opcao`)?.value.trim()||"",
+    quantidade:Math.max(0,Math.floor(Number(r.querySelector(`.${prefix}-var-qtd`)?.value)||0)),
+    ativo:true
+  })).filter(v=>v.cor||v.opcao);
+}
+function v6230AdicionarLinhaProduto(v={}){document.getElementById("produtoVariantesLinhas")?.insertAdjacentHTML("beforeend",v6230LinhaHtml("produto",v));v6230SincronizarEstoqueProduto();}
+function v6230AlternarVariantesProduto(){
+  const on=!!document.getElementById("produtoTemVariantes")?.checked;
+  document.getElementById("produtoVariantesArea")?.classList.toggle("hidden",!on);
+  const est=document.getElementById("estoque"); if(est){est.readOnly=on;est.style.background=on?"#f1f5f9":"";}
+  if(on && !document.querySelector(".produto-var-row")) v6230AdicionarLinhaProduto();
+  v6230SincronizarEstoqueProduto();
+}
+function v6230SincronizarEstoqueProduto(){
+  if(!document.getElementById("produtoTemVariantes")?.checked)return;
+  const est=document.getElementById("estoque"); if(est) est.value=String(v6230TotalVariantes(v6230LerLinhas("produto")));
+}
+function v6230AdicionarLinhaPT(v={}){document.getElementById("ptVariantesLinhas")?.insertAdjacentHTML("beforeend",v6230LinhaHtml("pt",v));v6230AtualizarResumoPT();}
+function v6230AlternarVariantesPT(){
+  const on=!!document.getElementById("ptTemVariantes")?.checked;
+  document.getElementById("ptVariantesArea")?.classList.toggle("hidden",!on);
+  if(on&&!document.querySelector(".pt-var-row"))v6230AdicionarLinhaPT();
+  v6230AtualizarResumoPT();
+}
+function v6230AtualizarResumoPT(){
+  const total=v6230TotalVariantes(v6230LerLinhas("pt")), esperado=Number(document.getElementById("ptQtdItem")?.value)||0;
+  const el=document.getElementById("ptVariantesResumo"); if(el)el.innerHTML=`Variantes: <b>${total}</b> un · Quantidade da compra: <b>${esperado}</b> un ${total===esperado?"✅":"⚠️"}`;
+}
+document.getElementById("ptQtdItem")?.addEventListener("input",v6230AtualizarResumoPT);
+
+function v6230ValidarVariantes(arr,total){
+  const a=v6230NormalizarVariantes(arr);
+  if(!a.length)return {ok:false,msg:"Adicione pelo menos uma variante."};
+  if(a.some(v=>!v.cor&&!v.opcao))return {ok:false,msg:"Cada variante deve ter Cor ou Tamanho/Opção."};
+  const keys=a.map(v=>(v.cor+"|"+v.opcao).toLowerCase());
+  if(new Set(keys).size!==keys.length)return {ok:false,msg:"Existem variantes repetidas."};
+  const soma=v6230TotalVariantes(a);
+  if(soma!==Math.floor(Number(total)||0))return {ok:false,msg:`A soma das variantes (${soma}) deve ser igual à quantidade total (${Math.floor(Number(total)||0)}).`};
+  return {ok:true};
+}
+
+// Cadastro/edição de produto — preserva todas as permissões anteriores.
+salvarProduto = async function(){
+  const admin=usuarioRole==="admin", estoqueRole=usuarioRole==="estoque";
+  if(!admin&&!estoqueRole)return alert("Acesso negado: este perfil não pode cadastrar produtos.");
+  const n=nome.value.trim(),bc=barcodeInput.value.trim(),cat=categoriaInput.value.trim()||"Geral";
+  let est=Number(estoque.value)||0; const min=Number(minimo.value)||0,comp=admin?(Number(compra.value)||0):0,vend=Number(venda.value)||0,imgBase64=fotoBase64.value||"";
+  const tem=!!document.getElementById("produtoTemVariantes")?.checked;
+  const variantes=tem?v6230NormalizarVariantes(v6230LerLinhas("produto")):[];
+  if(tem){est=v6230TotalVariantes(variantes);const val=v6230ValidarVariantes(variantes,est);if(!val.ok)return alert(val.msg);}
+  if(!n||vend<=0)return alert("Preencha o nome do produto e o preço de venda!");
+  if(est<0||min<0||comp<0)return alert("Estoque, mínimo e custo não podem ser negativos.");
+  const payload={nome:n,barcode:bc,categoria:cat,estoque:est,minimo:min,venda:vend,foto:imgBase64,temVariantes:tem,variantes};
+  if(admin)payload.compra=comp; else if(!editandoProdutoId)payload.compra=0;
+  try{
+    if(editandoProdutoId){
+      if(!admin)return alert("Apenas o Administrador pode editar o cadastro completo de um produto existente.");
+      const atual=todosProdutos.find(x=>x.id===editandoProdutoId);
+      if(atual?.temVariantes){
+        const antigos=v6230NormalizarVariantes(atual.variantes);
+        for(const av of antigos){
+          if((Number(av.quantidade)||0)!==0 && !variantes.some(nv=>nv.id===av.id))
+            return alert(`A variante "${v6230Rotulo(av)}" possui histórico/stock e não deve ser apagada. Mantenha-a com quantidade 0 ou desative-a futuramente.`);
+        }
+      }
+      await db.collection("produtos").doc(editandoProdutoId).update(payload);
+      cancelarEdicaoProduto(); alert("Produto atualizado com sucesso!");
+    }else{
+      await db.collection("produtos").add(payload); cancelarEdicaoProduto();
+      alert(estoqueRole?"Produto cadastrado sem custo de compra. O custo financeiro fica sob controlo do Administrador.":"Produto cadastrado com sucesso!");
+    }
+  }catch(err){alert("Erro ao guardar produto: "+(err.message||err));}
+};
+
+const v6230EditarProdutoBase=editarProduto;
+editarProduto=function(id){
+  v6230EditarProdutoBase(id);
+  const p=todosProdutos.find(x=>x.id===id); if(!p)return;
+  const tem=!!p.temVariantes&&Array.isArray(p.variantes)&&p.variantes.length>0;
+  const chk=document.getElementById("produtoTemVariantes"); if(chk)chk.checked=tem;
+  const box=document.getElementById("produtoVariantesLinhas"); if(box){box.innerHTML=""; if(tem)v6230NormalizarVariantes(p.variantes).forEach(v=>v6230AdicionarLinhaProduto(v));}
+  v6230AlternarVariantesProduto();
+};
+const v6230CancelarProdutoBase=cancelarEdicaoProduto;
+cancelarEdicaoProduto=function(){
+  v6230CancelarProdutoBase();
+  const chk=document.getElementById("produtoTemVariantes");if(chk)chk.checked=false;
+  const box=document.getElementById("produtoVariantesLinhas");if(box)box.innerHTML="";
+  v6230AlternarVariantesProduto();
+};
+
+// POS: seleção obrigatória da variante quando aplicável.
+const v6230AbrirVendaBase=abrirModalVenda;
+abrirModalVenda=function(id){
+  v6230AbrirVendaBase(id);
+  const p=todosProdutos.find(x=>x.id===id); if(!p||document.getElementById("modalVenda")?.classList.contains("hidden"))return;
+  const vars=v6230NormalizarVariantes(p.variantes).filter(v=>v.ativo!==false&&(Number(v.quantidade)||0)>0);
+  const box=document.getElementById("modalVarianteBox"),sel=document.getElementById("modalVarianteVenda");
+  if(p.temVariantes&&vars.length){
+    box?.classList.remove("hidden");
+    if(sel){sel.innerHTML=vars.map(v=>`<option value="${v6230Esc(v.id)}">${v6230Esc(v6230Rotulo(v))} — ${v.quantidade} un</option>`).join("");}
+    v6230AtualizarVariantePOS();
+  }else{box?.classList.add("hidden");if(sel)sel.innerHTML="";v6230ProdutoVarianteAtual=null;}
+};
+function v6230AtualizarVariantePOS(){
+  if(!produtoVendaAtual)return;
+  const id=document.getElementById("modalVarianteVenda")?.value;
+  const v=v6230NormalizarVariantes(produtoVendaAtual.variantes).find(x=>x.id===id)||null;
+  v6230ProdutoVarianteAtual=v;
+  const q=Number(v?.quantidade)||0;
+  const inp=document.getElementById("modalProdQtd");if(inp){inp.max=String(q);if(Number(inp.value)>q)inp.value=Math.max(1,q);}
+  const el=document.getElementById("modalVarianteDisponivel");if(el)el.textContent=v?`Disponível nesta variante: ${q} un`:"";
+  try{calcularTotalVendaModal();}catch(e){}
+}
+const v6230FecharVendaBase=fecharModalVenda;
+fecharModalVenda=function(){v6230ProdutoVarianteAtual=null;v6230FecharVendaBase();};
+
+// Venda atómica: baixa variante + total no mesmo documento e grava variante no movimento.
+confirmarVendaModal = async function(){
+  if(!produtoVendaAtual)return;
+  const btn=document.getElementById("btnConfirmarVenda");btn.disabled=true;
+  try{
+    const user=auth.currentUser;if(!user)throw new Error("Sessão expirada.");
+    const produtoId=produtoVendaAtual.id,produtoNome=produtoVendaAtual.nome||"Produto",precoUnit=Number(produtoVendaAtual.venda)||0;
+    const qtd=Number(modalProdQtd.value)||0,forma=modalFormaPagamento.value,recebido=Number(modalValorRecebido.value)||0,cliente=modalNomeCliente.value.trim()||"Consumidor Final";
+    if(qtd<=0)throw new Error("Informe uma quantidade válida.");
+    const caixaId=caixaAtualObj?.id||null;if(!caixaId)throw new Error("É obrigatório ter um Caixa/Turno aberto para vender. Abra o caixa antes de confirmar a venda.");
+    const total=qtd*precoUnit;if(forma==="Dinheiro"&&recebido<total)throw new Error(`Valor recebido (${recebido} Db) é menor que o total (${total} Db).`);
+    const troco=forma==="Dinheiro"?recebido-total:0;
+    const prodRef=db.collection("produtos").doc(produtoId);
+    let varianteRecibo=null;
+    await db.runTransaction(async tx=>{
+      const caixaRef=db.collection("caixas").doc(caixaId),caixaDoc=await tx.get(caixaRef);
+      if(!caixaDoc.exists||caixaDoc.data().estado!=="aberto")throw new Error("O caixa já está fechado.");
+      if(usuarioRole!=="admin"&&caixaDoc.data().uid!==user.uid)throw new Error("O caixa ativo não pertence ao usuário atual.");
+      const prodDoc=await tx.get(prodRef);if(!prodDoc.exists)throw new Error("Produto não existe mais no estoque.");
+      const p=prodDoc.data(),estoqueAtual=Number(p.estoque)||0;if(estoqueAtual<qtd)throw new Error(`Estoque insuficiente! Restam apenas ${estoqueAtual} unidades.`);
+      let upd={estoque:estoqueAtual-qtd}, variantePayload={};
+      if(p.temVariantes){
+        const vars=v6230NormalizarVariantes(p.variantes),idSel=document.getElementById("modalVarianteVenda")?.value;
+        const idx=vars.findIndex(v=>v.id===idSel);if(idx<0)throw new Error("Selecione a variante vendida.");
+        if((Number(vars[idx].quantidade)||0)<qtd)throw new Error(`Stock insuficiente na variante ${v6230Rotulo(vars[idx])}. Disponível: ${vars[idx].quantidade}.`);
+        vars[idx].quantidade-=qtd;upd.variantes=vars;varianteRecibo={id:vars[idx].id,cor:vars[idx].cor,opcao:vars[idx].opcao};
+        variantePayload={varianteId:vars[idx].id,varianteCor:vars[idx].cor,varianteOpcao:vars[idx].opcao,variante:v6230Rotulo(vars[idx])};
+      }
+      tx.update(prodRef,upd);
+      tx.set(db.collection("movimentacoes").doc(),{produto:produtoNome,produtoId,tipo:"saida",quantidade:qtd,valor:total,precoUnitarioVenda:precoUnit,custoUnitarioVenda:Number(p.compra)||0,custoTotalVenda:(Number(p.compra)||0)*qtd,formaPagamento:forma,cliente,usuario:user.email,nomeUsuario:usuarioNome||"Funcionário",uid:user.uid,role:usuarioRole,data:new Date(),caixaId,...variantePayload});
+    });
+    const itemRec=varianteRecibo?`${produtoNome} — ${v6230Rotulo(varianteRecibo)}`:produtoNome;
+    const recibo={data:new Date().toLocaleString("pt-PT"),cliente,vendedor:usuarioNome||"Funcionário",item:itemRec,qtd,precoUnit,total,pagamento:forma,troco};
+    fecharModalVenda();emitirReciboComprovativo(recibo);
+  }catch(e){alert("Erro ao processar venda: "+(e.message||e));}
+  finally{btn.disabled=false;}
+};
+
+// Armazém PT — compra preserva composição das variantes.
+const v6230CadastrarPTBase=cadastrarItemSoltoPT;
+cadastrarItemSoltoPT=async function(){
+  const tem=!!document.getElementById("ptTemVariantes")?.checked;
+  const vars=tem?v6230NormalizarVariantes(v6230LerLinhas("pt")):[];
+  const qtd=Number(document.getElementById("ptQtdItem")?.value)||0;
+  if(tem){const val=v6230ValidarVariantes(vars,qtd);if(!val.ok)return alert(val.msg);}
+  window.v6230VariantesPTPendentes=vars;
+  return v6230CadastrarPTBase();
+};
+
+// Interceta writes do fluxo de compra PT sem tocar na lógica financeira.
+const v6230CollectionBase=db.collection.bind(db);
+function v6230ComVariantes(data){
+  const vars=window.v6230VariantesPTPendentes;
+  if(Array.isArray(vars)&&vars.length&&data&&data.nome===document.getElementById("ptNomeItem")?.value.trim()&&Number(data.quantidade)===Number(document.getElementById("ptQtdItem")?.value)){
+    return {...data,temVariantes:true,variantes:v6230NormalizarVariantes(vars)};
+  }
+  return data;
+}
+
+// Aprovação de compra do ESTOQUE: copia variantes da solicitação para o item oficial.
+const v6230AprovarCompraBase=aprovarCompraArmazem;
+aprovarCompraArmazem=async function(id){
+  const r=solicitacoesCompraArmazem.find(x=>x.id===id);
+  window.v6230AprovacaoVariantes=r?.variantes||[];
+  return v6230AprovarCompraBase(id);
+};
+
+// Lote mantém variantes até São Tomé.
+armItensLoteComRateio=function(itens,freteEuro){
+  const total=itens.reduce((s,i)=>s+(Number(i.quantidade)||0)*(Number(i.custoEuroUnitario)||Number(i.custoEuroUnitarioBase)||0),0);
+  return itens.map(item=>{
+    const base=Number(item.custoEuroUnitario)||Number(item.custoEuroUnitarioBase)||0,subtotal=(Number(item.quantidade)||0)*base;
+    const proporcao=total>0?subtotal/total:1/Math.max(1,itens.length),freteTotal=Number(freteEuro||0)*proporcao;
+    const precoVendaPretendido=Number(document.querySelector(`.preco-venda-lote[data-id="${item.id}"]`)?.value)||Number(item.precoVendaPretendido)||0;
+    return {idOriginalPT:item.id,nome:item.nome,categoria:item.categoria,quantidade:Number(item.quantidade)||0,custoEuroUnitarioBase:base,freteAlocadoItemTotal:freteTotal,custoFinalUnitarioEuro:base+(freteTotal/Math.max(1,Number(item.quantidade)||1)),precoVendaPretendido,temVariantes:!!item.temVariantes,variantes:v6230NormalizarVariantes(item.variantes)};
+  });
+};
+
+// Stock: acrescenta resumo das variantes junto ao nome sem alterar colunas/custos.
+const v6230RenderEstoqueBase=renderizarTabelaEstoque;
+renderizarTabelaEstoque=function(){
+  v6230RenderEstoqueBase();
+  const rows=document.querySelectorAll("#lista tr");
+  rows.forEach((tr,idx)=>{
+    const cells=tr.querySelectorAll("td"); if(cells.length<2)return;
+    const nome=cells[1].querySelector("b")?.textContent||"";
+    const p=todosProdutos.find(x=>x.nome===nome);
+    if(p?.temVariantes&&Array.isArray(p.variantes)){
+      const resumo=v6230ResumoVariantes(p.variantes);
+      if(resumo&&!cells[1].querySelector(".v6230-resumo"))cells[1].insertAdjacentHTML("beforeend",`<div class="v6230-resumo" style="font-size:10px;color:#64748b;margin-top:4px;max-width:260px;">${v6230Esc(resumo)}</div>`);
+    }
+  });
+};
+
+// Alertas: variantes zeradas/baixas ficam visíveis dentro da Central sem substituir alertas atuais.
+const v6230NotifBase=construirNotificacoesAdmin;
+construirNotificacoesAdmin=function(){
+  const n=v6230NotifBase();
+  if(usuarioRole!=="admin")return n;
+  for(const p of (todosProdutos||[])){
+    if(!p.temVariantes)continue;
+    for(const v of v6230NormalizarVariantes(p.variantes)){
+      if(v.ativo!==false&&(Number(v.quantidade)||0)<=0)n.push({tipo:"ALERTA",modulo:"Estoque",titulo:"Variante esgotada",mensagem:`${p.nome} — ${v6230Rotulo(v)}: 0 un`,pagina:"paginaPrincipal",ref:`${p.id}:${v.id}`});
+    }
+  }
+  return n;
+};
+
+document.addEventListener("DOMContentLoaded",()=>{
+  setTimeout(()=>{v6230AlternarVariantesProduto();v6230AlternarVariantesPT();},700);
+});
 </script>
 
 </body>
