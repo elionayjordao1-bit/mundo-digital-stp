@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.27-018">
+<meta name="mdstp-build" content="2026.09.27-019">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -714,12 +714,12 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
     <!-- ESTOQUE GERAL STP -->
     <div class="card hidden" id="cardEstoque">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <h3 style="margin:0;">📋 Estoque Geral (São Tomé)</h3>
-        <div id="f6241GestaoDescontosDashboard" class="hidden" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-left:auto;">
-          <button id="f6240BtnAprovacoes" class="btn-secondary" onclick="f6240AbrirAprovacoes()" style="padding:8px 12px;min-height:36px;">🏷️ Descontos <span id="f6240PendentesBadge"></span></button>
-          <button id="f6240BtnCupoes" class="btn-secondary" onclick="f6240AbrirCupoes()" style="padding:8px 12px;min-height:36px;">🎟️ Cupões</button>
-        </div>
+      </div>
+      <div id="f6241GestaoDescontosDashboard" class="hidden" style="display:flex;gap:7px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin:8px 12% 8px 0;">
+        <button id="f6240BtnAprovacoes" class="btn-secondary" onclick="f6240AbrirAprovacoes()" style="padding:7px 11px;min-height:34px;font-size:13px;">🏷️ Descontos <span id="f6240PendentesBadge"></span></button>
+        <button id="f6240BtnCupoes" class="btn-secondary" onclick="f6240AbrirCupoes()" style="padding:7px 11px;min-height:34px;font-size:13px;">🎟️ Cupões</button>
       </div>
       <div class="search-container">
         <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar por nome ou Código de Barras..." oninput="mudarFiltroOuBusca()">
