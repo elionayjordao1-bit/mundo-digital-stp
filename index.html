@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.27-017">
+<meta name="mdstp-build" content="2026.09.27-018">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -714,7 +714,13 @@ tr:nth-child(even) { background-color: #f8fafc; }
 
     <!-- ESTOQUE GERAL STP -->
     <div class="card hidden" id="cardEstoque">
-      <h3>📋 Estoque Geral (São Tomé)</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <h3 style="margin:0;">📋 Estoque Geral (São Tomé)</h3>
+        <div id="f6241GestaoDescontosDashboard" class="hidden" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-left:auto;">
+          <button id="f6240BtnAprovacoes" class="btn-secondary" onclick="f6240AbrirAprovacoes()" style="padding:8px 12px;min-height:36px;">🏷️ Descontos <span id="f6240PendentesBadge"></span></button>
+          <button id="f6240BtnCupoes" class="btn-secondary" onclick="f6240AbrirCupoes()" style="padding:8px 12px;min-height:36px;">🎟️ Cupões</button>
+        </div>
+      </div>
       <div class="search-container">
         <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Pesquisar por nome ou Código de Barras..." oninput="mudarFiltroOuBusca()">
         <select id="selectCategoriaFiltro" onchange="mudarFiltroOuBusca()" style="padding: 10px; font-size: 14px; width: auto;">
@@ -2236,14 +2242,16 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <label style="font-size: 12px; font-weight:600;">Nome do Cliente (Opcional):</label>
     <input type="text" id="modalNomeCliente" placeholder="Ex: João Silva" style="margin-bottom: 10px;">
 
-    <div id="f6240DescontoBox" style="border:1px solid #cbd5e1;background:#f8fafc;border-radius:9px;padding:10px;margin-bottom:12px;">
-      <div style="font-weight:800;margin-bottom:7px;">🏷️ Desconto / Cupão</div>
-      <div id="f6240DescontoEstado" style="font-size:12px;color:#64748b;margin-bottom:8px;">Sem desconto aplicado.</div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap;">
-        <button type="button" id="f6240BtnSolicitar" class="btn-secondary" onclick="f6240AbrirSolicitacao()">🏷️ Solicitar desconto</button>
-        <input id="f6240CupaoCodigo" type="text" placeholder="Código do cupão" style="flex:1;min-width:135px;margin:0;text-transform:uppercase;">
-        <button type="button" class="btn-secondary" onclick="f6240AplicarCupao()">🎟️ Aplicar cupão</button>
-        <button type="button" id="f6240BtnRemover" class="btn-danger hidden" onclick="f6240RemoverBeneficio()">Remover</button>
+    <div id="f6240DescontoBox" style="margin-bottom:12px;">
+      <button type="button" id="f6241BtnAbrirBeneficios" class="btn-secondary" onclick="f6241ToggleBeneficios()" style="width:100%;padding:9px 12px;min-height:38px;font-weight:800;">🏷️ Desconto / Cupão</button>
+      <div id="f6241BeneficiosConteudo" class="hidden" style="border:1px solid #cbd5e1;border-top:0;background:#f8fafc;border-radius:0 0 9px 9px;padding:10px;">
+        <div id="f6240DescontoEstado" style="font-size:12px;color:#64748b;margin-bottom:8px;">Sem desconto aplicado.</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+          <button type="button" id="f6240BtnSolicitar" class="btn-secondary" onclick="f6240AbrirSolicitacao()">🏷️ Solicitar desconto</button>
+          <input id="f6240CupaoCodigo" type="text" placeholder="Código do cupão" style="flex:1;min-width:135px;margin:0;text-transform:uppercase;">
+          <button type="button" class="btn-secondary" onclick="f6240AplicarCupao()">🎟️ Aplicar cupão</button>
+          <button type="button" id="f6240BtnRemover" class="btn-danger hidden" onclick="f6240RemoverBeneficio()">Remover</button>
+        </div>
       </div>
     </div>
 
@@ -11909,7 +11917,7 @@ function armIniciarListenerHistorico(){
 }
 function carregarArmazemPTTresPassos(){
   if(!usuarioPodeArmazemPT())return;
-  // 6.24.0: Armazém não depende de abrir Financeiro para conhecer o saldo atual.
+  // 6.24.1: Armazém não depende de abrir Financeiro para conhecer o saldo atual.
   try{ iniciarListenerTesouraria(); }catch(e){ console.warn("Tesouraria no Armazém:",e); }
   armAtualizarTesouraria6233().catch(e=>console.warn("Atualização de saldo no Armazém:",e));
   if(listenerArmazemPT)listenerArmazemPT(); if(listenerLotesPT)listenerLotesPT();
@@ -14366,12 +14374,12 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 
 <style id="f6229-admin-registo-sem-compra-css">
-/* FASE 6.24.0 — a compra ao fornecedor nunca faz parte do formulário inicial. */
+/* FASE 6.24.1 — a compra ao fornecedor nunca faz parte do formulário inicial. */
 #f622CompraFinanceiraAdmin{display:none !important;}
 </style>
 <script>
 /* =========================================================================
-   FASE 6.24.0 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
+   FASE 6.24.1 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
    - ADMIN regista diretamente a encomenda oficial, sem autoaprovação.
    - Nenhuma conta da Tesouraria é debitada no registo.
    - A encomenda nasce AGUARDANDO_COMPRA.
@@ -14466,7 +14474,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       aplicarUI6229();
       alert("Encomenda registada com sucesso.\n\nEstado: AGUARDANDO COMPRA.\nNenhuma conta da Tesouraria foi debitada. Quando concluir a negociação com o fornecedor, use 🛒 Registar Compra.");
     }catch(e){
-      console.error("FASE 6.24.0 — registo ADMIN sem compra:",e);
+      console.error("FASE 6.24.1 — registo ADMIN sem compra:",e);
       alert("Erro ao registar encomenda: "+(e.message||e));
     }finally{
       if(btn)btn.disabled=false;
@@ -14481,7 +14489,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 <script>
 /* =========================================================================
-   FASE 6.24.0 — VARIANTES DE PRODUTO
+   FASE 6.24.1 — VARIANTES DE PRODUTO
    Camada aditiva e retrocompatível. Não altera fórmulas financeiras.
    Produto simples continua exatamente suportado.
    ========================================================================= */
@@ -14827,7 +14835,7 @@ const f6240AbrirVendaOriginal=abrirModalVenda;
 abrirModalVenda=function(id){
   f6240Reset();
   f6240AbrirVendaOriginal(id);
-  setTimeout(()=>{f6240ConfigPOS();f6240RenderBeneficio();},0);
+  setTimeout(()=>{f6240ConfigPOS();f6240RenderBeneficio();f6241FecharBeneficiosPOS();},0);
 };
 function f6240ConfigPOS(){
   const b=document.getElementById("f6240BtnSolicitar");
@@ -15006,9 +15014,21 @@ confirmarVendaModal=async function(){
 };
 
 function f6240AplicarUI(){
-  const a=document.getElementById("f6240GestaoAtalhos"),c=document.getElementById("f6240BtnCupoes");
+  const a=document.getElementById("f6241GestaoDescontosDashboard"),c=document.getElementById("f6240BtnCupoes");
   if(a){a.classList.toggle("hidden",!f6240Gestor());a.style.display=f6240Gestor()?"flex":"none";}
   if(c)c.style.display=usuarioRole==="admin"?"inline-block":"none";
+}
+function f6241ToggleBeneficios(forceOpen){
+  const area=document.getElementById("f6241BeneficiosConteudo"),btn=document.getElementById("f6241BtnAbrirBeneficios");
+  if(!area)return;
+  const abrir=forceOpen===true ? true : area.classList.contains("hidden");
+  if(abrir){area.classList.remove("hidden");if(btn)btn.innerHTML='🏷️ Desconto / Cupão <span style="font-size:11px;opacity:.75;">▲</span>';}
+  else{area.classList.add("hidden");if(btn)btn.innerHTML="🏷️ Desconto / Cupão";}
+}
+function f6241FecharBeneficiosPOS(){
+  const area=document.getElementById("f6241BeneficiosConteudo"),btn=document.getElementById("f6241BtnAbrirBeneficios");
+  if(area)area.classList.add("hidden");
+  if(btn)btn.innerHTML="🏷️ Desconto / Cupão";
 }
 const f6240SegOriginal=typeof aplicarSegurancaInterface64==="function"?aplicarSegurancaInterface64:null;
 if(f6240SegOriginal)aplicarSegurancaInterface64=function(){const r=f6240SegOriginal.apply(this,arguments);setTimeout(()=>{f6240AplicarUI();f6240Ouvir();},0);return r;};
