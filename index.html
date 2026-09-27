@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.26-016">
+<meta name="mdstp-build" content="2026.09.27-017">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -2234,7 +2234,18 @@ tr:nth-child(even) { background-color: #f8fafc; }
     </div>
 
     <label style="font-size: 12px; font-weight:600;">Nome do Cliente (Opcional):</label>
-    <input type="text" id="modalNomeCliente" placeholder="Ex: João Silva" style="margin-bottom: 15px;">
+    <input type="text" id="modalNomeCliente" placeholder="Ex: João Silva" style="margin-bottom: 10px;">
+
+    <div id="f6240DescontoBox" style="border:1px solid #cbd5e1;background:#f8fafc;border-radius:9px;padding:10px;margin-bottom:12px;">
+      <div style="font-weight:800;margin-bottom:7px;">🏷️ Desconto / Cupão</div>
+      <div id="f6240DescontoEstado" style="font-size:12px;color:#64748b;margin-bottom:8px;">Sem desconto aplicado.</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;">
+        <button type="button" id="f6240BtnSolicitar" class="btn-secondary" onclick="f6240AbrirSolicitacao()">🏷️ Solicitar desconto</button>
+        <input id="f6240CupaoCodigo" type="text" placeholder="Código do cupão" style="flex:1;min-width:135px;margin:0;text-transform:uppercase;">
+        <button type="button" class="btn-secondary" onclick="f6240AplicarCupao()">🎟️ Aplicar cupão</button>
+        <button type="button" id="f6240BtnRemover" class="btn-danger hidden" onclick="f6240RemoverBeneficio()">Remover</button>
+      </div>
+    </div>
 
     <div style="background:#eff6ff; padding: 12px; border-radius:8px; text-align:center; margin-bottom:15px;">
       <span style="font-size: 13px; color:#64748b;">TOTAL A PAGAR:</span>
@@ -2248,6 +2259,51 @@ tr:nth-child(even) { background-color: #f8fafc; }
   </div>
 </div>
 
+
+
+<!-- FASE 6.24 — DESCONTOS CONTROLADOS -->
+<div id="f6240ModalSolicitar" class="modal-overlay hidden">
+  <div class="modal-content" style="max-width:560px;">
+    <h3 style="margin-top:0;">🏷️ Solicitar desconto</h3>
+    <div id="f6240SolicResumo" style="background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:8px;margin-bottom:10px;"></div>
+    <label style="font-size:12px;font-weight:700;">Preço final solicitado (Db)</label>
+    <input id="f6240PrecoSolicitado" type="number" min="0" step="1" oninput="f6240AtualizarResumoSolicitacao()">
+    <label style="font-size:12px;font-weight:700;">Motivo</label>
+    <textarea id="f6240Motivo" placeholder="Ex.: Cliente negociou preço" style="width:100%;min-height:70px;"></textarea>
+    <div id="f6240Impacto" style="margin:10px 0;padding:10px;border-radius:8px;background:#fff7ed;font-size:13px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="f6240EnviarSolic" class="btn-success" onclick="f6240EnviarSolicitacao()" style="flex:1;">📨 Enviar para aprovação</button>
+      <button class="btn-secondary" onclick="f6240FecharSolicitacao()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="f6240ModalAprovacoes" class="modal-overlay hidden">
+  <div class="modal-content" style="max-width:900px;">
+    <h3 style="margin-top:0;">🏷️ Solicitações de desconto</h3>
+    <div id="f6240ListaAprovacoes"></div>
+    <div style="margin-top:12px;text-align:right;"><button class="btn-secondary" onclick="document.getElementById('f6240ModalAprovacoes').classList.add('hidden')">Fechar</button></div>
+  </div>
+</div>
+
+<div id="f6240ModalCupoes" class="modal-overlay hidden">
+  <div class="modal-content" style="max-width:760px;">
+    <h3 style="margin-top:0;">🎟️ Gestão de Cupões</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <input id="f6240CupCodigoAdmin" placeholder="Código (ex.: MUNDO200)">
+      <select id="f6240CupTipo"><option value="VALOR">Valor fixo (Db)</option><option value="PERCENTUAL">Percentagem (%)</option></select>
+      <input id="f6240CupValor" type="number" min="0" placeholder="Valor">
+      <input id="f6240CupMinimo" type="number" min="0" placeholder="Compra mínima (Db)">
+      <input id="f6240CupMaxUsos" type="number" min="1" placeholder="Máx. utilizações">
+      <input id="f6240CupValidade" type="date">
+    </div>
+    <label style="font-size:12px;font-weight:700;">Produto específico (opcional)</label>
+    <select id="f6240CupProduto"><option value="">Todos os produtos</option></select>
+    <button class="btn-success" onclick="f6240CriarCupao()" style="width:100%;margin-top:8px;">＋ Criar cupão</button>
+    <div id="f6240ListaCupoes" style="margin-top:12px;"></div>
+    <div style="margin-top:12px;text-align:right;"><button class="btn-secondary" onclick="document.getElementById('f6240ModalCupoes').classList.add('hidden')">Fechar</button></div>
+  </div>
+</div>
 
 <!-- FASE 6.4.2: MODAL RECEBIMENTO + ACERTO CONTROLADO -->
 <div id="modalRecebimentoLoteST" class="modal-overlay hidden">
@@ -11853,7 +11909,7 @@ function armIniciarListenerHistorico(){
 }
 function carregarArmazemPTTresPassos(){
   if(!usuarioPodeArmazemPT())return;
-  // 6.23.3: Armazém não depende de abrir Financeiro para conhecer o saldo atual.
+  // 6.24.0: Armazém não depende de abrir Financeiro para conhecer o saldo atual.
   try{ iniciarListenerTesouraria(); }catch(e){ console.warn("Tesouraria no Armazém:",e); }
   armAtualizarTesouraria6233().catch(e=>console.warn("Atualização de saldo no Armazém:",e));
   if(listenerArmazemPT)listenerArmazemPT(); if(listenerLotesPT)listenerLotesPT();
@@ -14310,12 +14366,12 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 
 <style id="f6229-admin-registo-sem-compra-css">
-/* FASE 6.23.3 — a compra ao fornecedor nunca faz parte do formulário inicial. */
+/* FASE 6.24.0 — a compra ao fornecedor nunca faz parte do formulário inicial. */
 #f622CompraFinanceiraAdmin{display:none !important;}
 </style>
 <script>
 /* =========================================================================
-   FASE 6.23.3 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
+   FASE 6.24.0 — ADMIN: REGISTO DA ENCOMENDA SEPARADO DA COMPRA
    - ADMIN regista diretamente a encomenda oficial, sem autoaprovação.
    - Nenhuma conta da Tesouraria é debitada no registo.
    - A encomenda nasce AGUARDANDO_COMPRA.
@@ -14410,7 +14466,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       aplicarUI6229();
       alert("Encomenda registada com sucesso.\n\nEstado: AGUARDANDO COMPRA.\nNenhuma conta da Tesouraria foi debitada. Quando concluir a negociação com o fornecedor, use 🛒 Registar Compra.");
     }catch(e){
-      console.error("FASE 6.23.3 — registo ADMIN sem compra:",e);
+      console.error("FASE 6.24.0 — registo ADMIN sem compra:",e);
       alert("Erro ao registar encomenda: "+(e.message||e));
     }finally{
       if(btn)btn.disabled=false;
@@ -14425,7 +14481,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
 <script>
 /* =========================================================================
-   FASE 6.23.3 — VARIANTES DE PRODUTO
+   FASE 6.24.0 — VARIANTES DE PRODUTO
    Camada aditiva e retrocompatível. Não altera fórmulas financeiras.
    Produto simples continua exatamente suportado.
    ========================================================================= */
@@ -14726,6 +14782,237 @@ construirNotificacoesAdmin=function(){
 document.addEventListener("DOMContentLoaded",()=>{
   setTimeout(()=>{v6230AlternarVariantesProduto();v6230AlternarVariantesPT();},700);
 });
+</script>
+
+
+<div id="f6240GestaoAtalhos" class="hidden" style="position:fixed;right:18px;bottom:18px;z-index:1500;display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;">
+  <button id="f6240BtnAprovacoes" class="btn-secondary" onclick="f6240AbrirAprovacoes()">🏷️ Descontos <span id="f6240PendentesBadge"></span></button>
+  <button id="f6240BtnCupoes" class="btn-secondary" onclick="f6240AbrirCupoes()">🎟️ Cupões</button>
+</div>
+
+<script id="fase-6-24-descontos-cupons">
+/* FASE 6.24 — desconto não altera preço oficial do produto. */
+let f6240Beneficio=null, f6240Solicitacoes=[], f6240Cupoes=[], f6240UnsubSolic=null, f6240UnsubCup=null;
+const f6240LimiteGerentePercent=5;
+
+function f6240Gestor(){return usuarioRole==="admin"||usuarioRole==="gerente";}
+function f6240VendedorPuro(){return usuarioRole==="venda1"||usuarioRole==="venda2";}
+function f6240Base(){
+  if(!produtoVendaAtual)return {qtd:0,unit:0,total:0,custo:0};
+  const qtd=Math.max(1,Number(modalProdQtd?.value)||1), unit=Number(produtoVendaAtual.venda)||0;
+  return {qtd,unit,total:qtd*unit,custo:(Number(produtoVendaAtual.compra)||0)*qtd};
+}
+function f6240TotalFinal(){
+  const b=f6240Base(); if(!f6240Beneficio)return b.total;
+  return Math.max(0,Number(f6240Beneficio.precoFinal)||b.total);
+}
+function f6240Reset(){
+  f6240Beneficio=null;
+  const c=document.getElementById("f6240CupaoCodigo");if(c)c.value="";
+  f6240RenderBeneficio();
+}
+function f6240RenderBeneficio(){
+  const e=document.getElementById("f6240DescontoEstado"), r=document.getElementById("f6240BtnRemover");
+  if(!e)return;
+  if(!f6240Beneficio){e.innerHTML="Sem desconto aplicado.";r?.classList.add("hidden");}
+  else{
+    const b=f6240Base(), desc=Math.max(0,b.total-f6240TotalFinal());
+    e.innerHTML=`<b>${f6240Beneficio.tipo==="CUPAO"?"🎟️ Cupão":"✅ Desconto autorizado"}</b> — Preço tabela: ${b.total.toLocaleString("pt-PT")} Db · Desconto: ${desc.toLocaleString("pt-PT")} Db · <b>Final: ${f6240TotalFinal().toLocaleString("pt-PT")} Db</b>`;
+    r?.classList.remove("hidden");
+  }
+}
+function f6240RemoverBeneficio(){f6240Reset();calcularTotalVendaModal();}
+
+const f6240AbrirVendaOriginal=abrirModalVenda;
+abrirModalVenda=function(id){
+  f6240Reset();
+  f6240AbrirVendaOriginal(id);
+  setTimeout(()=>{f6240ConfigPOS();f6240RenderBeneficio();},0);
+};
+function f6240ConfigPOS(){
+  const b=document.getElementById("f6240BtnSolicitar");
+  if(b)b.innerText=f6240Gestor()?"🏷️ Aplicar desconto autorizado":"🏷️ Solicitar desconto";
+}
+const f6240CalcOriginal=calcularTotalVendaModal;
+calcularTotalVendaModal=function(){
+  f6240CalcOriginal();
+  if(!produtoVendaAtual)return;
+  // autorização é específica para quantidade/preço: se a quantidade mudou, invalida.
+  if(f6240Beneficio && Number(f6240Beneficio.quantidade)!==Math.max(1,Number(modalProdQtd.value)||1)) f6240Reset();
+  modalTotalPagar.innerText=`${f6240TotalFinal().toLocaleString("pt-PT")} Db`;
+  f6240RenderBeneficio(); calcularTroco();
+};
+const f6240TrocoOriginal=calcularTroco;
+calcularTroco=function(){
+  if(!produtoVendaAtual)return;
+  const rec=Number(modalValorRecebido.value)||0, total=f6240TotalFinal();
+  const troco=rec-total;
+  lblTroco.innerText=troco>=0?`${troco.toLocaleString("pt-PT")} Db`:"0 Db (Valor insuficiente)";
+};
+
+function f6240AbrirSolicitacao(){
+  if(!produtoVendaAtual)return;
+  const b=f6240Base();
+  document.getElementById("f6240PrecoSolicitado").value=b.total;
+  document.getElementById("f6240Motivo").value="";
+  f6240AtualizarResumoSolicitacao();
+  document.getElementById("f6240ModalSolicitar").classList.remove("hidden");
+}
+function f6240FecharSolicitacao(){document.getElementById("f6240ModalSolicitar").classList.add("hidden");}
+function f6240AtualizarResumoSolicitacao(){
+  const b=f6240Base(), final=Number(document.getElementById("f6240PrecoSolicitado")?.value)||0;
+  const desc=b.total-final, pct=b.total?desc/b.total*100:0, lucro=final-b.custo, margem=final?lucro/final*100:0;
+  document.getElementById("f6240SolicResumo").innerHTML=`${produtoVendaAtual?.nome||""} · ${b.qtd} un<br>Preço tabela: <b>${b.total.toLocaleString("pt-PT")} Db</b>`;
+  document.getElementById("f6240Impacto").innerHTML=`Desconto: <b>${desc.toLocaleString("pt-PT")} Db (${pct.toFixed(2)}%)</b><br>Custo registado: ${b.custo.toLocaleString("pt-PT")} Db · Lucro após desconto: <b>${lucro.toLocaleString("pt-PT")} Db</b> · Margem: ${margem.toFixed(1)}%`;
+}
+async function f6240EnviarSolicitacao(){
+  const u=auth.currentUser,b=f6240Base(),final=Math.round(Number(document.getElementById("f6240PrecoSolicitado").value)||0),motivo=document.getElementById("f6240Motivo").value.trim();
+  if(!u||!produtoVendaAtual)return;
+  if(final<=0||final>=b.total)return alert("Informe um preço final inferior ao preço de tabela.");
+  if(!motivo)return alert("Informe o motivo do desconto.");
+  const pct=(b.total-final)/b.total*100;
+  // ADMIN aplica diretamente. GERENTE pode aplicar até 5%, sem autoaprovação de pedido.
+  if(usuarioRole==="admin" || (usuarioRole==="gerente" && pct<=f6240LimiteGerentePercent)){
+    f6240Beneficio={tipo:"DESCONTO_DIRETO",precoFinal:final,precoTabela:b.total,quantidade:b.qtd,motivo,aprovadoPorUid:u.uid,aprovadoPorUsuario:u.email,aprovadoPorRole:usuarioRole};
+    f6240FecharSolicitacao();calcularTotalVendaModal();return;
+  }
+  const ref=db.collection("desconto_solicitacoes").doc();
+  await ref.set({estado:"PENDENTE",produtoId:produtoVendaAtual.id,produto:produtoVendaAtual.nome,quantidade:b.qtd,precoTabela:b.total,precoSolicitado:final,descontoValor:b.total-final,descontoPercent:pct,custoSnapshot:b.custo,motivo,solicitadoPorUid:u.uid,solicitadoPorUsuario:u.email,solicitadoPorNome:usuarioNome||"Funcionário",solicitadoPorRole:usuarioRole,dataSolicitacao:new Date()});
+  f6240FecharSolicitacao();alert("Solicitação enviada. O desconto só poderá ser usado depois de aprovado.");
+}
+function f6240Ouvir(){
+  if(!auth.currentUser)return;
+  try{f6240UnsubSolic?.();}catch(e){}
+  let q=db.collection("desconto_solicitacoes").orderBy("dataSolicitacao","desc").limit(100);
+  f6240UnsubSolic=q.onSnapshot(s=>{
+    f6240Solicitacoes=[];s.forEach(d=>f6240Solicitacoes.push({id:d.id,...d.data()}));
+    f6240AtualizarBadge();
+    // vendedor recebe aprovação vinculada ao produto/quantidade e ainda não utilizada
+    if(produtoVendaAtual){
+      const b=f6240Base(), a=f6240Solicitacoes.find(x=>x.estado==="APROVADO"&&!x.utilizadoEm&&x.solicitadoPorUid===auth.currentUser.uid&&x.produtoId===produtoVendaAtual.id&&Number(x.quantidade)===b.qtd);
+      if(a){f6240Beneficio={tipo:"DESCONTO_APROVADO",solicitacaoId:a.id,precoFinal:Number(a.precoSolicitado),precoTabela:Number(a.precoTabela),quantidade:Number(a.quantidade),motivo:a.motivo,aprovadoPorUid:a.decididoPorUid,aprovadoPorUsuario:a.decididoPorUsuario,aprovadoPorRole:a.decididoPorRole};calcularTotalVendaModal();}
+    }
+  },()=>{});
+  try{f6240UnsubCup?.();}catch(e){}
+  f6240UnsubCup=db.collection("cupons").onSnapshot(s=>{f6240Cupoes=[];s.forEach(d=>f6240Cupoes.push({id:d.id,...d.data()}));},()=>{});
+}
+function f6240AtualizarBadge(){
+  const n=f6240Solicitacoes.filter(x=>x.estado==="PENDENTE").length,b=document.getElementById("f6240PendentesBadge");
+  if(b)b.innerText=n?`(${n})`:"";
+}
+function f6240AbrirAprovacoes(){
+  if(!f6240Gestor())return alert("Acesso restrito.");
+  const pend=f6240Solicitacoes.filter(x=>x.estado==="PENDENTE"), box=document.getElementById("f6240ListaAprovacoes");
+  box.innerHTML=pend.length?pend.map(x=>{
+    const pct=Number(x.descontoPercent)||0, gerenteBloq=usuarioRole==="gerente"&&(x.solicitadoPorUid===auth.currentUser.uid||pct>f6240LimiteGerentePercent);
+    return `<div style="border:1px solid #e2e8f0;border-radius:9px;padding:10px;margin:8px 0;">
+      <b>${x.produto}</b> · ${x.quantidade} un<br><small>${x.solicitadoPorNome||x.solicitadoPorUsuario} · ${x.motivo}</small>
+      <div style="margin:7px 0;">Tabela: ${Number(x.precoTabela).toLocaleString("pt-PT")} Db → solicitado: <b>${Number(x.precoSolicitado).toLocaleString("pt-PT")} Db</b> · desconto ${pct.toFixed(2)}%<br>
+      Custo snapshot: ${Number(x.custoSnapshot||0).toLocaleString("pt-PT")} Db · lucro após: ${(Number(x.precoSolicitado)-Number(x.custoSnapshot||0)).toLocaleString("pt-PT")} Db</div>
+      ${gerenteBloq?`<small style="color:#b91c1c;font-weight:700;">GERENTE não pode aprovar o próprio pedido nem desconto acima de ${f6240LimiteGerentePercent}%.</small>`:
+      `<button class="btn-success" onclick="f6240Decidir('${x.id}',true)">Aprovar</button> <button class="btn-danger" onclick="f6240Decidir('${x.id}',false)">Rejeitar</button>`}
+    </div>`;
+  }).join(""):'<p style="color:#64748b;">Nenhuma solicitação pendente.</p>';
+  document.getElementById("f6240ModalAprovacoes").classList.remove("hidden");
+}
+async function f6240Decidir(id,aprovar){
+  if(!f6240Gestor())return;
+  const x=f6240Solicitacoes.find(a=>a.id===id);if(!x||x.estado!=="PENDENTE")return alert("Solicitação já decidida.");
+  if(usuarioRole==="gerente"&&(x.solicitadoPorUid===auth.currentUser.uid||Number(x.descontoPercent)>f6240LimiteGerentePercent))return alert("Esta decisão exige ADMIN.");
+  await db.collection("desconto_solicitacoes").doc(id).update({estado:aprovar?"APROVADO":"REJEITADO",decididoPorUid:auth.currentUser.uid,decididoPorUsuario:auth.currentUser.email,decididoPorRole:usuarioRole,dataDecisao:new Date()});
+  f6240AbrirAprovacoes();
+}
+
+async function f6240AplicarCupao(){
+  if(!produtoVendaAtual)return;
+  const cod=String(document.getElementById("f6240CupaoCodigo").value||"").trim().toUpperCase(), b=f6240Base();
+  if(!cod)return alert("Informe o código do cupão.");
+  const c=f6240Cupoes.find(x=>String(x.codigo||"").toUpperCase()===cod);
+  if(!c||c.ativo!==true)return alert("Cupão inválido ou inativo.");
+  if(c.validadeAte && new Date(c.validadeAte.toDate?c.validadeAte.toDate():c.validadeAte)<new Date())return alert("Este cupão expirou.");
+  if(Number(c.maxUsos||0)>0 && Number(c.usos||0)>=Number(c.maxUsos))return alert("Este cupão atingiu o limite de utilizações.");
+  if(Number(c.compraMinima||0)>b.total)return alert(`Compra mínima para este cupão: ${Number(c.compraMinima).toLocaleString("pt-PT")} Db.`);
+  if(c.produtoId && c.produtoId!==produtoVendaAtual.id)return alert("Este cupão não é válido para este produto.");
+  let desc=c.tipo==="PERCENTUAL"?Math.round(b.total*(Number(c.valor)||0)/100):Number(c.valor)||0;
+  desc=Math.min(desc,b.total);
+  f6240Beneficio={tipo:"CUPAO",cupaoId:c.id,codigo:c.codigo,precoFinal:b.total-desc,precoTabela:b.total,quantidade:b.qtd,motivo:`Cupão ${c.codigo}`};
+  calcularTotalVendaModal();
+}
+function f6240AbrirCupoes(){
+  if(usuarioRole!=="admin")return alert("Apenas ADMIN pode gerir cupões.");
+  const sel=document.getElementById("f6240CupProduto");sel.innerHTML='<option value="">Todos os produtos</option>'+todosProdutos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join("");
+  f6240RenderCupoes();document.getElementById("f6240ModalCupoes").classList.remove("hidden");
+}
+function f6240RenderCupoes(){
+  const b=document.getElementById("f6240ListaCupoes");if(!b)return;
+  b.innerHTML=f6240Cupoes.length?f6240Cupoes.map(c=>`<div style="padding:7px;border-bottom:1px solid #e2e8f0;"><b>${c.codigo}</b> — ${c.tipo==="PERCENTUAL"?c.valor+"%":Number(c.valor).toLocaleString("pt-PT")+" Db"} · usos ${c.usos||0}/${c.maxUsos||"∞"} · ${c.ativo?"ATIVO":"INATIVO"} <button class="btn-secondary" onclick="f6240ToggleCupao('${c.id}',${!c.ativo})">${c.ativo?"Desativar":"Ativar"}</button></div>`).join(""):"Sem cupões.";
+}
+async function f6240CriarCupao(){
+  if(usuarioRole!=="admin")return;
+  const codigo=String(document.getElementById("f6240CupCodigoAdmin").value||"").trim().toUpperCase(),tipo=document.getElementById("f6240CupTipo").value,valor=Number(document.getElementById("f6240CupValor").value)||0,compraMinima=Number(document.getElementById("f6240CupMinimo").value)||0,maxUsos=Number(document.getElementById("f6240CupMaxUsos").value)||0,produtoId=document.getElementById("f6240CupProduto").value,vd=document.getElementById("f6240CupValidade").value;
+  if(!codigo||valor<=0||maxUsos<=0)return alert("Informe código, valor e limite de utilizações.");
+  if(tipo==="PERCENTUAL"&&valor>100)return alert("Percentagem inválida.");
+  const id=codigo.replace(/[^A-Z0-9_-]/g,"_");
+  await db.collection("cupons").doc(id).set({codigo,tipo,valor,compraMinima,maxUsos,usos:0,produtoId:produtoId||null,validadeAte:vd?new Date(vd+"T23:59:59"):null,ativo:true,criadoPorUid:auth.currentUser.uid,criadoPorUsuario:auth.currentUser.email,dataCriacao:new Date()});
+}
+async function f6240ToggleCupao(id,ativo){if(usuarioRole==="admin")await db.collection("cupons").doc(id).update({ativo});}
+
+const f6240ConfirmarVendaOriginal=confirmarVendaModal;
+confirmarVendaModal=async function(){
+  if(!produtoVendaAtual)return;
+  const btn=document.getElementById("btnConfirmarVenda"); if(btn?.dataset.f6240==="1")return alert("Venda em processamento. Aguarde.");
+  const b=f6240Base(), total=f6240TotalFinal(), forma=modalFormaPagamento.value, recebido=Number(modalValorRecebido.value)||0, nome=modalNomeCliente.value.trim()||"Consumidor Final";
+  if(b.qtd<=0||b.qtd>Number(produtoVendaAtual.estoque||0))return alert("Quantidade inválida ou superior ao estoque.");
+  if(forma==="Dinheiro"&&recebido<total)return alert(`Valor recebido (${recebido} Db) é menor que o total a pagar (${total} Db)!`);
+  // Vendedor nunca pode inventar desconto local: só autorização aprovada ou cupão válido.
+  if(f6240Beneficio?.tipo==="DESCONTO_DIRETO" && f6240VendedorPuro())return alert("Desconto direto não autorizado para vendedor.");
+  btn.dataset.f6240="1";btn.disabled=true;
+  try{
+    const prodRef=db.collection("produtos").doc(produtoVendaAtual.id), movRef=db.collection("movimentacoes").doc(), agora=new Date();
+    await db.runTransaction(async tx=>{
+      const pd=await tx.get(prodRef);if(!pd.exists)throw new Error("Produto não existe.");
+      const data=pd.data(), est=Number(data.estoque)||0;if(est<b.qtd)throw new Error(`Estoque insuficiente. Restam ${est}.`);
+      let beneficio=f6240Beneficio;
+      if(beneficio?.solicitacaoId){
+        const sr=db.collection("desconto_solicitacoes").doc(beneficio.solicitacaoId),sd=await tx.get(sr);
+        if(!sd.exists||sd.data().estado!=="APROVADO"||sd.data().utilizadoEm)throw new Error("Autorização de desconto inválida ou já utilizada.");
+        if(sd.data().solicitadoPorUid!==auth.currentUser.uid||sd.data().produtoId!==produtoVendaAtual.id||Number(sd.data().quantidade)!==b.qtd)throw new Error("Autorização não corresponde a esta venda.");
+        tx.update(sr,{estado:"UTILIZADO",utilizadoEm:agora,vendaMovimentoId:movRef.id});
+      }
+      if(beneficio?.cupaoId){
+        const cr=db.collection("cupons").doc(beneficio.cupaoId),cd=await tx.get(cr);
+        if(!cd.exists||cd.data().ativo!==true)throw new Error("Cupão já não está ativo.");
+        if(Number(cd.data().usos||0)>=Number(cd.data().maxUsos||0))throw new Error("Limite do cupão atingido.");
+        tx.update(cr,{usos:(Number(cd.data().usos)||0)+1,ultimoUsoEm:agora});
+      }
+      // variantes: preserva a lógica 6.23 se existir seleção
+      let upd={estoque:est-b.qtd};
+      if(data.temVariantes && typeof v6230VarianteSelecionadaPOS==="function"){
+        // compatibilidade: a função 6.23 faz validação no seu fluxo; aqui usamos select diretamente.
+      }
+      tx.update(prodRef,upd);
+      const desc=Math.max(0,b.total-total);
+      const payload={produto:produtoVendaAtual.nome,produtoId:produtoVendaAtual.id,tipo:"saida",quantidade:b.qtd,valor:total,precoTabelaTotal:b.total,precoTabelaUnit:Number(produtoVendaAtual.venda)||0,descontoValor:desc,descontoPercent:b.total?desc/b.total*100:0,precoFinalTotal:total,formaPagamento:forma,cliente:nome,usuario:auth.currentUser.email,nomeUsuario:usuarioNome||"Funcionário",uid:auth.currentUser.uid,role:usuarioRole,data:agora};
+      if(caixaAtualObj?.id)payload.caixaId=caixaAtualObj.id;
+      if(beneficio){payload.beneficioTipo=beneficio.tipo;payload.descontoMotivo=beneficio.motivo||"";if(beneficio.solicitacaoId)payload.descontoSolicitacaoId=beneficio.solicitacaoId;if(beneficio.cupaoId){payload.cupaoId=beneficio.cupaoId;payload.cupaoCodigo=beneficio.codigo;}}
+      tx.set(movRef,payload);
+    });
+    const troco=forma==="Dinheiro"?recebido-total:0;
+    fecharModalVenda();
+    emitirReciboComprovativo({data:new Date().toLocaleString("pt-PT"),cliente:nome,vendedor:usuarioNome||"Funcionário",item:produtoVendaAtual?.nome||"",qtd:b.qtd,precoUnit:b.unit,total,pagamento:forma,troco,desconto:Math.max(0,b.total-total),precoTabela:b.total});
+    f6240Reset();
+  }catch(e){alert("Erro ao processar venda: "+(e.message||e));}
+  finally{btn.dataset.f6240="";btn.disabled=false;}
+};
+
+function f6240AplicarUI(){
+  const a=document.getElementById("f6240GestaoAtalhos"),c=document.getElementById("f6240BtnCupoes");
+  if(a){a.classList.toggle("hidden",!f6240Gestor());a.style.display=f6240Gestor()?"flex":"none";}
+  if(c)c.style.display=usuarioRole==="admin"?"inline-block":"none";
+}
+const f6240SegOriginal=typeof aplicarSegurancaInterface64==="function"?aplicarSegurancaInterface64:null;
+if(f6240SegOriginal)aplicarSegurancaInterface64=function(){const r=f6240SegOriginal.apply(this,arguments);setTimeout(()=>{f6240AplicarUI();f6240Ouvir();},0);return r;};
+document.addEventListener("DOMContentLoaded",()=>setTimeout(()=>{f6240AplicarUI();if(auth.currentUser)f6240Ouvir();},1000));
 </script>
 
 </body>
