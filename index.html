@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.27-019">
+<meta name="mdstp-build" content="2026.09.28-020">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -1729,7 +1729,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <h3 style="color:#0f766e;">💰 Tesouraria & Posição Financeira</h3>
       <p style="margin-top:-6px;color:#64748b;font-size:13px;">
         Controle onde está o dinheiro da empresa. Transferências internas não são receita nem despesa.
-        Conversões entre EUR e Db guardam taxa de referência, taxa aplicada e margem cambial.
+        Conversões entre EUR e Db guardam taxa de referência, taxa aplicada e diferença cambial.
       </p>
     </div>
 
@@ -1890,7 +1890,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
           <thead>
             <tr>
               <th>Data</th><th>Tipo</th><th>Origem</th><th>Destino</th><th>Moeda</th><th>Valor Origem</th>
-              <th>Valor Destino</th><th>Taxa Ref.</th><th>Taxa Aplicada</th><th>Margem</th><th>Responsável</th><th>Obs.</th>
+              <th>Valor Destino</th><th>Taxa Ref.</th><th>Taxa Aplicada</th><th>Diferença Cambial</th><th>Responsável</th><th>Obs.</th>
             </tr>
           </thead>
           <tbody id="listaTesouraria"></tbody>
@@ -1902,7 +1902,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <h4 style="margin-top:0;">ℹ️ Regras da Tesouraria</h4>
       <ul style="margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;">
         <li>Transferência entre contas na mesma moeda não gera lucro nem despesa.</li>
-        <li>Conversões EUR ⇄ Db registam taxa de referência, taxa aplicada e margem cambial.</li>
+        <li>Conversões EUR ⇄ Db usam a taxa aplicada para calcular o destino e registam a diferença cambial face à taxa de referência.</li>
         <li>Nenhuma conta pode enviar mais dinheiro do que possui.</li>
         <li>Movimentos ficam imutáveis para preservar a auditoria.</li>
         <li>Para Responsável → Caixa use este módulo; ele cria automaticamente o suprimento físico no caixa.</li>
@@ -7690,16 +7690,21 @@ function atualizarResumoMovTesouraria() {
     return;
   }
 
-  let destinoValor=0, margem=0;
+  let destinoValor=0, diferencaCambialDb=0;
   if(mo==="EUR" && md==="STN") {
+    // O destino usa SEMPRE a taxa realmente aplicada na operação.
     destinoValor = valor * aplicada;
-    margem = valor * (ref - aplicada);
+    // Diferença vs. taxa de referência: positiva se recebemos mais Db que a referência.
+    diferencaCambialDb = destinoValor - (valor * ref);
   } else if(mo==="STN" && md==="EUR") {
+    // Ex.: 7.950 Db / 26,5 = 300 EUR.
     destinoValor = valor / aplicada;
-    margem = (valor / aplicada) * (aplicada - ref);
+    // Valor dos EUR recebidos à taxa de referência menos os Db efetivamente entregues.
+    // Ex.: 300*26 - 7.950 = -150 Db.
+    diferencaCambialDb = (destinoValor * ref) - valor;
   }
 
-  box.innerText = `Destino: ${destinoValor.toLocaleString("pt-PT",{maximumFractionDigits:2})} ${md==="EUR"?"€":"Db"} | Margem estimada: ${margem.toLocaleString("pt-PT",{maximumFractionDigits:2})} Db`;
+  box.innerText = `Destino: ${destinoValor.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} ${md==="EUR"?"€":"Db"} | Diferença cambial: ${diferencaCambialDb.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})} Db`;
 }
 
 async function registrarMovimentoTesouraria() {
@@ -7733,10 +7738,12 @@ async function registrarMovimentoTesouraria() {
     if(ref<=0 || aplicada<=0) return alert("Informe taxa de referência e taxa aplicada.");
     if(mo==="EUR" && md==="STN") {
       valorDestino = valorOrigem * aplicada;
-      margemDb = valorOrigem * (ref - aplicada);
+      // Mantemos o campo legado margemDb por compatibilidade com o histórico,
+      // mas o seu significado passa a ser diferença cambial em Db.
+      margemDb = valorDestino - (valorOrigem * ref);
     } else if(mo==="STN" && md==="EUR") {
       valorDestino = valorOrigem / aplicada;
-      margemDb = valorDestino * (aplicada - ref);
+      margemDb = (valorDestino * ref) - valorOrigem;
     } else {
       return alert("Conversão de moedas não suportada para estas contas.");
     }
