@@ -1,13 +1,12 @@
-/* Mundo Digital STP PWA — 2026.09.28-020
+/* Mundo Digital STP PWA — 6.24.5 / 2026.10.02-022
    Cache apenas da interface local.
    Firebase/Firestore e operações financeiras NÃO são simuladas offline. */
 
-const CACHE_NAME = 'mdstp-shell-2026.10.02-021-v6244';
+const CACHE_NAME = 'mdstp-shell-2026.10.02-022-v6245';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './app-version.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
@@ -18,6 +17,10 @@ self.addEventListener('install', event => {
       .then(cache => cache.addAll(APP_SHELL))
       .then(() => self.skipWaiting())
   );
+});
+
+self.addEventListener('message', event => {
+  if(event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -34,7 +37,6 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
   if(req.method !== 'GET') return;
-
   const url = new URL(req.url);
   if(url.origin !== self.location.origin) return;
 
@@ -53,7 +55,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if(url.pathname.endsWith('/app-version.json')) {
+  if(url.pathname.endsWith('/app-version.json') || url.pathname.endsWith('/service-worker.js')) {
     event.respondWith(fetch(req, {cache:'no-store'}));
     return;
   }

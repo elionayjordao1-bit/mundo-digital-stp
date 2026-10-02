@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.09.28-020">
+<meta name="mdstp-build" content="2026.10.02-022">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -1352,7 +1352,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <input id="f5EncProduto" placeholder="Produto Encomendado">
         <input id="f5EncQtd" type="number" min="1" value="1" placeholder="Quantidade">
         <input id="f5EncValorTotal" type="number" min="0.01" step="0.01" placeholder="Valor de Venda Total (Db)" oninput="f5CalcularSinal()">
-        <input id="f5EncSinalPago" type="number" min="0.01" step="0.01" placeholder="Sinal Recebido (Db)">
+        <input id="f5EncSinalPago" type="number" min="0.01" step="0.01" placeholder="Sinal Recebido (Db)" oninput="f5AtualizarResumoPagina()">
         <select id="f5EncFormaSinal">
           <option value="Dinheiro">💵 Sinal em Dinheiro</option>
           <option value="Transferencia">🏦 Sinal por Transferência / DobraPay</option>
@@ -6607,9 +6607,10 @@ function f5Moeda(v) {
 }
 
 function f5CalcularSinal() {
-  const total = f5Numero('f5EncValorTotal');
-  const sinalEl = document.getElementById('f5EncSinalPago');
-  if(total > 0 && (!sinalEl.value || Number(sinalEl.value) <= 0)) sinalEl.value = (total/2).toFixed(2);
+  // FASE 6.24.5 — o sinal é sempre o valor realmente digitado pelo utilizador.
+  // Não preencher automaticamente 50% enquanto o valor de venda está a ser digitado:
+  // ao escrever 3000, o browser passa por 3 -> 30 -> 300 -> 3000 e a lógica antiga
+  // podia fixar 1,50 Db como sinal logo no primeiro algarismo.
   f5AtualizarResumoPagina();
 }
 
@@ -13683,29 +13684,41 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       btn.textContent = '⏳ A atualizar...';
     }
 
+    let recarregou = false;
+    const recarregarVersaoPublicada = () => {
+      if(recarregou) return;
+      recarregou = true;
+      esconderAtualizacao();
+      const destino = window.location.origin + window.location.pathname + '?pwa_refresh=' + Date.now();
+      window.location.replace(destino);
+    };
+
     try {
-      // Pede ao navegador para verificar também o Service Worker.
-      if(registroSW) {
-        try { await registroSW.update(); } catch(e) {}
+      // FASE 6.24.5 — atualização PWA determinística.
+      // 1) procura o SW publicado; 2) ativa imediatamente o waiting worker;
+      // 3) limpa apenas caches da shell; 4) recarrega quando o novo SW assume controlo.
+      if('serviceWorker' in navigator){
+        navigator.serviceWorker.addEventListener('controllerchange', recarregarVersaoPublicada, {once:true});
       }
 
-      // Limpa apenas caches PWA do mesmo site. Não toca no Firestore/Firebase.
+      if(registroSW){
+        try { await registroSW.update(); } catch(e) {}
+        const waiting = registroSW.waiting;
+        if(waiting){
+          try { waiting.postMessage({type:'SKIP_WAITING'}); } catch(e) {}
+        }
+      }
+
       if('caches' in window){
         try {
           const keys = await caches.keys();
-          await Promise.all(
-            keys
-              .filter(k => k.startsWith('mdstp-shell-'))
-              .map(k => caches.delete(k))
-          );
+          await Promise.all(keys.filter(k => k.startsWith('mdstp-shell-')).map(k => caches.delete(k)));
         } catch(e) {}
       }
 
-      esconderAtualizacao();
-
-      // Reabre a URL sem fragmentos/parâmetros, forçando a versão publicada.
-      const destino = window.location.origin + window.location.pathname + '?pwa_refresh=' + Date.now();
-      window.location.replace(destino);
+      // Se controllerchange não disparar (ex.: primeira instalação), ainda assim força
+      // uma navegação de rede com cache-buster após um curto intervalo.
+      setTimeout(recarregarVersaoPublicada, 900);
     } catch(e){
       console.warn('PWA: falha ao aplicar atualização:', e);
       if(btn){
