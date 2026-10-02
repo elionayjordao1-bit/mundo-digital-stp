@@ -2,7 +2,7 @@
    Cache apenas da interface local.
    Firebase/Firestore e operações financeiras NÃO são simuladas offline. */
 
-const CACHE_NAME = 'mdstp-shell-2026.09.28-020-v6242';
+const CACHE_NAME = 'mdstp-shell-2026.10.02-021-v6244';
 const APP_SHELL = [
   './',
   './index.html',
