@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.10.03-023">
+<meta name="mdstp-build" content="2026.10.03-024">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -1501,7 +1501,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <div id="desp52ResumoConta" style="grid-column:1/-1;padding:10px 12px;border-radius:8px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;line-height:1.55;">
           A despesa sairá do <b>Caixa Loja</b>. Para pagamento em dinheiro físico é necessário um turno aberto e saldo suficiente.
         </div>
-        <button onclick="registrarDespesaFase52()" class="btn-danger" style="grid-column:1/-1;">💸 Registar Despesa</button>
+        <button id="btnRegistrarDespesa52" onclick="registrarDespesaFase52()" class="btn-danger" style="grid-column:1/-1;">💸 Registar Despesa</button>
       </div>
     </div>
 
@@ -1526,6 +1526,18 @@ tr:nth-child(even) { background-color: #f8fafc; }
         <span id="desp52KpiCategoria" class="kpi-value">-</span>
         <span id="desp52KpiCategoriaValor" class="kpi-sub" style="color:#7c3aed;">0 Db</span>
       </div>
+    </div>
+
+    <div class="card" id="cardDespesaSolicitacoes6247" style="border-top:4px solid #f59e0b;">
+      <h3 style="color:#92400e;">🧾 Solicitações de Despesas</h3>
+      <p style="color:#64748b;font-size:13px;margin-top:-6px;">
+        A GERENTE solicita e o valor fica <b>reservado</b>, sem sair do saldo contabilístico. O débito só acontece após aprovação do ADMIN.
+      </p>
+      <div id="desp6247ResumoReservas" style="padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;margin-bottom:10px;">A carregar reservas…</div>
+      <div class="table-responsive"><table style="min-width:1100px;">
+        <thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Origem solicitada</th><th>Solicitante</th><th>Estado</th><th>Ação ADMIN</th></tr></thead>
+        <tbody id="listaDespesaSolicitacoes6247"></tbody>
+      </table></div>
     </div>
 
     <div class="card">
@@ -1575,7 +1587,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <h4 style="margin-top:0;">ℹ️ Lógica financeira</h4>
       <ul style="margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;">
         <li>Despesa paga pelo <b>Caixa Loja</b> exige turno aberto e saldo físico suficiente.</li>
-        <li>Despesa paga pela <b>Responsável / Reserva</b>, <b>Banco STP / DobraPay</b> ou <b>Portugal / EUR</b> cria uma saída correspondente na Tesouraria.</li>
+        <li>Para a <b>GERENTE</b>, a despesa vira solicitação e reserva o valor; o débito só ocorre após aprovação do <b>ADMIN</b>.</li>
         <li>Pagamento em <b>Portugal / EUR</b> guarda o valor em euros e o equivalente em Db pela taxa de referência informada.</li>
         <li>Uma despesa registada fica no histórico; não há botão de apagar.</li>
         <li>Suprimentos e sangrias continuam sendo movimentos de caixa, não despesas.</li>
@@ -6884,7 +6896,7 @@ let todasDespesasFase52 = [];
 let listenerDespesasFase52 = null;
 
 function usuarioPodeDespesasFase52() {
-  return usuarioRole === "admin";
+  return usuarioRole === "admin" || usuarioRole === "gerente";
 }
 
 function saldoFisicoAtualFase52() {
@@ -6955,8 +6967,135 @@ async function obterSaldoRealDespesa626(conta) {
   return saldo;
 }
 
+
+// FASE 6.24.7 — GERENTE solicita; ADMIN aprova. Reserva é compromisso, não débito contabilístico.
+let despesasSolicitacoes6247 = [];
+let listenerDespSolic6247 = null;
+let reservasDesp6247 = {};
+let listenerReservasDesp6247 = null;
+
+function ehGerenteDesp6247(){ return usuarioRole === "gerente"; }
+function ehAdminDesp6247(){ return usuarioRole === "admin"; }
+function gerenteSubAtivaDesp6247(){
+  try { return ehGerenteDesp6247() && typeof window.f611EmSubstituicaoOperacional === "function" && window.f611EmSubstituicaoOperacional(); }
+  catch(e){ return false; }
+}
+function valorReservadoDesp6247(conta){ return Math.max(0, Number(reservasDesp6247?.[conta]?.reservado)||0); }
+
+function iniciarSolicitacoesDesp6247(){
+  try{ if(listenerDespSolic6247) listenerDespSolic6247(); }catch(e){}
+  try{ if(listenerReservasDesp6247) listenerReservasDesp6247(); }catch(e){}
+  listenerDespSolic6247=null; listenerReservasDesp6247=null;
+  const u=auth.currentUser; if(!u || !(ehAdminDesp6247()||ehGerenteDesp6247())) return;
+  let q=db.collection("despesa_solicitacoes");
+  if(ehGerenteDesp6247()) q=q.where("uid","==",u.uid);
+  listenerDespSolic6247=q.onSnapshot(sn=>{
+    despesasSolicitacoes6247=[]; sn.forEach(d=>despesasSolicitacoes6247.push({id:d.id,...d.data()}));
+    despesasSolicitacoes6247.sort((a,b)=>obterDataSegura(b.data)-obterDataSegura(a.data)); renderSolicitacoesDesp6247();
+  },e=>console.warn("Solicitações de despesas:",e));
+  listenerReservasDesp6247=db.collection("despesa_reserva_saldos").onSnapshot(sn=>{
+    reservasDesp6247={}; sn.forEach(d=>reservasDesp6247[d.id]={id:d.id,...d.data()}); renderSolicitacoesDesp6247(); atualizarResumoDespesaFase52();
+  },e=>console.warn("Reservas de despesas:",e));
+}
+
+async function saldoDisponivelDesp6247(conta){
+  const reservado=valorReservadoDesp6247(conta);
+  let contabil=0;
+  if(conta==="caixa_stp") contabil=saldoFisicoAtualFase52(); else contabil=await obterSaldoRealDespesa626(conta);
+  return {contabil, reservado, disponivel: contabil-reservado};
+}
+
+async function solicitarDespesaGerente6247({descricao,categoria,conta,valorPagamento,observacao}){
+  const u=auth.currentUser; if(!u) throw new Error("Sessão expirada.");
+  if(conta==="portugal_eur") throw new Error("Portugal / EUR é exclusivo do ADMIN.");
+  if(!["caixa_stp","responsavel_stp","banco_stp"].includes(conta)) throw new Error("Origem não autorizada para GERENTE.");
+  let caixaId=null;
+  if(conta==="caixa_stp"){
+    if(!gerenteSubAtivaDesp6247() || !caixaAtualObj || caixaAtualObj.estado!=="aberto") throw new Error("Para solicitar pagamento pelo Caixa Loja, ative a Substituição Operacional e mantenha o seu Caixa/Turno aberto.");
+    caixaId=caixaAtualObj.id;
+  }
+  const disp=await saldoDisponivelDesp6247(conta);
+  if(disp.disponivel+0.0000001<valorPagamento) throw new Error(`Saldo disponível insuficiente em ${nomeContaTes(conta)}. Contabilístico: ${disp.contabil.toLocaleString("pt-PT")} Db; reservado: ${disp.reservado.toLocaleString("pt-PT")} Db; disponível: ${disp.disponivel.toLocaleString("pt-PT")} Db.`);
+  const pedidoRef=db.collection("despesa_solicitacoes").doc();
+  const reservaRef=db.collection("despesa_reserva_saldos").doc(conta);
+  const agora=new Date();
+  await db.runTransaction(async tx=>{
+    const rs=await tx.get(reservaRef); const reservadoAntes=rs.exists?(Number(rs.data().reservado)||0):0;
+    // Revalida saldo financeiro dentro da transação para contas da Tesouraria.
+    let saldoBase=disp.contabil;
+    if(conta!=="caixa_stp"){
+      const sr=db.collection("tesouraria_saldos").doc(conta), ss=await tx.get(sr);
+      if(!ss.exists) throw new Error(`Saldo de ${nomeContaTes(conta)} não inicializado.`);
+      saldoBase=Number(ss.data().saldo)||0;
+    }
+    if(saldoBase-reservadoAntes+0.0000001<valorPagamento) throw new Error("O saldo disponível mudou. Atualize e tente novamente.");
+    tx.set(pedidoRef,{descricao,categoria,contaSolicitada:conta,valorPagamento,valorDb:valorPagamento,moedaPagamento:"STN",observacao:observacao||"",estado:"PENDENTE_APROVACAO",reservado:true,uid:u.uid,usuario:u.email||"",nomeUsuario:usuarioNome||"",role:"gerente",data:agora,...(caixaId?{caixaId}: {})});
+    tx.set(reservaRef,{conta,moeda:"STN",reservado:reservadoAntes+valorPagamento,atualizadoEm:agora,ultimoPedidoId:pedidoRef.id,ultimoDelta:valorPagamento,ultimoUid:u.uid},{merge:true});
+  });
+  alert("Solicitação enviada ao ADMIN. O valor ficou reservado, mas ainda não saiu da Tesouraria/Caixa.");
+}
+
+function renderSolicitacoesDesp6247(){
+  const tb=document.getElementById("listaDespesaSolicitacoes6247"), box=document.getElementById("desp6247ResumoReservas");
+  if(box){
+    const nomes=["caixa_stp","responsavel_stp","banco_stp"].map(c=>`${nomeContaTes(c)}: <b>${valorReservadoDesp6247(c).toLocaleString("pt-PT")} Db</b>`);
+    box.innerHTML="🔒 Valores atualmente reservados — "+nomes.join(" · ");
+  }
+  if(!tb) return;
+  const lista=despesasSolicitacoes6247.slice(0,100);
+  tb.innerHTML=lista.map(d=>{
+    const pend=d.estado==="PENDENTE_APROVACAO";
+    const acoes=ehAdminDesp6247()&&pend?`<select id="desp6247Conta_${d.id}" style="min-width:180px">${d.caixaId?`<option value="caixa_stp" ${d.contaSolicitada==="caixa_stp"?"selected":""}>Caixa Loja</option>`:""}<option value="responsavel_stp" ${d.contaSolicitada==="responsavel_stp"?"selected":""}>Responsável / Reserva</option><option value="banco_stp" ${d.contaSolicitada==="banco_stp"?"selected":""}>Banco STP / DobraPay</option><option value="portugal_eur">Portugal / EUR</option></select><div style="display:flex;gap:5px;margin-top:5px"><button class="btn-success" onclick="aprovarDespesa6247('${d.id}')">✓ Aprovar e Pagar</button><button class="btn-danger" onclick="rejeitarDespesa6247('${d.id}')">✕ Rejeitar</button></div>`:"-";
+    const cor=pend?"#b45309":d.estado==="PAGA"?"#15803d":"#64748b";
+    return `<tr><td><small>${obterDataSegura(d.data).toLocaleString("pt-PT")}</small></td><td><b>${d.descricao||"-"}</b></td><td>${d.categoria||"-"}</td><td><b>${(Number(d.valorDb)||0).toLocaleString("pt-PT")} Db</b></td><td>${nomeContaTes(d.contaSolicitada)}</td><td>${d.nomeUsuario||d.usuario||"-"}</td><td style="color:${cor};font-weight:700">${d.estado||"-"}</td><td>${acoes}</td></tr>`;
+  }).join("")||'<tr><td colspan="8" style="color:#94a3b8">Nenhuma solicitação.</td></tr>';
+}
+
+async function rejeitarDespesa6247(id){
+  if(!ehAdminDesp6247()) return alert("Apenas o ADMIN pode rejeitar.");
+  const pref=db.collection("despesa_solicitacoes").doc(id), agora=new Date();
+  try{ await db.runTransaction(async tx=>{
+    const ps=await tx.get(pref); if(!ps.exists) throw new Error("Pedido não encontrado."); const p=ps.data(); if(p.estado!=="PENDENTE_APROVACAO") throw new Error("Pedido já processado.");
+    const rr=db.collection("despesa_reserva_saldos").doc(p.contaSolicitada), rs=await tx.get(rr); const antes=rs.exists?(Number(rs.data().reservado)||0):0;
+    tx.update(pref,{estado:"REJEITADA",reservado:false,rejeitadoEm:agora,rejeitadoPorUid:auth.currentUser.uid,rejeitadoPorUsuario:auth.currentUser.email||""});
+    tx.set(rr,{conta:p.contaSolicitada,moeda:"STN",reservado:Math.max(0,antes-Number(p.valorPagamento||0)),atualizadoEm:agora,ultimoPedidoId:id,ultimoDelta:-Number(p.valorPagamento||0),ultimoUid:auth.currentUser.uid},{merge:true});
+  }); alert("Solicitação rejeitada. A reserva foi libertada."); }catch(e){alert("Erro ao rejeitar: "+(e.message||e));}
+}
+
+async function aprovarDespesa6247(id){
+  if(!ehAdminDesp6247()) return alert("Apenas o ADMIN pode aprovar.");
+  const contaEfetiva=document.getElementById(`desp6247Conta_${id}`)?.value||"";
+  if(!ehContaTesourariaInterna(contaEfetiva)) return alert("Conta inválida.");
+  let taxa=null; if(contaEfetiva==="portugal_eur"){ taxa=Number(prompt("Taxa contabilística Db/€ para este pagamento:","26")); if(!(taxa>0)) return; }
+  const pref=db.collection("despesa_solicitacoes").doc(id), dref=db.collection("despesas").doc(), agora=new Date();
+  try{ await db.runTransaction(async tx=>{
+    const ps=await tx.get(pref); if(!ps.exists) throw new Error("Pedido não encontrado."); const p=ps.data(); if(p.estado!=="PENDENTE_APROVACAO") throw new Error("Pedido já processado.");
+    const valorDb=Number(p.valorDb)||0; if(!(valorDb>0)) throw new Error("Valor inválido.");
+    const reservaOrigRef=db.collection("despesa_reserva_saldos").doc(p.contaSolicitada), rso=await tx.get(reservaOrigRef), reservadoOrig=rso.exists?(Number(rso.data().reservado)||0):0;
+    let reservadoEfetiva=0;
+    if(contaEfetiva!==p.contaSolicitada && contaEfetiva!=="portugal_eur"){
+      const rte=db.collection("despesa_reserva_saldos").doc(contaEfetiva), rtes=await tx.get(rte); reservadoEfetiva=rtes.exists?(Number(rtes.data().reservado)||0):0;
+    }
+    let valorPagamento=valorDb, moeda="STN", saldoRef=null, saldoDepois=null;
+    if(contaEfetiva==="portugal_eur"){ moeda="EUR"; valorPagamento=valorDb/taxa; }
+    if(contaEfetiva!=="caixa_stp"){
+      saldoRef=db.collection("tesouraria_saldos").doc(contaEfetiva); const ss=await tx.get(saldoRef); if(!ss.exists) throw new Error(`Saldo de ${nomeContaTes(contaEfetiva)} não inicializado.`); const saldo=Number(ss.data().saldo)||0;
+      const reservadoNaEfetiva=contaEfetiva===p.contaSolicitada?Math.max(0,reservadoOrig-valorDb):reservadoEfetiva;
+      if(saldo-reservadoNaEfetiva+0.0000001<valorPagamento) throw new Error(`Saldo disponível insuficiente em ${nomeContaTes(contaEfetiva)}.`); saldoDepois=saldo-valorPagamento;
+    } else {
+      const caixaId=p.caixaId; if(!caixaId) throw new Error("O pedido não possui Caixa/Turno associado."); const cs=await tx.get(db.collection("caixas").doc(caixaId)); if(!cs.exists||cs.data().estado!=="aberto") throw new Error("O Caixa/Turno associado já não está aberto. Altere a origem antes de aprovar.");
+    }
+    const movRef=contaEfetiva==="caixa_stp"?db.collection("movimentacoes").doc():db.collection("tesouraria_movimentos").doc();
+    tx.set(dref,{descricao:p.descricao,categoria:p.categoria,valor:valorDb,valorDb,valorPagamento,moedaPagamento:moeda,contaPagamento:contaEfetiva,taxaReferencia:taxa,formaPagamento:contaEfetiva==="caixa_stp"?"Dinheiro":"Transferencia",observacao:p.observacao||"",estado:"REGISTADA",usuario:auth.currentUser.email||"",nomeUsuario:usuarioNome||"",uid:auth.currentUser.uid,role:"admin",data:agora,solicitacaoDespesaId:id,solicitadoPorUid:p.uid,solicitadoPorUsuario:p.usuario||"",...(contaEfetiva==="caixa_stp"?{caixaId:p.caixaId}:{})});
+    if(contaEfetiva==="caixa_stp") tx.set(movRef,{produto:`Despesa Operacional: ${p.descricao}`,tipo:"despesa_caixa",origem:"despesa_operacional",quantidade:1,valor:valorDb,formaPagamento:"Dinheiro - Despesa Operacional",categoria:p.categoria,observacao:p.observacao||"",usuario:auth.currentUser.email||"",nomeUsuario:usuarioNome||"",uid:auth.currentUser.uid,role:"admin",data:agora,caixaId:p.caixaId,despesaId:dref.id,solicitacaoDespesaId:id});
+    else { tx.set(movRef,{tipo:"despesa_operacional",natureza:"despesa_operacional",origem:contaEfetiva,destino:"despesa_externa",moedaOrigem:moeda,moedaDestino:moeda,valorOrigem:valorPagamento,valorDestino:0,taxaReferencia:taxa,taxaAplicada:null,margemDb:0,observacao:`Despesa operacional aprovada — ${p.descricao}${p.observacao?" — "+p.observacao:""}`,categoria:p.categoria,despesaId:dref.id,solicitacaoDespesaId:id,usuario:auth.currentUser.email||"",nomeUsuario:usuarioNome||"",uid:auth.currentUser.uid,role:"admin",data:agora}); tx.update(saldoRef,{saldo:saldoDepois,moeda,atualizadoEm:agora,atualizadoPorUid:auth.currentUser.uid,atualizadoPorUsuario:auth.currentUser.email||"",ultimaOperacao:"despesa_operacional_aprovada",ultimaDespesaId:dref.id}); }
+    tx.update(pref,{estado:"PAGA",reservado:false,contaEfetiva,despesaId:dref.id,aprovadoEm:agora,aprovadoPorUid:auth.currentUser.uid,aprovadoPorUsuario:auth.currentUser.email||""});
+    tx.set(reservaOrigRef,{conta:p.contaSolicitada,moeda:"STN",reservado:Math.max(0,reservadoOrig-valorDb),atualizadoEm:agora,ultimoPedidoId:id,ultimoDelta:-valorDb,ultimoUid:auth.currentUser.uid},{merge:true});
+  }); alert("Despesa aprovada e paga. A reserva foi libertada e o débito efetivado."); }catch(e){alert("Erro ao aprovar despesa: "+(e.message||e));}
+}
+
 async function registrarDespesaFase52() {
-  if(!usuarioPodeDespesasFase52()) return alert("Acesso restrito: apenas o Administrador pode registar despesas operacionais.");
+  if(!usuarioPodeDespesasFase52()) return alert("Acesso restrito: apenas ADMIN ou GERENTE podem usar Despesas Operacionais.");
   if(!navigator.onLine) return alert("O registo de despesas exige ligação à internet.");
 
   const user = auth.currentUser;
@@ -6978,6 +7117,13 @@ async function registrarDespesaFase52() {
   if(valorPagamento <= 0) return alert("Informe um valor válido.");
   if(conta === "portugal_eur" && taxaReferencia <= 0) return alert("Informe uma taxa de referência válida para a despesa paga em euros.");
   if(!ehContaTesourariaInterna(conta)) return alert("Conta de pagamento inválida.");
+
+  if(ehGerenteDesp6247()) {
+    if(conta === "portugal_eur") return alert("Portugal / EUR é exclusivo do ADMIN.");
+    if(!confirm(`Enviar solicitação de despesa ao ADMIN?\n\n${descricao}\nOrigem pretendida: ${nomeContaTes(conta)}\nValor: ${valorPagamento.toLocaleString("pt-PT")} Db\n\nO valor ficará reservado, mas não será debitado até aprovação.`)) return;
+    try { await solicitarDespesaGerente6247({descricao,categoria,conta,valorPagamento,observacao}); document.getElementById("desp52Descricao").value=""; document.getElementById("desp52Valor").value=""; document.getElementById("desp52Observacao").value=""; atualizarResumoDespesaFase52(); } catch(e) { alert("Erro ao solicitar despesa: "+(e.message||e)); }
+    return;
+  }
 
   if(conta === "caixa_stp") {
     if(!caixaAtualObj || caixaAtualObj.estado !== "aberto") {
@@ -9064,7 +9210,7 @@ function navegarPara(paginaId) {
     return;
   }
   if(paginaId === "paginaDespesas" && !usuarioPodeDespesasFase52()) {
-    alert("Acesso restrito: o módulo Despesas Operacionais é exclusivo do Administrador.");
+    alert("Acesso restrito: o módulo Despesas Operacionais é exclusivo do Administrador e da Gerente.");
     return;
   }
   if(paginaId === "paginaTesouraria" && !usuarioPodeTesouraria()) {
@@ -9129,7 +9275,9 @@ function navegarPara(paginaId) {
   }
   if(paginaId === "paginaDespesas") {
     iniciarListenerDespesasFase52();
+    iniciarSolicitacoesDesp6247();
     renderizarDespesasFase52();
+    const b=document.getElementById("btnRegistrarDespesa52"); if(b) b.textContent=usuarioRole==="gerente"?"📨 Solicitar Despesa ao ADMIN":"💸 Registar Despesa";
   }
   if(paginaId === "paginaTesouraria") {
     iniciarListenerTesouraria();
@@ -10010,7 +10158,7 @@ function aplicarSegurancaInterface64() {
   mostrar("btnPageCaixa", admin || usuarioRole === "gerente" || vendedor);
   mostrar("btnPageTransferencias", admin || vendedor);
   mostrar("btnPageEncomendas", admin || vendedor);
-  mostrar("btnPageDespesas", admin);
+  mostrar("btnPageDespesas", admin || usuarioRole === "gerente");
   mostrar("btnPageTesouraria", admin);
   mostrar("btnPageArmazem", admin || estoque);
 
@@ -12304,12 +12452,17 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   function governarDespesasGerente(){
     const pagina=document.getElementById("paginaDespesas");
     if(!pagina) return;
-    if(gerenteEmSubstituicaoUI()) return; // Caixa Loja volta a ser opção operacional durante a substituição.
-    removerOpcao("desp52ContaPagamento","caixa_stp");
     const sel=document.getElementById("desp52ContaPagamento");
-    if(sel && !sel.value) selecionarSeExiste("desp52ContaPagamento","responsavel_stp");
+    if(sel){
+      [...sel.options].forEach(o=>{
+        if(o.value==="portugal_eur") o.disabled=true;
+        if(o.value==="caixa_stp") o.disabled=!gerenteEmSubstituicaoUI();
+      });
+      if(sel.value==="portugal_eur" || (sel.value==="caixa_stp"&&!gerenteEmSubstituicaoUI())) selecionarSeExiste("desp52ContaPagamento","responsavel_stp");
+    }
+    const b=document.getElementById("btnRegistrarDespesa52"); if(b) b.textContent="📨 Solicitar Despesa ao ADMIN";
     const card=pagina.querySelector(".card");
-    inserirNota(card,"despesas",`👁️ <b>Perfil GERENTE:</b> pode registar despesas por <b>Responsável / Reserva, Banco STP / DobraPay ou Portugal / EUR</b>. A origem <b>Caixa Loja</b> não aparece porque exige operação física de caixa.`,"#9a3412","#fff7ed","#fed7aa");
+    inserirNota(card,"despesas",`🧾 <b>Perfil GERENTE:</b> regista uma <b>solicitação</b>; nenhum dinheiro sai diretamente. O valor fica reservado até o ADMIN aprovar ou rejeitar. Pode solicitar por <b>Responsável / Reserva</b>, <b>Banco STP / DobraPay</b> e, com Substituição Operacional + turno aberto, <b>Caixa Loja</b>. <b>Portugal / EUR</b> é exclusivo do ADMIN.`,"#9a3412","#fff7ed","#fed7aa");
     try{ if(typeof atualizarResumoDespesaFase52==="function") atualizarResumoDespesaFase52(); }catch(e){}
   }
 
@@ -12382,13 +12535,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       return original.apply(this,arguments);
     };
   }
-  if(typeof registrarDespesaFase52==="function"){
-    const original=registrarDespesaFase52;
-    registrarDespesaFase52=async function(){
-      if(ehGerente() && !gerenteEmSubstituicaoUI() && document.getElementById("desp52ContaPagamento")?.value==="caixa_stp") return alert("Caixa Loja não é uma origem disponível para GERENTE fora da Substituição Operacional.");
-      return original.apply(this,arguments);
-    };
-  }
+  // Despesas 6.24.7: a própria função cria solicitação para GERENTE; não há débito direto.
   if(typeof registrarMovimentoTesouraria==="function"){
     const original=registrarMovimentoTesouraria;
     registrarMovimentoTesouraria=async function(){

@@ -1,8 +1,8 @@
-/* Mundo Digital STP PWA — 6.24.6 / 2026.10.03-023
+/* Mundo Digital STP PWA — 6.24.7 / 2026.10.03-024
    Cache apenas da interface local.
    Firebase/Firestore e operações financeiras NÃO são simuladas offline. */
 
-const CACHE_NAME = 'mdstp-shell-2026.10.03-023-v6246';
+const CACHE_NAME = 'mdstp-shell-2026.10.03-024-v6247';
 const APP_SHELL = [
   './',
   './index.html',
