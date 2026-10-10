@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.10.10-025">
+<meta name="mdstp-build" content="2026.10.10-026">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -2311,7 +2311,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <h3 style="margin-top:0;">🎟️ Gestão de Cupões</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <input id="f6240CupCodigoAdmin" placeholder="Código (ex.: MUNDO200)">
-      <select id="f6240CupTipo"><option value="VALOR">Valor fixo (Db)</option><option value="PERCENTUAL">Percentagem (%)</option></select>
+      <select id="f6240CupTipo"><option value="VALOR_FIXO">Valor fixo (Db)</option><option value="PERCENTUAL">Percentagem (%)</option></select>
       <input id="f6240CupValor" type="number" min="0" placeholder="Valor">
       <input id="f6240CupMinimo" type="number" min="0" placeholder="Compra mínima (Db)">
       <input id="f6240CupMaxUsos" type="number" min="1" placeholder="Máx. utilizações">
@@ -2320,6 +2320,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <label style="font-size:12px;font-weight:700;">Produto específico (opcional)</label>
     <select id="f6240CupProduto"><option value="">Todos os produtos</option></select>
     <button class="btn-success" onclick="f6240CriarCupao()" style="width:100%;margin-top:8px;">＋ Criar cupão</button>
+    <div id="f62472Preview" aria-live="polite" style="margin-top:12px;"></div>
     <div id="f6240ListaCupoes" style="margin-top:12px;"></div>
     <div style="margin-top:12px;text-align:right;"><button class="btn-secondary" onclick="document.getElementById('f6240ModalCupoes').classList.add('hidden')">Fechar</button></div>
   </div>
@@ -15116,17 +15117,43 @@ async function f6240AplicarCupao(){
 function f6240AbrirCupoes(){
   if(usuarioRole!=="admin")return alert("Apenas ADMIN pode gerir cupões.");
   const sel=document.getElementById("f6240CupProduto");sel.innerHTML='<option value="">Todos os produtos</option>'+todosProdutos.map(p=>`<option value="${p.id}">${p.nome}</option>`).join("");
-  f6240RenderCupoes();document.getElementById("f6240ModalCupoes").classList.remove("hidden");
+  f6240RenderCupoes();document.getElementById("f6240ModalCupoes").classList.remove("hidden");f62472AtualizarPreview();
 }
 function f6240RenderCupoes(){
   const b=document.getElementById("f6240ListaCupoes");if(!b)return;
   b.innerHTML=f6240Cupoes.length?f6240Cupoes.map(c=>`<div style="padding:7px;border-bottom:1px solid #e2e8f0;"><b>${c.codigo}</b> — ${c.tipo==="PERCENTUAL"?c.valor+"%":Number(c.valor).toLocaleString("pt-PT")+" Db"} · usos ${c.usos||0}/${c.maxUsos||"∞"} · ${c.ativo?"ATIVO":"INATIVO"} <button class="btn-secondary" onclick="f6240ToggleCupao('${c.id}',${!c.ativo})">${c.ativo?"Desativar":"Ativar"}</button></div>`).join(""):"Sem cupões.";
 }
+function f62472AtualizarPreview(){
+  const box=document.getElementById("f62472Preview");if(!box)return;
+  const val=id=>document.getElementById(id)?.value||"";
+  const tipo=val("f6240CupTipo"), desconto=Number(val("f6240CupValor")), minimo=Number(val("f6240CupMinimo")),max=Number(val("f6240CupMaxUsos"));
+  const produto=todosProdutos.find(p=>p.id===val("f6240CupProduto"));
+  const preco=produto?Number(produto.venda)||0:0;
+  const fmt=n=>Number(n).toLocaleString("pt-PT",{maximumFractionDigits:2})+" Db";
+  const desc=tipo==="PERCENTUAL"?preco*desconto/100:desconto;
+  const final=Math.max(0,preco-Math.max(0,desc));
+  const valido=Number.isFinite(desconto)&&desconto>0&&(tipo!=="PERCENTUAL"||desconto<=100)&&Number.isFinite(minimo)&&minimo>=0&&Number.isInteger(max)&&max>0;
+  const titulo=produto?String(produto.nome||"Produto selecionado").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])):"Todos os produtos";
+  box.innerHTML=`<div style="background:#effcf6;border:1px solid #a7f3d0;border-radius:12px;padding:14px;color:#14532d;">
+    <div style="font-weight:800;font-size:16px;margin-bottom:8px;">👁 Pré-visualização do cupão</div>
+    <div style="font-weight:700;">${titulo}</div>
+    ${produto&&preco>0?`<div style="display:flex;justify-content:space-between;margin-top:10px;"><span>Preço normal (1 unidade)</span><b>${fmt(preco)}</b></div><div style="display:flex;justify-content:space-between;margin-top:6px;"><span>Desconto</span><b>− ${fmt(Math.min(preco,Math.max(0,desc)))}</b></div><div style="display:flex;justify-content:space-between;border-top:1px solid #86efac;padding-top:9px;margin-top:9px;font-size:18px;"><strong>Preço final estimado</strong><strong>${fmt(final)}</strong></div>`:`<p style="margin:8px 0;">${tipo==="PERCENTUAL"?`Desconto de ${Number.isFinite(desconto)?desconto:0}%`:`Desconto fixo de ${fmt(Number.isFinite(desconto)?desconto:0)}`} na compra elegível. Escolhe um produto para veres o preço final de uma unidade.</p>`}
+    <div style="font-size:12px;margin-top:9px;">Compra mínima: ${fmt(Number.isFinite(minimo)?minimo:0)} · Limite: ${Number.isFinite(max)?max:0} utilizações · Validade: ${val("f6240CupValidade")||"não definida"}</div>
+    ${produto&&preco>0&&minimo>preco?'<p style="color:#92400e;margin:8px 0 0;">⚠️ Uma unidade não atinge a compra mínima; o cupão só poderá aplicar-se a uma compra elegível.</p>':''}
+    ${!valido?'<p style="color:#b91c1c;margin:8px 0 0;">⚠️ Preenche um desconto válido e um limite de utilizações maior que zero.</p>':''}
+    <p style="font-size:11px;margin:8px 0 0;">Simulação para uma unidade, antes de outros ajustes; não altera o preço do produto nem reserva stock.</p>
+  </div>`;
+}
+["f6240CupCodigoAdmin","f6240CupTipo","f6240CupValor","f6240CupMinimo","f6240CupMaxUsos","f6240CupValidade","f6240CupProduto"].forEach(id=>{
+  document.getElementById(id)?.addEventListener("input",f62472AtualizarPreview);
+  document.getElementById(id)?.addEventListener("change",f62472AtualizarPreview);
+});
 async function f6240CriarCupao(){
   if(usuarioRole!=="admin" || !auth.currentUser)return alert("Apenas ADMIN pode criar cupões.");
   const codigo=String(document.getElementById("f6240CupCodigoAdmin").value||"").trim().toUpperCase(),tipo=document.getElementById("f6240CupTipo").value,valor=Number(document.getElementById("f6240CupValor").value),compraMinima=Number(document.getElementById("f6240CupMinimo").value||0),maxUsos=Number(document.getElementById("f6240CupMaxUsos").value),produtoId=document.getElementById("f6240CupProduto").value,vd=document.getElementById("f6240CupValidade").value;
   if(!/^[A-Z0-9_-]{3,60}$/.test(codigo))return alert("Código: 3 a 60 caracteres, apenas letras, números, _ e -.");
   if(!["FIXO","VALOR_FIXO","PERCENTUAL"].includes(tipo)||!Number.isFinite(valor)||valor<=0||tipo==="PERCENTUAL"&&valor>100||!Number.isFinite(compraMinima)||compraMinima<0||!Number.isInteger(maxUsos)||maxUsos<=0)return alert("Verifique tipo, valor, compra mínima e limite de utilizações.");
+  if(produtoId && !todosProdutos.some(p=>p.id===produtoId))return alert("Produto selecionado inválido.");
   const validade=vd?new Date(vd+"T23:59:59"):null;
   if(validade&&(!Number.isFinite(validade.getTime())||validade<=new Date()))return alert("A validade deve ser uma data futura.");
   const btn=document.querySelector('button[onclick="f6240CriarCupao()"]');
@@ -15139,8 +15166,8 @@ async function f6240CriarCupao(){
       tx.set(ref,{codigo,tipo,valor,compraMinima,maxUsos,usos:0,produtoId:produtoId||null,validadeAte:validade,ativo:true,criadoPorUid:auth.currentUser.uid,criadoPorUsuario:auth.currentUser.email||"",dataCriacao:new Date()});
     });
     alert("Cupão "+codigo+" criado com sucesso.");
-    document.getElementById("f6240CupCodigoAdmin").value="";
-  }catch(e){console.error("Falha ao criar cupão",e);alert("Não foi possível criar o cupão: "+(e.code==="permission-denied"?"Permissão negada pelo Firestore. Confirme a publicação das regras 6.24.7.1.":e.message||String(e)));}
+    document.getElementById("f6240CupCodigoAdmin").value="";f62472AtualizarPreview();
+  }catch(e){console.error("Falha ao criar cupão",e);alert("Não foi possível criar o cupão: "+(e.code==="permission-denied"?"Permissão negada pelo Firestore. Confirme a publicação das regras 6.24.7.2.":e.message||String(e)));}
   finally{if(btn){btn.disabled=false;btn.textContent="＋ Criar cupão";}}
 }
 async function f6240ToggleCupao(id,ativo){
