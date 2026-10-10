@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.10.03-024">
+<meta name="mdstp-build" content="2026.10.10-025">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -15069,7 +15069,7 @@ function f6240Ouvir(){
     }
   },()=>{});
   try{f6240UnsubCup?.();}catch(e){}
-  f6240UnsubCup=db.collection("cupons").onSnapshot(s=>{f6240Cupoes=[];s.forEach(d=>f6240Cupoes.push({id:d.id,...d.data()}));},()=>{});
+  f6240UnsubCup=db.collection("cupons").onSnapshot(s=>{f6240Cupoes=[];s.forEach(d=>f6240Cupoes.push({id:d.id,...d.data()}));f6240RenderCupoes();},e=>{console.error("Erro ao carregar cupões",e);});
 }
 function f6240AtualizarBadge(){
   const n=f6240Solicitacoes.filter(x=>x.estado==="PENDENTE").length,b=document.getElementById("f6240PendentesBadge");
@@ -15123,14 +15123,31 @@ function f6240RenderCupoes(){
   b.innerHTML=f6240Cupoes.length?f6240Cupoes.map(c=>`<div style="padding:7px;border-bottom:1px solid #e2e8f0;"><b>${c.codigo}</b> — ${c.tipo==="PERCENTUAL"?c.valor+"%":Number(c.valor).toLocaleString("pt-PT")+" Db"} · usos ${c.usos||0}/${c.maxUsos||"∞"} · ${c.ativo?"ATIVO":"INATIVO"} <button class="btn-secondary" onclick="f6240ToggleCupao('${c.id}',${!c.ativo})">${c.ativo?"Desativar":"Ativar"}</button></div>`).join(""):"Sem cupões.";
 }
 async function f6240CriarCupao(){
-  if(usuarioRole!=="admin")return;
-  const codigo=String(document.getElementById("f6240CupCodigoAdmin").value||"").trim().toUpperCase(),tipo=document.getElementById("f6240CupTipo").value,valor=Number(document.getElementById("f6240CupValor").value)||0,compraMinima=Number(document.getElementById("f6240CupMinimo").value)||0,maxUsos=Number(document.getElementById("f6240CupMaxUsos").value)||0,produtoId=document.getElementById("f6240CupProduto").value,vd=document.getElementById("f6240CupValidade").value;
-  if(!codigo||valor<=0||maxUsos<=0)return alert("Informe código, valor e limite de utilizações.");
-  if(tipo==="PERCENTUAL"&&valor>100)return alert("Percentagem inválida.");
-  const id=codigo.replace(/[^A-Z0-9_-]/g,"_");
-  await db.collection("cupons").doc(id).set({codigo,tipo,valor,compraMinima,maxUsos,usos:0,produtoId:produtoId||null,validadeAte:vd?new Date(vd+"T23:59:59"):null,ativo:true,criadoPorUid:auth.currentUser.uid,criadoPorUsuario:auth.currentUser.email,dataCriacao:new Date()});
+  if(usuarioRole!=="admin" || !auth.currentUser)return alert("Apenas ADMIN pode criar cupões.");
+  const codigo=String(document.getElementById("f6240CupCodigoAdmin").value||"").trim().toUpperCase(),tipo=document.getElementById("f6240CupTipo").value,valor=Number(document.getElementById("f6240CupValor").value),compraMinima=Number(document.getElementById("f6240CupMinimo").value||0),maxUsos=Number(document.getElementById("f6240CupMaxUsos").value),produtoId=document.getElementById("f6240CupProduto").value,vd=document.getElementById("f6240CupValidade").value;
+  if(!/^[A-Z0-9_-]{3,60}$/.test(codigo))return alert("Código: 3 a 60 caracteres, apenas letras, números, _ e -.");
+  if(!["FIXO","VALOR_FIXO","PERCENTUAL"].includes(tipo)||!Number.isFinite(valor)||valor<=0||tipo==="PERCENTUAL"&&valor>100||!Number.isFinite(compraMinima)||compraMinima<0||!Number.isInteger(maxUsos)||maxUsos<=0)return alert("Verifique tipo, valor, compra mínima e limite de utilizações.");
+  const validade=vd?new Date(vd+"T23:59:59"):null;
+  if(validade&&(!Number.isFinite(validade.getTime())||validade<=new Date()))return alert("A validade deve ser uma data futura.");
+  const btn=document.querySelector('button[onclick="f6240CriarCupao()"]');
+  if(btn){btn.disabled=true;btn.textContent="A criar cupão...";}
+  try{
+    const ref=db.collection("cupons").doc(codigo);
+    await db.runTransaction(async tx=>{
+      const atual=await tx.get(ref);
+      if(atual.exists)throw new Error("Já existe um cupão com este código. Não foi substituído.");
+      tx.set(ref,{codigo,tipo,valor,compraMinima,maxUsos,usos:0,produtoId:produtoId||null,validadeAte:validade,ativo:true,criadoPorUid:auth.currentUser.uid,criadoPorUsuario:auth.currentUser.email||"",dataCriacao:new Date()});
+    });
+    alert("Cupão "+codigo+" criado com sucesso.");
+    document.getElementById("f6240CupCodigoAdmin").value="";
+  }catch(e){console.error("Falha ao criar cupão",e);alert("Não foi possível criar o cupão: "+(e.code==="permission-denied"?"Permissão negada pelo Firestore. Confirme a publicação das regras 6.24.7.1.":e.message||String(e)));}
+  finally{if(btn){btn.disabled=false;btn.textContent="＋ Criar cupão";}}
 }
-async function f6240ToggleCupao(id,ativo){if(usuarioRole==="admin")await db.collection("cupons").doc(id).update({ativo});}
+async function f6240ToggleCupao(id,ativo){
+  if(usuarioRole!=="admin")return;
+  try{await db.collection("cupons").doc(id).update({ativo});}
+  catch(e){console.error("Falha ao alterar cupão",e);alert("Não foi possível alterar o cupão: "+(e.message||e));}
+}
 
 const f6240ConfirmarVendaOriginal=confirmarVendaModal;
 confirmarVendaModal=async function(){
