@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.10.10-026">
+<meta name="mdstp-build" content="2026.10.11-027">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -2887,6 +2887,8 @@ auth.onAuthStateChanged(async u => {
       return;
     }
     usuarioNome = String(dados.nome || "").trim();
+    // 6.24.7.5: inicia a sincronização após confirmar o perfil, sem timeout de 1,2s.
+    if(typeof window.f611PerfilPronto === "function") window.f611PerfilPronto(u.uid);
 
     userEmailSpan.innerText = u.email || "";
     userRoleSpan.innerText = usuarioRole;
@@ -3127,7 +3129,11 @@ function carregarCaixaDoUsuario() {
     .where("uid", "==", user.uid)
     .where("estado", "==", "aberto")
     .limit(1)
-    .onSnapshot(s => {
+    .onSnapshot({includeMetadataChanges:true}, s => {
+      if(usuarioRole === 'gerente' && s.metadata.fromCache){
+        console.warn('Turno GERENTE: dados locais; a aguardar confirmação do servidor.');
+        return;
+      }
       if(!s.empty) {
         let doc = s.docs[0];
         caixaAtualObj = doc.data();
@@ -3136,6 +3142,12 @@ function carregarCaixaDoUsuario() {
       } else {
         caixaAtualObj = null;
         renderizarPainelCaixaFechado();
+      }
+    }, err => {
+      console.error('Falha ao sincronizar Caixa/Turno:', err);
+      if(usuarioRole === 'gerente'){
+        const box=document.getElementById('statusTurnoBox');
+        if(box) box.innerHTML='<p style="color:#b45309;font-weight:bold">⚠️ Não foi possível sincronizar o turno com o servidor. Não abra outro caixa. Verifique a ligação e as permissões.</p>';
       }
     });
 }
@@ -12571,7 +12583,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
    Uma identidade, dois contextos. Nunca altera o role real do utilizador.
    ========================================================================= */
 (function(){
-  let subDocRef611=null, subUnsub611=null;
+  let subDocRef611=null, subUnsub611=null, subUid611=null, subEstado611="a_sincronizar";
   window.f611SubAtiva=false;
   window.f611SubDados=null;
 
@@ -12601,6 +12613,14 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       pag.insertBefore(card,alvo||null);
     }
     const d=window.f611SubDados||{};
+    if(subEstado611==='a_sincronizar' || subEstado611==='erro'){
+      card.style.borderLeft='5px solid #f59e0b'; card.style.background='#fff7ed';
+      card.innerHTML=`<h3>⚠️ Substituição Operacional — ${subEstado611==='erro'?'erro de sincronização':'a sincronizar'}</h3>
+      <p>Não é seguro iniciar outra substituição ou outro turno enquanto o estado não for confirmado pelo servidor.</p>
+      <button id="btnRecarregarSub611" class="btn warning">🔄 Tentar sincronizar novamente</button>`;
+      card.querySelector('#btnRecarregarSub611').onclick=()=>window.f611PerfilPronto(auth.currentUser?.uid);
+      return;
+    }
     if(emSub611()){
       card.style.borderLeft='5px solid #f59e0b'; card.style.background='#fffbeb';
       card.innerHTML=`<h3>🟠 SUBSTITUIÇÃO OPERACIONAL ATIVA</h3>
@@ -12620,7 +12640,22 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
   async function iniciarSub611(){
     if(!ehGerente611()||!auth.currentUser) return;
-    if(caixaAtualObj?.estado==='aberto') return alert('Já existe um Caixa/Turno aberto nesta conta. Feche-o antes de iniciar uma nova substituição.');
+    if(subEstado611!=='pronto') return alert('Aguarde a sincronização da substituição com o servidor.');
+    if(emSub611()) return alert('A substituição já está ativa. Utilize o turno existente.');
+    // Confirma o estado real antes de qualquer criação: nunca sobrescreve uma substituição.
+    const uCheck=auth.currentUser;
+    try {
+      const [subAtual, turnosAbertos]=await Promise.all([
+        db.collection('substituicoes_operacionais').doc(uCheck.uid).get({source:'server'}),
+        db.collection('caixas').where('uid','==',uCheck.uid).where('estado','==','aberto').limit(1).get({source:'server'})
+      ]);
+      if(subAtual.exists && subAtual.data().estado==='ativa'){
+        window.f611SubDados=subAtual.data(); window.f611SubAtiva=true; subEstado611='pronto'; aplicarContexto611();
+        return alert('Substituição ativa recuperada do servidor. Não foi criada outra.');
+      }
+      if(!turnosAbertos.empty) return alert('Existe um turno aberto, mas a substituição não está ativa no servidor. Operação bloqueada para evitar duplicados. Contacte o ADMIN.');
+      if(subAtual.exists) return alert('Existe um registo de substituição encerrado. As regras atuais não permitem reativá-lo. Não será sobrescrito.');
+    }catch(e){console.error('Verificação da substituição:',e);return alert('Não foi possível confirmar o estado no servidor: '+(e.message||e));}
     const opcoes='1 - Ausência da vendedora\n2 - Intervalo / pausa\n3 - Emergência operacional\n4 - Cobertura temporária\n5 - Outro';
     const n=prompt('Motivo obrigatório da substituição:\n\n'+opcoes,'1'); if(n===null) return;
     const mapa={'1':'Ausência da vendedora','2':'Intervalo / pausa','3':'Emergência operacional','4':'Cobertura temporária','5':'Outro'};
@@ -12679,7 +12714,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
   function resetSessao611(){
     if(subUnsub611){ try{subUnsub611();}catch(e){} subUnsub611=null; }
-    subDocRef611=null;
+    subDocRef611=null; subUid611=null; subEstado611='a_sincronizar';
     window.f611SubAtiva=false;
     window.f611SubDados=null;
     try{ document.getElementById('cardSubstituicaoOperacional611')?.remove(); }catch(e){}
@@ -12687,15 +12722,38 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   window.f611ResetSessao = resetSessao611;
 
   function ouvir611(){
+    const u=auth.currentUser;
+    if(!u||!ehGerente611()) {resetSessao611();return;}
+    if(subUnsub611 && subUid611===u.uid) return; // não reinicia a escuta em cada renderização
     if(subUnsub611){try{subUnsub611();}catch(e){} subUnsub611=null;}
-    const u=auth.currentUser; if(!u||!ehGerente611()){resetSessao611();return;}
-    subDocRef611=db.collection('substituicoes_operacionais').doc(u.uid);
-    subUnsub611=subDocRef611.onSnapshot(doc=>{
-      const d=doc.exists?doc.data():null; window.f611SubDados=d; window.f611SubAtiva=!!(d&&d.estado==='ativa');
-      aplicarContexto611();
+    const uid=u.uid;
+    subUid611=uid; subEstado611='a_sincronizar';
+    window.f611SubAtiva=false; window.f611SubDados=null;
+    aplicarContexto611();
+    subDocRef611=db.collection('substituicoes_operacionais').doc(uid);
+    subUnsub611=subDocRef611.onSnapshot({includeMetadataChanges:true},doc=>{
+      if(!auth.currentUser||auth.currentUser.uid!==uid||subUid611!==uid)return;
+      if(doc.metadata.fromCache){
+        subEstado611='a_sincronizar'; window.f611SubAtiva=false;
+        aplicarContexto611(); return;
+      }
+      const d=doc.exists?doc.data():null;
+      window.f611SubDados=d; window.f611SubAtiva=!!(d&&d.estado==='ativa');
+      subEstado611='pronto'; aplicarContexto611();
       if(typeof carregarCaixaDoUsuario==='function') carregarCaixaDoUsuario();
+    },e=>{
+      if(subUid611!==uid)return;
+      console.error('Falha ao sincronizar substituição operacional:',e);
+      subEstado611='erro'; window.f611SubAtiva=false; window.f611SubDados=null;
+      subUnsub611=null; aplicarContexto611();
     });
   }
+  // Chamado pela autenticação principal assim que a role foi validada.
+  window.f611PerfilPronto=function(uid){
+    if(!uid||!auth.currentUser||auth.currentUser.uid!==uid)return;
+    if(ehGerente611()){ouvir611();aplicarContexto611();}
+    else resetSessao611();
+  };
 
   // Guards operacionais: mantém role real e adiciona apenas o contexto temporário.
   const abrirCaixaOriginal611=abrirCaixa;
@@ -12746,19 +12804,8 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   document.addEventListener('click',()=>{ if(ehGerente611()) setTimeout(aplicarContexto611,20); },true);
   if(typeof auth!=='undefined'&&auth?.onAuthStateChanged){
     auth.onAuthStateChanged(u=>{
-      if(!u){ resetSessao611(); return; }
-      const uidObservado=u.uid;
-      // A role vem do documento usuarios; espera apenas até a validação principal terminar.
-      let tent=0;
-      const iniciarQuandoPronto=()=>{
-        if(!auth.currentUser || auth.currentUser.uid!==uidObservado){ resetSessao611(); return; }
-        if(usuarioRole){
-          if(ehGerente611()){ ouvir611(); aplicarContexto611(); } else resetSessao611();
-          return;
-        }
-        if(++tent<=12) setTimeout(iniciarQuandoPronto,100);
-      };
-      iniciarQuandoPronto();
+      if(!u) resetSessao611();
+      // O início com role confirmada ocorre em f611PerfilPronto, sem temporizadores.
     });
   }
 })();
@@ -15167,7 +15214,7 @@ async function f6240CriarCupao(){
     });
     alert("Cupão "+codigo+" criado com sucesso.");
     document.getElementById("f6240CupCodigoAdmin").value="";f62472AtualizarPreview();
-  }catch(e){console.error("Falha ao criar cupão",e);alert("Não foi possível criar o cupão: "+(e.code==="permission-denied"?"Permissão negada pelo Firestore. Confirme a publicação das regras 6.24.7.2.":e.message||String(e)));}
+  }catch(e){console.error("Falha ao criar cupão",e);alert("Não foi possível criar o cupão: "+(e.code==="permission-denied"?"Permissão negada pelo Firestore. Confirme a publicação das regras 6.24.7.5.":e.message||String(e)));}
   finally{if(btn){btn.disabled=false;btn.textContent="＋ Criar cupão";}}
 }
 async function f6240ToggleCupao(id,ativo){
