@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.10.13-028">
+<meta name="mdstp-build" content="2026.10.15-029">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -2188,14 +2188,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <input id="f5CustoAlfandega" type="number" min="0" step="0.01" value="0" placeholder="Alfândega (Db)" oninput="f5AtualizarFinalResumo()">
       <input id="f5CustoLevantamento" type="number" min="0" step="0.01" value="0" placeholder="Levantamento / taxa de retirada (Db)" oninput="f5AtualizarFinalResumo()">
       <input id="f5CustoOutros" type="number" min="0" step="0.01" value="0" placeholder="Outros custos (Db)" oninput="f5AtualizarFinalResumo()">
-      <select id="f5CustoFormaPagamento" onchange="f5AtualizarOpcoesContaFinal()">
+      <select id="f5CustoFormaPagamento">
         <option value="Dinheiro">💵 Pago em Dinheiro (sai do caixa)</option>
-        <option value="Transferencia">🏦 Pago por conta financeira</option>
-      </select>
-      <select id="f5CustoContaFinanceira" style="display:none;" aria-label="Conta que pagou os custos">
-        <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
-        <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
-        <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
+        <option value="Transferencia">🏦 Pago por Transferência / DobraPay</option>
       </select>
       <input id="f5CustoObservacao" placeholder="Observação dos custos (opcional)">
     </div>
@@ -2203,14 +2198,9 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <h4 style="margin:0 0 10px;color:#334155;">💰 Recebimento final do cliente</h4>
     <div class="form-grid">
       <input id="f5FinalValorReceber" type="number" readonly style="background:#f8fafc;font-weight:700;">
-      <select id="f5FinalFormaPagamento" onchange="f5AtualizarOpcoesContaFinal()">
+      <select id="f5FinalFormaPagamento">
         <option value="Dinheiro">💵 Dinheiro no caixa</option>
-        <option value="Transferencia">🏦 Recebimento por conta financeira</option>
-      </select>
-      <select id="f5FinalContaFinanceira" style="display:none;" aria-label="Conta que recebe o pagamento final">
-        <option value="responsavel_stp">👤 Responsável / Reserva (Db)</option>
-        <option value="banco_stp">🏦 Banco STP / DobraPay (Db)</option>
-        <option value="portugal_eur">🇵🇹 Portugal / EUR (€)</option>
+        <option value="Transferencia">🏦 Transferência / DobraPay</option>
       </select>
       <input id="f5FinalObservacao" placeholder="Observação da entrega (opcional)">
     </div>
@@ -2321,7 +2311,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <h3 style="margin-top:0;">🎟️ Gestão de Cupões</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
       <input id="f6240CupCodigoAdmin" placeholder="Código (ex.: MUNDO200)">
-      <select id="f6240CupTipo"><option value="VALOR_FIXO">Valor fixo (Db)</option><option value="PERCENTUAL">Percentagem (%)</option></select>
+      <select id="f6240CupTipo"><option value="VALOR_FIXO">Valor fixo (Db)</option><option value="VALOR">Valor fixo (Db) — compatibilidade</option><option value="PERCENTUAL">Percentagem (%)</option></select>
       <input id="f6240CupValor" type="number" min="0" placeholder="Valor">
       <input id="f6240CupMinimo" type="number" min="0" placeholder="Compra mínima (Db)">
       <input id="f6240CupMaxUsos" type="number" min="1" placeholder="Máx. utilizações">
@@ -2897,8 +2887,6 @@ auth.onAuthStateChanged(async u => {
       return;
     }
     usuarioNome = String(dados.nome || "").trim();
-    // 6.24.7.6: inicia a sincronização após confirmar o perfil, sem timeout de 1,2s.
-    if(typeof window.f611PerfilPronto === "function") window.f611PerfilPronto(u.uid);
 
     userEmailSpan.innerText = u.email || "";
     userRoleSpan.innerText = usuarioRole;
@@ -3139,11 +3127,7 @@ function carregarCaixaDoUsuario() {
     .where("uid", "==", user.uid)
     .where("estado", "==", "aberto")
     .limit(1)
-    .onSnapshot({includeMetadataChanges:true}, s => {
-      if(usuarioRole === 'gerente' && s.metadata.fromCache){
-        console.warn('Turno GERENTE: dados locais; a aguardar confirmação do servidor.');
-        return;
-      }
+    .onSnapshot(s => {
       if(!s.empty) {
         let doc = s.docs[0];
         caixaAtualObj = doc.data();
@@ -3152,12 +3136,6 @@ function carregarCaixaDoUsuario() {
       } else {
         caixaAtualObj = null;
         renderizarPainelCaixaFechado();
-      }
-    }, err => {
-      console.error('Falha ao sincronizar Caixa/Turno:', err);
-      if(usuarioRole === 'gerente'){
-        const box=document.getElementById('statusTurnoBox');
-        if(box) box.innerHTML='<p style="color:#b45309;font-weight:bold">⚠️ Não foi possível sincronizar o turno com o servidor. Não abra outro caixa. Verifique a ligação e as permissões.</p>';
       }
     });
 }
@@ -6671,9 +6649,7 @@ function f5RenderizarLista() {
   tbody.innerHTML = lista.map(enc => {
     const venda = Number(enc.valorTotal)||0;
     const sinal = Number(enc.sinalPago)||0;
-    const finalRecebido = enc.estado === 'CONCLUIDO' ? Math.max(0, Number(enc.valorFinalRecebido)||0) : 0;
-    const totalRecebido = Math.min(venda, sinal + finalRecebido);
-    const falta = Math.max(0, venda-totalRecebido);
+    const falta = Math.max(0, venda-sinal);
     const compra = Number(enc.custoCompra)||0;
     const chegada = Number(enc.custosChegada)||0;
     const custoReal = compra + chegada;
@@ -6694,7 +6670,7 @@ function f5RenderizarLista() {
         ? `${comprovativo} <button class="btn-success btn-acao" style="background:#d97706;" onclick="f6227AbrirCompra('${enc.id}')">🛒 Registar Compra</button>`
         : (enc.estado === 'EM_TRANSITO'
           ? `${comprovativo} <button class="btn-success btn-acao" style="background:#0d9488;" onclick="f5AbrirFinalizacao('${enc.id}')">📦 Chegou / Entregar</button>`
-          : `<span style="font-size:11px;color:#64748b;">Lucro: <b style="color:#059669;">${f5Moeda(lucroReal)}</b></span> <button class="btn-secondary btn-acao" style="background:#7c3aed;color:white;" onclick="f62476RegularizarEncomenda('${enc.id}')">💳 Verificar / Regularizar Tesouraria</button>`);
+          : `<span style="font-size:11px;color:#64748b;">Lucro: <b style="color:#059669;">${f5Moeda(lucroReal)}</b></span>`);
 
       if(precisaRegularizarCompra) {
         acao += ` <button class="btn-secondary btn-acao" style="background:#d97706;color:white;" onclick="f6222AbrirRegularizacaoCompra('${enc.id}')">🧾 Regularizar Compra</button>`;
@@ -6711,8 +6687,8 @@ function f5RenderizarLista() {
       <td><b>${String(enc.produto||'-')}</b></td>
       <td>${Number(enc.quantidade||1)}</td>
       <td>${f5Moeda(venda)}</td>
-      <td style="color:#059669;font-weight:700;">${f5Moeda(totalRecebido)}${enc.estado === 'CONCLUIDO' ? '<br><small style="color:#047857;">✅ Pago</small>' : ''}</td>
-      <td style="color:${falta<=0.0001?'#059669':'#dc2626'};font-weight:700;">${falta<=0.0001 ? '✅ Pago' : f5Moeda(falta)}</td>
+      <td style="color:#059669;font-weight:700;">${f5Moeda(sinal)}</td>
+      <td style="color:#dc2626;font-weight:700;">${f5Moeda(falta)}</td>
       <td class="f622-custo-sensivel">${usuarioRole === 'admin' ? f5Moeda(compra) : '🔒'}</td>
       <td class="f622-custo-sensivel" style="color:#d97706;font-weight:700;">${usuarioRole === 'admin' ? f5Moeda(chegada) : '🔒'}</td>
       <td class="f622-custo-sensivel">${usuarioRole === 'admin' ? f5Moeda(custoReal) : '🔒'}</td>
@@ -6816,28 +6792,6 @@ async function f620EmitirComprovativoEncomenda(id){
   window.print();
 }
 
-function f5AtualizarOpcoesContaFinal() {
-  const semCaixa = !caixaAtualObj;
-  const custoForma = document.getElementById('f5CustoFormaPagamento');
-  const finalForma = document.getElementById('f5FinalFormaPagamento');
-  const custoConta = document.getElementById('f5CustoContaFinanceira');
-  const finalConta = document.getElementById('f5FinalContaFinanceira');
-  if(custoConta) custoConta.style.display = (custoForma?.value === 'Transferencia') ? 'block' : 'none';
-  if(finalConta) finalConta.style.display = (finalForma?.value === 'Transferencia') ? 'block' : 'none';
-  // Sem caixa, apenas ADMIN pode direcionar recebimentos/pagamentos diretamente para contas.
-  if(semCaixa && usuarioRole !== 'admin') {
-    if(finalForma) finalForma.value = 'Dinheiro';
-    if(custoForma) custoForma.value = 'Dinheiro';
-    if(finalForma) finalForma.disabled = true;
-    if(custoForma) custoForma.disabled = true;
-    if(finalConta) finalConta.style.display = 'none';
-    if(custoConta) custoConta.style.display = 'none';
-  } else {
-    if(finalForma) finalForma.disabled = false;
-    if(custoForma) custoForma.disabled = false;
-  }
-}
-
 function f5AbrirFinalizacao(id) {
   const enc = todasEncomendas.find(x=>x.id===id);
   if(!enc) return alert('Encomenda não encontrada.');
@@ -6849,14 +6803,11 @@ function f5AbrirFinalizacao(id) {
   document.getElementById('f5CustoLevantamento').value = Number(enc.custoLevantamento)||0;
   document.getElementById('f5CustoOutros').value = Number(enc.custoOutros)||0;
   document.getElementById('f5CustoFormaPagamento').value = enc.formaPagamentoCustos || 'Dinheiro';
-  document.getElementById('f5CustoContaFinanceira').value = enc.contaPagamentoCustos || 'banco_stp';
   document.getElementById('f5CustoObservacao').value = enc.observacaoCustos || '';
   document.getElementById('f5FinalFormaPagamento').value = 'Dinheiro';
-  document.getElementById('f5FinalContaFinanceira').value = enc.contaRecebimentoFinal || 'responsavel_stp';
   document.getElementById('f5FinalObservacao').value = '';
   document.getElementById('f5FinalValorReceber').value = Math.max(0,(Number(enc.valorTotal)||0)-(Number(enc.sinalPago)||0)).toFixed(2);
   f5AtualizarFinalResumo();
-  f5AtualizarOpcoesContaFinal();
   document.getElementById('modalFinalizarEncomendaFase5').classList.remove('hidden');
 }
 
@@ -6883,7 +6834,6 @@ async function f5ConfirmarFinalizacao() {
   if(!navigator.onLine) return alert('É necessária ligação à internet para concluir a encomenda com segurança.');
   const user=auth.currentUser;
   if(!user) return alert('Sessão expirada.');
-  if(usuarioRole!=='admin') return alert('A conclusão financeira e a escolha de contas estão reservadas ao ADMIN.');
   const btn=document.getElementById('btnF5ConfirmarFinal');
   btn.disabled=true;
   try {
@@ -6894,103 +6844,49 @@ async function f5ConfirmarFinalizacao() {
     const custoOutros=f5Numero('f5CustoOutros');
     const custosChegada=custoCorreios+custoAlfandega+custoLevantamento+custoOutros;
     const formaCustos=document.getElementById('f5CustoFormaPagamento').value;
-    const contaCustos=formaCustos==='Dinheiro'?'caixa_stp':document.getElementById('f5CustoContaFinanceira').value;
     const obsCustos=document.getElementById('f5CustoObservacao').value.trim();
     const formaFinal=document.getElementById('f5FinalFormaPagamento').value;
-    const contaFinal=formaFinal==='Dinheiro'?'caixa_stp':document.getElementById('f5FinalContaFinanceira').value;
     const obsFinal=document.getElementById('f5FinalObservacao').value.trim();
     const valorFinal=Math.max(0,(Number(f5EncomendaAtual.valorTotal)||0)-(Number(f5EncomendaAtual.sinalPago)||0));
     const custoCompra=Number(f5EncomendaAtual.custoCompra)||0;
     const lucroReal=(Number(f5EncomendaAtual.valorTotal)||0)-custoCompra-custosChegada;
-    if(!Number.isFinite(custosChegada)||custosChegada<0) throw new Error('Custos inválidos.');
-    if((valorFinal>0&&contaFinal==='caixa_stp'||custosChegada>0&&contaCustos==='caixa_stp')&&!caixaAtualObj) throw new Error('Não existe caixa aberto. Selecione uma conta financeira (opção disponível ao ADMIN).');
-    const contasValidas=['caixa_stp','responsavel_stp','banco_stp','portugal_eur'];
-    if(valorFinal>0&&!contasValidas.includes(contaFinal)) throw new Error('Conta de recebimento inválida.');
-    if(custosChegada>0&&!contasValidas.includes(contaCustos)) throw new Error('Conta de pagamento dos custos inválida.');
-    if(contaFinal==='portugal_eur'||contaCustos==='portugal_eur') throw new Error('A encomenda está contabilizada em Db. Portugal / EUR não pode ser usado nesta operação em Db. Registe uma operação EUR separada se foi essa a moeda real.');
+    if(valorFinal < 0) throw new Error('Valor restante inválido.');
+    if(custosChegada < 0) throw new Error('Custos inválidos.');
+    if(valorFinal > 0 && formaFinal==='Dinheiro' && !caixaAtualObj) throw new Error('Para receber o pagamento final em dinheiro, abra primeiro um Caixa/Turno.');
+    if(custosChegada > 0 && formaCustos==='Dinheiro' && !caixaAtualObj) throw new Error('Para pagar custos de chegada em dinheiro, abra primeiro um Caixa/Turno.');
+
     const encRef=db.collection('encomendas').doc(id);
-    const movFinalRef=db.collection('tesouraria_movimentos').doc(`encomenda_${id}_recebimento_final`);
-    const movCustoRef=db.collection('tesouraria_movimentos').doc(`encomenda_${id}_custo_chegada`);
-    const movCaixaFinalRef=db.collection('movimentacoes').doc(`encomenda_${id}_recebimento_final`);
-    const movCaixaCustoRef=db.collection('movimentacoes').doc(`encomenda_${id}_custo_chegada`);
     await db.runTransaction(async tx=>{
       const encDoc=await tx.get(encRef);
       if(!encDoc.exists) throw new Error('Encomenda não encontrada.');
       const enc=encDoc.data();
-      if(enc.estado!=='EM_TRANSITO') throw new Error('Esta encomenda já foi concluída. Não repita a operação; use a regularização financeira do ADMIN.');
+      if(enc.estado!=='EM_TRANSITO') throw new Error('Esta encomenda já foi concluída por outro utilizador.');
       if(usuarioRole!=='admin' && enc.uid!==user.uid) throw new Error('Esta encomenda pertence a outro utilizador.');
-      let caixaId=null, caixaRef=null;
-      if(contaFinal==='caixa_stp'||contaCustos==='caixa_stp') {
-        caixaId=caixaAtualObj?.id;
-        if(!caixaId) throw new Error('Caixa fechado ou inexistente.');
-        caixaRef=db.collection('caixas').doc(caixaId);
+      let caixaId=null;
+      if((formaFinal==='Dinheiro' && valorFinal>0) || (formaCustos==='Dinheiro' && custosChegada>0)) {
+        const caixaRef=db.collection('caixas').doc(caixaAtualObj.id);
         const caixaDoc=await tx.get(caixaRef);
-        if(!caixaDoc.exists||caixaDoc.data().estado!=='aberto') throw new Error('O caixa atual não está aberto.');
+        if(!caixaDoc.exists || caixaDoc.data().estado!=='aberto') throw new Error('O caixa atual não está aberto.');
+        if(usuarioRole!=='admin' && caixaDoc.data().uid!==user.uid) throw new Error('O caixa aberto não pertence ao usuário atual.');
+        caixaId=caixaAtualObj.id;
       }
-      // Conta ledger is the source of truth. Read all account balances before writes.
-      const contaDebitar= custosChegada>0 && contaCustos!=='caixa_stp' ? contaCustos : null;
-      let saldoRef=null,saldoDoc=null,saldoAntes=0;
-      if(contaDebitar) {
-        saldoRef=db.collection('tesouraria_saldos').doc(contaDebitar);
-        saldoDoc=await tx.get(saldoRef);
-        if(!saldoDoc.exists) throw new Error(`Saldo de ${contaDebitar} não está inicializado.`);
-        saldoAntes=Number(saldoDoc.data().saldo);
-        if(!Number.isFinite(saldoAntes)||saldoAntes+1e-7<custosChegada) throw new Error(`Saldo insuficiente em ${contaDebitar} para pagar ${f5Moeda(custosChegada)}.`);
-      }
-      const agora=new Date();
       if(valorFinal>0) {
-        tx.set(movFinalRef,{tipo:'recebimento_encomenda',origem:'cliente_externo',destino:contaFinal,moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:valorFinal,valorDestino:valorFinal,taxaReferencia:null,taxaAplicada:null,margemDb:0,encomendaId:id,observacao:`Pagamento final da encomenda — ${enc.cliente||''} — ${enc.produto||''}. ${obsFinal}`.trim(),usuario:user.email||'',nomeUsuario:usuarioNome||'',uid:user.uid,role:usuarioRole,data:agora,...(contaFinal==='caixa_stp'?{caixaId}: {})});
-        tx.set(movCaixaFinalRef,{produto:`Pagamento final encomenda: ${enc.produto}`,tipo:'saida',quantidade:Number(enc.quantidade)||1,valor:valorFinal,formaPagamento:formaFinal,cliente:enc.cliente||'',usuario:user.email||'',nomeUsuario:usuarioNome||'',uid:user.uid,role:usuarioRole,data:agora,encomendaId:id,origem:'encomenda',...(contaFinal==='caixa_stp'?{caixaId}:{}),observacao:obsFinal});
+        const movFinal=db.collection('movimentacoes').doc();
+        tx.set(movFinal,{produto:`Pagamento Final Encomenda: ${enc.produto}`,tipo:'saida',quantidade:Number(enc.quantidade)||1,valor:valorFinal,formaPagamento:`${formaFinal} - Quitação Encomenda`,cliente:enc.cliente,usuario:user.email,nomeUsuario:usuarioNome||"Funcionário",uid:user.uid,role:usuarioRole,data:new Date(),...(formaFinal==='Dinheiro'&&caixaId?{caixaId}:{}),encomendaId:id,origem:'encomenda',observacao:obsFinal});
       }
       if(custosChegada>0) {
-        tx.set(movCustoRef,{tipo:'custo_chegada_encomenda',origem:contaCustos,destino:'fornecedor_externo',moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:custosChegada,valorDestino:custosChegada,taxaReferencia:null,taxaAplicada:null,margemDb:0,encomendaId:id,observacao:`Custos de chegada da encomenda — ${enc.produto||''}. ${obsCustos}`.trim(),usuario:user.email||'',nomeUsuario:usuarioNome||'',uid:user.uid,role:usuarioRole,data:agora,...(contaCustos==='caixa_stp'?{caixaId}:{})});
-        tx.set(movCaixaCustoRef,{produto:`Custo chegada encomenda: ${enc.produto}`,tipo:'despesa_caixa',quantidade:1,valor:custosChegada,formaPagamento:formaCustos,cliente:enc.cliente||'',usuario:user.email||'',nomeUsuario:usuarioNome||'',uid:user.uid,role:usuarioRole,data:agora,encomendaId:id,origem:'encomenda',...(contaCustos==='caixa_stp'?{caixaId}:{}),observacao:obsCustos});
-        if(contaDebitar) tx.set(saldoRef,{saldo:saldoAntes-custosChegada,moeda:'STN',atualizadoEm:agora,atualizadoPorUid:user.uid,atualizadoPorUsuario:user.email||'',origemCalculo:'encomenda_custo_chegada'}, {merge:true});
+        const movCusto=db.collection('movimentacoes').doc();
+        tx.set(movCusto,{produto:`Custo Chegada Encomenda: ${enc.produto}`,tipo:'despesa_caixa',quantidade:1,valor:custosChegada,formaPagamento:`${formaCustos} - Custo Encomenda`,cliente:enc.cliente,usuario:user.email,uid:user.uid,role:usuarioRole,data:new Date(),...(formaCustos==='Dinheiro'&&caixaId?{caixaId}:{}),encomendaId:id,origem:'encomenda',observacao:obsCustos});
       }
-      tx.update(encRef,{estado:'CONCLUIDO',dataConclusao:agora,custosChegada,custoCorreios,custoAlfandega,custoLevantamento,custoOutros,formaPagamentoCustos:formaCustos,contaPagamentoCustos:contaCustos,observacaoCustos:obsCustos,valorFinalRecebido:valorFinal,valorTotalRecebido:(Number(enc.sinalPago)||0)+valorFinal,valorEmFalta:0,estadoPagamento:'PAGO',formaPagamentoFinal:formaFinal,contaRecebimentoFinal:contaFinal,observacaoFinal:obsFinal,custoTotalReal:custoCompra+custosChegada,lucroReal,concluidoPorUid:user.uid,concluidoPorUsuario:user.email,tesourariaRecebimentoFinalId:valorFinal>0?movFinalRef.id:null,tesourariaCustoChegadaId:custosChegada>0?movCustoRef.id:null,regularizacaoFinanceiraEstado:'CONTABILIZADA'});
+      tx.update(encRef,{estado:'CONCLUIDO',dataConclusao:new Date(),custosChegada,custoCorreios,custoAlfandega,custoLevantamento,custoOutros,formaPagamentoCustos:formaCustos,observacaoCustos:obsCustos,valorFinalRecebido:valorFinal,formaPagamentoFinal:formaFinal,observacaoFinal:obsFinal,custoTotalReal:custoCompra+custosChegada,lucroReal,concluidoPorUid:user.uid,concluidoPorUsuario:user.email});
     });
-    const recibo={data:new Date().toLocaleString('pt-PT'),cliente:f5EncomendaAtual.cliente,vendedor:usuarioNome||'Funcionário',item:f5EncomendaAtual.produto,qtd:Number(f5EncomendaAtual.quantidade)||1,precoUnit:(Number(f5EncomendaAtual.valorTotal)||0)/(Number(f5EncomendaAtual.quantidade)||1),total:valorFinal,pagamento:formaFinal,troco:0,observacao:`Quitação de encomenda. Sinal já recebido: ${f5Moeda(f5EncomendaAtual.sinalPago)}. Pagamento final: ${f5Moeda(valorFinal)}. Custos de chegada: ${f5Moeda(custosChegada)}. Lucro real: ${f5Moeda(lucroReal)}.`};
+
+    const recibo={data:new Date().toLocaleString('pt-PT'),cliente:f5EncomendaAtual.cliente,vendedor:usuarioNome||"Funcionário",item:f5EncomendaAtual.produto,qtd:Number(f5EncomendaAtual.quantidade)||1,precoUnit:(Number(f5EncomendaAtual.valorTotal)||0)/(Number(f5EncomendaAtual.quantidade)||1),total:valorFinal,pagamento:formaFinal,troco:0,observacao:`Quitação de encomenda. Sinal já recebido: ${f5Moeda(f5EncomendaAtual.sinalPago)}. Custos de chegada: ${f5Moeda(custosChegada)}. Lucro real: ${f5Moeda(lucroReal)}.`};
     f5FecharModalFinalizar();
     if(typeof emitirReciboComprovativo==='function') emitirReciboComprovativo(recibo);
-    alert(`Encomenda concluída e contabilizada.\n\nPagamento final: ${f5Moeda(valorFinal)} — ${contaFinal}\nCustos de chegada: ${f5Moeda(custosChegada)} — ${contaCustos}\nEstado do pagamento: PAGO\nLucro real: ${f5Moeda(lucroReal)}`);
+    alert(`Encomenda concluída com sucesso.\n\nLucro real: ${f5Moeda(lucroReal)}\nCustos de chegada: ${f5Moeda(custosChegada)}`);
   } catch(e) { alert('Erro ao concluir encomenda: '+(e.message||e)); }
   finally { btn.disabled=false; }
-}
-
-// Regularização protegida: cria apenas pernas financeiras em falta para encomendas já concluídas.
-async function f62476RegularizarEncomenda(id) {
-  if(usuarioRole!=='admin'||!auth.currentUser) return alert('Apenas ADMIN pode regularizar encomendas.');
-  if(!navigator.onLine) return alert('É necessária ligação à internet.');
-  const enc=todasEncomendas.find(x=>x.id===id);
-  if(!enc||enc.estado!=='CONCLUIDO') return alert('Encomenda concluída não encontrada.');
-  const venda=Number(enc.valorTotal)||0, sinal=Number(enc.sinalPago)||0, final=Number(enc.valorFinalRecebido)||Math.max(0,venda-sinal), custos=Number(enc.custosChegada)||0;
-  const opEntrada=prompt(`Conta que RECEBEU os ${f5Moeda(final)} do cliente:\n1 = Responsável / Reserva\n2 = Banco STP / DobraPay\n3 = Caixa/Turno (apenas se existia caixa aberto)`, enc.contaRecebimentoFinal==='banco_stp'?'2':enc.contaRecebimentoFinal==='caixa_stp'?'3':'1');
-  if(opEntrada===null) return;
-  const contaEntrada=({'1':'responsavel_stp','2':'banco_stp','3':'caixa_stp'})[String(opEntrada).trim()];
-  const opSaida=prompt(`Conta que PAGOU os ${f5Moeda(custos)} de chegada:\n1 = Banco STP / DobraPay\n2 = Responsável / Reserva\n3 = Caixa/Turno (apenas se existia caixa aberto)`, enc.contaPagamentoCustos==='responsavel_stp'?'2':enc.contaPagamentoCustos==='caixa_stp'?'3':'1');
-  if(opSaida===null) return;
-  const contaSaida=({'1':'banco_stp','2':'responsavel_stp','3':'caixa_stp'})[String(opSaida).trim()];
-  if(!contaEntrada||!contaSaida) return alert('Opção inválida. A regularização foi cancelada.');
-  if(contaEntrada==='caixa_stp'||contaSaida==='caixa_stp') return alert('A regularização por Caixa/Turno exige um fluxo específico ligado ao turno. Escolha a conta real não física ou regularize com o caixa aberto.');
-  if(!confirm(`REGULARIZAR FINANCEIRO?\n\n${enc.cliente||''} — ${enc.produto||''}\nEntrada em falta: ${f5Moeda(final)} → ${contaEntrada}\nCusto em falta: ${f5Moeda(custos)} ← ${contaSaida}\n\nO sistema verificará os identificadores e não repetirá movimentos existentes.`)) return;
-  const user=auth.currentUser, agora=new Date();
-  const encRef=db.collection('encomendas').doc(id), entradaRef=db.collection('tesouraria_movimentos').doc(`encomenda_${id}_recebimento_final`), custoRef=db.collection('tesouraria_movimentos').doc(`encomenda_${id}_custo_chegada`);
-  try {
-    await db.runTransaction(async tx=>{
-      const ed=await tx.get(encRef); if(!ed.exists||ed.data().estado!=='CONCLUIDO') throw new Error('A encomenda mudou de estado.');
-      const reads=[];
-      if(final>0) reads.push(tx.get(entradaRef));
-      if(custos>0) reads.push(tx.get(custoRef));
-      const snaps=await Promise.all(reads);
-      let i=0, entradaExiste=final>0?snaps[i++].exists:false, custoExiste=custos>0?snaps[i++].exists:false;
-      let saldoRef=null,saldo=0;
-      if(custos>0&&!custoExiste) { saldoRef=db.collection('tesouraria_saldos').doc(contaSaida); const sd=await tx.get(saldoRef); if(!sd.exists) throw new Error('Saldo da conta de custos não inicializado.'); saldo=Number(sd.data().saldo)||0; if(saldo+1e-7<custos) throw new Error('Saldo insuficiente para regularizar o custo.'); }
-      if(final>0&&!entradaExiste) tx.set(entradaRef,{tipo:'recebimento_encomenda',origem:'cliente_externo',destino:contaEntrada,moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:final,valorDestino:final,encomendaId:id,observacao:`Regularização ADMIN — pagamento final — ${enc.cliente||''} — ${enc.produto||''}`,usuario:user.email||'',nomeUsuario:usuarioNome||'',uid:user.uid,role:usuarioRole,data:agora});
-      if(custos>0&&!custoExiste) { tx.set(custoRef,{tipo:'custo_chegada_encomenda',origem:contaSaida,destino:'fornecedor_externo',moedaOrigem:'STN',moedaDestino:'STN',valorOrigem:custos,valorDestino:custos,encomendaId:id,observacao:`Regularização ADMIN — custos de chegada — ${enc.produto||''}`,usuario:user.email||'',nomeUsuario:usuarioNome||'',uid:user.uid,role:usuarioRole,data:agora}); tx.set(saldoRef,{saldo:saldo-custos,moeda:'STN',atualizadoEm:agora,atualizadoPorUid:user.uid,origemCalculo:'regularizacao_encomenda'}, {merge:true}); }
-      tx.update(encRef,{valorTotalRecebido:Math.min(venda,sinal+final),valorEmFalta:0,estadoPagamento:'PAGO',regularizacaoFinanceiraEstado:(!entradaExiste&&final>0||!custoExiste&&custos>0)?'REGULARIZADA':'JÁ_CONTABILIZADA',regularizadaPorUid:user.uid,regularizadaPorUsuario:user.email||'',regularizadaEm:agora,tesourariaRecebimentoFinalId:final>0?entradaRef.id:null,tesourariaCustoChegadaId:custos>0?custoRef.id:null});
-    });
-    alert('Verificação/regularização concluída. Atualize Tesouraria e Financeiro para confirmar os saldos e movimentos.');
-  } catch(e) { alert('Falha na regularização: '+(e.message||e)); }
 }
 
 
@@ -12675,7 +12571,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
    Uma identidade, dois contextos. Nunca altera o role real do utilizador.
    ========================================================================= */
 (function(){
-  let subDocRef611=null, subUnsub611=null, subUid611=null, subEstado611="a_sincronizar";
+  let subDocRef611=null, subUnsub611=null;
   window.f611SubAtiva=false;
   window.f611SubDados=null;
 
@@ -12705,14 +12601,6 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
       pag.insertBefore(card,alvo||null);
     }
     const d=window.f611SubDados||{};
-    if(subEstado611==='a_sincronizar' || subEstado611==='erro'){
-      card.style.borderLeft='5px solid #f59e0b'; card.style.background='#fff7ed';
-      card.innerHTML=`<h3>⚠️ Substituição Operacional — ${subEstado611==='erro'?'erro de sincronização':'a sincronizar'}</h3>
-      <p>Não é seguro iniciar outra substituição ou outro turno enquanto o estado não for confirmado pelo servidor.</p>
-      <button id="btnRecarregarSub611" class="btn warning">🔄 Tentar sincronizar novamente</button>`;
-      card.querySelector('#btnRecarregarSub611').onclick=()=>window.f611PerfilPronto(auth.currentUser?.uid);
-      return;
-    }
     if(emSub611()){
       card.style.borderLeft='5px solid #f59e0b'; card.style.background='#fffbeb';
       card.innerHTML=`<h3>🟠 SUBSTITUIÇÃO OPERACIONAL ATIVA</h3>
@@ -12732,22 +12620,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
   async function iniciarSub611(){
     if(!ehGerente611()||!auth.currentUser) return;
-    if(subEstado611!=='pronto') return alert('Aguarde a sincronização da substituição com o servidor.');
-    if(emSub611()) return alert('A substituição já está ativa. Utilize o turno existente.');
-    // Confirma o estado real antes de qualquer criação: nunca sobrescreve uma substituição.
-    const uCheck=auth.currentUser;
-    try {
-      const [subAtual, turnosAbertos]=await Promise.all([
-        db.collection('substituicoes_operacionais').doc(uCheck.uid).get({source:'server'}),
-        db.collection('caixas').where('uid','==',uCheck.uid).where('estado','==','aberto').limit(1).get({source:'server'})
-      ]);
-      if(subAtual.exists && subAtual.data().estado==='ativa'){
-        window.f611SubDados=subAtual.data(); window.f611SubAtiva=true; subEstado611='pronto'; aplicarContexto611();
-        return alert('Substituição ativa recuperada do servidor. Não foi criada outra.');
-      }
-      if(!turnosAbertos.empty) return alert('Existe um turno aberto, mas a substituição não está ativa no servidor. Operação bloqueada para evitar duplicados. Contacte o ADMIN.');
-      if(subAtual.exists) return alert('Existe um registo de substituição encerrado. As regras atuais não permitem reativá-lo. Não será sobrescrito.');
-    }catch(e){console.error('Verificação da substituição:',e);return alert('Não foi possível confirmar o estado no servidor: '+(e.message||e));}
+    if(caixaAtualObj?.estado==='aberto') return alert('Já existe um Caixa/Turno aberto nesta conta. Feche-o antes de iniciar uma nova substituição.');
     const opcoes='1 - Ausência da vendedora\n2 - Intervalo / pausa\n3 - Emergência operacional\n4 - Cobertura temporária\n5 - Outro';
     const n=prompt('Motivo obrigatório da substituição:\n\n'+opcoes,'1'); if(n===null) return;
     const mapa={'1':'Ausência da vendedora','2':'Intervalo / pausa','3':'Emergência operacional','4':'Cobertura temporária','5':'Outro'};
@@ -12806,7 +12679,7 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
 
   function resetSessao611(){
     if(subUnsub611){ try{subUnsub611();}catch(e){} subUnsub611=null; }
-    subDocRef611=null; subUid611=null; subEstado611='a_sincronizar';
+    subDocRef611=null;
     window.f611SubAtiva=false;
     window.f611SubDados=null;
     try{ document.getElementById('cardSubstituicaoOperacional611')?.remove(); }catch(e){}
@@ -12814,38 +12687,15 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   window.f611ResetSessao = resetSessao611;
 
   function ouvir611(){
-    const u=auth.currentUser;
-    if(!u||!ehGerente611()) {resetSessao611();return;}
-    if(subUnsub611 && subUid611===u.uid) return; // não reinicia a escuta em cada renderização
     if(subUnsub611){try{subUnsub611();}catch(e){} subUnsub611=null;}
-    const uid=u.uid;
-    subUid611=uid; subEstado611='a_sincronizar';
-    window.f611SubAtiva=false; window.f611SubDados=null;
-    aplicarContexto611();
-    subDocRef611=db.collection('substituicoes_operacionais').doc(uid);
-    subUnsub611=subDocRef611.onSnapshot({includeMetadataChanges:true},doc=>{
-      if(!auth.currentUser||auth.currentUser.uid!==uid||subUid611!==uid)return;
-      if(doc.metadata.fromCache){
-        subEstado611='a_sincronizar'; window.f611SubAtiva=false;
-        aplicarContexto611(); return;
-      }
-      const d=doc.exists?doc.data():null;
-      window.f611SubDados=d; window.f611SubAtiva=!!(d&&d.estado==='ativa');
-      subEstado611='pronto'; aplicarContexto611();
+    const u=auth.currentUser; if(!u||!ehGerente611()){resetSessao611();return;}
+    subDocRef611=db.collection('substituicoes_operacionais').doc(u.uid);
+    subUnsub611=subDocRef611.onSnapshot(doc=>{
+      const d=doc.exists?doc.data():null; window.f611SubDados=d; window.f611SubAtiva=!!(d&&d.estado==='ativa');
+      aplicarContexto611();
       if(typeof carregarCaixaDoUsuario==='function') carregarCaixaDoUsuario();
-    },e=>{
-      if(subUid611!==uid)return;
-      console.error('Falha ao sincronizar substituição operacional:',e);
-      subEstado611='erro'; window.f611SubAtiva=false; window.f611SubDados=null;
-      subUnsub611=null; aplicarContexto611();
     });
   }
-  // Chamado pela autenticação principal assim que a role foi validada.
-  window.f611PerfilPronto=function(uid){
-    if(!uid||!auth.currentUser||auth.currentUser.uid!==uid)return;
-    if(ehGerente611()){ouvir611();aplicarContexto611();}
-    else resetSessao611();
-  };
 
   // Guards operacionais: mantém role real e adiciona apenas o contexto temporário.
   const abrirCaixaOriginal611=abrirCaixa;
@@ -12896,8 +12746,19 @@ if(_f610ConstruirNotif) construirNotificacoesAdmin=function(){const n=_f610Const
   document.addEventListener('click',()=>{ if(ehGerente611()) setTimeout(aplicarContexto611,20); },true);
   if(typeof auth!=='undefined'&&auth?.onAuthStateChanged){
     auth.onAuthStateChanged(u=>{
-      if(!u) resetSessao611();
-      // O início com role confirmada ocorre em f611PerfilPronto, sem temporizadores.
+      if(!u){ resetSessao611(); return; }
+      const uidObservado=u.uid;
+      // A role vem do documento usuarios; espera apenas até a validação principal terminar.
+      let tent=0;
+      const iniciarQuandoPronto=()=>{
+        if(!auth.currentUser || auth.currentUser.uid!==uidObservado){ resetSessao611(); return; }
+        if(usuarioRole){
+          if(ehGerente611()){ ouvir611(); aplicarContexto611(); } else resetSessao611();
+          return;
+        }
+        if(++tent<=12) setTimeout(iniciarQuandoPronto,100);
+      };
+      iniciarQuandoPronto();
     });
   }
 })();
@@ -15289,7 +15150,7 @@ function f62472AtualizarPreview(){
 });
 async function f6240CriarCupao(){
   if(usuarioRole!=="admin" || !auth.currentUser)return alert("Apenas ADMIN pode criar cupões.");
-  const codigo=String(document.getElementById("f6240CupCodigoAdmin").value||"").trim().toUpperCase(),tipo=document.getElementById("f6240CupTipo").value,valor=Number(document.getElementById("f6240CupValor").value),compraMinima=Number(document.getElementById("f6240CupMinimo").value||0),maxUsos=Number(document.getElementById("f6240CupMaxUsos").value),produtoId=document.getElementById("f6240CupProduto").value,vd=document.getElementById("f6240CupValidade").value;
+  const codigo=String(document.getElementById("f6240CupCodigoAdmin").value||"").trim().toUpperCase(),tipoSelecionado=document.getElementById("f6240CupTipo").value,tipo=tipoSelecionado==="VALOR"?"VALOR_FIXO":tipoSelecionado,valor=Number(document.getElementById("f6240CupValor").value),compraMinima=Number(document.getElementById("f6240CupMinimo").value||0),maxUsos=Number(document.getElementById("f6240CupMaxUsos").value),produtoId=document.getElementById("f6240CupProduto").value,vd=document.getElementById("f6240CupValidade").value;
   if(!/^[A-Z0-9_-]{3,60}$/.test(codigo))return alert("Código: 3 a 60 caracteres, apenas letras, números, _ e -.");
   if(!["FIXO","VALOR_FIXO","PERCENTUAL"].includes(tipo)||!Number.isFinite(valor)||valor<=0||tipo==="PERCENTUAL"&&valor>100||!Number.isFinite(compraMinima)||compraMinima<0||!Number.isInteger(maxUsos)||maxUsos<=0)return alert("Verifique tipo, valor, compra mínima e limite de utilizações.");
   if(produtoId && !todosProdutos.some(p=>p.id===produtoId))return alert("Produto selecionado inválido.");
@@ -15306,7 +15167,7 @@ async function f6240CriarCupao(){
     });
     alert("Cupão "+codigo+" criado com sucesso.");
     document.getElementById("f6240CupCodigoAdmin").value="";f62472AtualizarPreview();
-  }catch(e){console.error("Falha ao criar cupão",e);alert("Não foi possível criar o cupão: "+(e.code==="permission-denied"?"Permissão negada pelo Firestore. Confirme a publicação das regras 6.24.7.6.":e.message||String(e)));}
+  }catch(e){console.error("Falha ao criar cupão",e);alert("Não foi possível criar o cupão: "+(e.code==="permission-denied"?"Permissão negada pelo Firestore. Confirme a publicação das regras 6.24.7.2.":e.message||String(e)));}
   finally{if(btn){btn.disabled=false;btn.textContent="＋ Criar cupão";}}
 }
 async function f6240ToggleCupao(id,ativo){
