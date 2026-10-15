@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.10.15-029">
+<meta name="mdstp-build" content="2026.10.15-030">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -2259,7 +2259,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
       <div id="f6241BeneficiosConteudo" class="hidden" style="border:1px solid #cbd5e1;border-top:0;background:#f8fafc;border-radius:0 0 9px 9px;padding:10px;">
         <div id="f6240DescontoEstado" style="font-size:12px;color:#64748b;margin-bottom:8px;">Sem desconto aplicado.</div>
         <div style="display:flex;gap:7px;flex-wrap:wrap;">
-          <button type="button" id="f6240BtnSolicitar" class="btn-secondary" onclick="f6240AbrirSolicitacao()">🏷️ Solicitar desconto</button>
+          <button type="button" id="f6240BtnSolicitar" class="btn-secondary" onclick="f6240AbrirSolicitacao()">🏷️ Preparar desconto</button>
           <input id="f6240CupaoCodigo" type="text" placeholder="Código do cupão" style="flex:1;min-width:135px;margin:0;text-transform:uppercase;">
           <button type="button" class="btn-secondary" onclick="f6240AplicarCupao()">🎟️ Aplicar cupão</button>
           <button type="button" id="f6240BtnRemover" class="btn-danger hidden" onclick="f6240RemoverBeneficio()">Remover</button>
@@ -2284,7 +2284,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <!-- FASE 6.24 — DESCONTOS CONTROLADOS -->
 <div id="f6240ModalSolicitar" class="modal-overlay hidden">
   <div class="modal-content" style="max-width:560px;">
-    <h3 style="margin-top:0;">🏷️ Solicitar desconto</h3>
+    <h3 style="margin-top:0;">🏷️ Preparar desconto</h3>
     <div id="f6240SolicResumo" style="background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:8px;margin-bottom:10px;"></div>
     <label style="font-size:12px;font-weight:700;">Preço final solicitado (Db)</label>
     <input id="f6240PrecoSolicitado" type="number" min="0" step="1" oninput="f6240AtualizarResumoSolicitacao()">
@@ -2292,7 +2292,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
     <textarea id="f6240Motivo" placeholder="Ex.: Cliente negociou preço" style="width:100%;min-height:70px;"></textarea>
     <div id="f6240Impacto" style="margin:10px 0;padding:10px;border-radius:8px;background:#fff7ed;font-size:13px;"></div>
     <div style="display:flex;gap:8px;">
-      <button id="f6240EnviarSolic" class="btn-success" onclick="f6240EnviarSolicitacao()" style="flex:1;">📨 Enviar para aprovação</button>
+      <button id="f6240EnviarSolic" class="btn-success" onclick="f6240EnviarSolicitacao()" style="flex:1;">📨 Enviar ao ADMIN</button>
       <button class="btn-secondary" onclick="f6240FecharSolicitacao()">Cancelar</button>
     </div>
   </div>
@@ -15007,7 +15007,7 @@ abrirModalVenda=function(id){
 };
 function f6240ConfigPOS(){
   const b=document.getElementById("f6240BtnSolicitar");
-  if(b)b.innerText=f6240Gestor()?"🏷️ Aplicar desconto autorizado":"🏷️ Solicitar desconto";
+  if(b)b.innerText=f6240Gestor()?"🏷️ Aplicar desconto autorizado":"🏷️ Preparar desconto";
 }
 const f6240CalcOriginal=calcularTotalVendaModal;
 calcularTotalVendaModal=function(){
@@ -15086,7 +15086,7 @@ function f6240AbrirAprovacoes(){
       <div style="margin:7px 0;">Tabela: ${Number(x.precoTabela).toLocaleString("pt-PT")} Db → solicitado: <b>${Number(x.precoSolicitado).toLocaleString("pt-PT")} Db</b> · desconto ${pct.toFixed(2)}%<br>
       Custo snapshot: ${Number(x.custoSnapshot||0).toLocaleString("pt-PT")} Db · lucro após: ${(Number(x.precoSolicitado)-Number(x.custoSnapshot||0)).toLocaleString("pt-PT")} Db</div>
       ${gerenteBloq?`<small style="color:#b91c1c;font-weight:700;">GERENTE não pode aprovar o próprio pedido nem desconto acima de ${f6240LimiteGerentePercent}%.</small>`:
-      `<button class="btn-success" onclick="f6240Decidir('${x.id}',true)">Aprovar</button> <button class="btn-danger" onclick="f6240Decidir('${x.id}',false)">Rejeitar</button>`}
+      `<button class="btn-success" onclick="f6240Decidir('${x.id}',true)">Autorizar desconto</button> <button class="btn-danger" onclick="f6240Decidir('${x.id}',false)">Rejeitar</button>`}
     </div>`;
   }).join(""):'<p style="color:#64748b;">Nenhuma solicitação pendente.</p>';
   document.getElementById("f6240ModalAprovacoes").classList.remove("hidden");
@@ -15150,7 +15150,7 @@ function f62472AtualizarPreview(){
 });
 async function f6240CriarCupao(){
   if(usuarioRole!=="admin" || !auth.currentUser)return alert("Apenas ADMIN pode criar cupões.");
-  const codigo=String(document.getElementById("f6240CupCodigoAdmin").value||"").trim().toUpperCase(),tipoSelecionado=document.getElementById("f6240CupTipo").value,tipo=tipoSelecionado==="VALOR"?"VALOR_FIXO":tipoSelecionado,valor=Number(document.getElementById("f6240CupValor").value),compraMinima=Number(document.getElementById("f6240CupMinimo").value||0),maxUsos=Number(document.getElementById("f6240CupMaxUsos").value),produtoId=document.getElementById("f6240CupProduto").value,vd=document.getElementById("f6240CupValidade").value;
+  const codigo=String(document.getElementById("f6240CupCodigoAdmin").value||"").trim().toUpperCase(),tipo=document.getElementById("f6240CupTipo").value,valor=Number(document.getElementById("f6240CupValor").value),compraMinima=Number(document.getElementById("f6240CupMinimo").value||0),maxUsos=Number(document.getElementById("f6240CupMaxUsos").value),produtoId=document.getElementById("f6240CupProduto").value,vd=document.getElementById("f6240CupValidade").value;
   if(!/^[A-Z0-9_-]{3,60}$/.test(codigo))return alert("Código: 3 a 60 caracteres, apenas letras, números, _ e -.");
   if(!["FIXO","VALOR_FIXO","PERCENTUAL"].includes(tipo)||!Number.isFinite(valor)||valor<=0||tipo==="PERCENTUAL"&&valor>100||!Number.isFinite(compraMinima)||compraMinima<0||!Number.isInteger(maxUsos)||maxUsos<=0)return alert("Verifique tipo, valor, compra mínima e limite de utilizações.");
   if(produtoId && !todosProdutos.some(p=>p.id===produtoId))return alert("Produto selecionado inválido.");
