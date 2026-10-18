@@ -15202,7 +15202,7 @@ confirmarVendaModal=async function(){
         const cr=db.collection("cupons").doc(beneficio.cupaoId),cd=await tx.get(cr);
         if(!cd.exists||cd.data().ativo!==true)throw new Error("Cupão já não está ativo.");
         if(Number(cd.data().usos||0)>=Number(cd.data().maxUsos||0))throw new Error("Limite do cupão atingido.");
-        tx.update(cr,{usos:(Number(cd.data().usos)||0)+1,ultimoUsoEm:agora});
+        tx.update(cr,{usos:(Number(cd.data().usos)||0)+1,ultimoUsoEm:firebase.firestore.FieldValue.serverTimestamp()});
       }
       // variantes: preserva a lógica 6.23 se existir seleção
       let upd={estoque:est-b.qtd};
