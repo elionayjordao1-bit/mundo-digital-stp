@@ -15190,6 +15190,16 @@ confirmarVendaModal=async function(){
     const prodRef=db.collection("produtos").doc(produtoVendaAtual.id), movRef=db.collection("movimentacoes").doc(), agora=new Date();
     await db.runTransaction(async tx=>{
       const pd=await tx.get(prodRef);if(!pd.exists)throw new Error("Produto não existe.");
+      // Recebimentos por transferência atualizam Banco STP na mesma transação da venda.
+      const vendaPorTransferencia = forma === "Transferencia";
+      const saldoBancoRef = db.collection("tesouraria_saldos").doc("banco_stp");
+      const movEntradaRef = db.collection("movimentacoes").doc("venda_transf_" + movRef.id);
+      const tesVendaRef = db.collection("tesouraria_movimentos").doc("venda_transf_" + movRef.id);
+      let saldoBancoDoc = null;
+      if(vendaPorTransferencia){
+        saldoBancoDoc = await tx.get(saldoBancoRef);
+        if(!saldoBancoDoc.exists) throw new Error("A conta Banco STP / DobraPay ainda não está inicializada na Tesouraria. A venda não foi gravada; peça ao ADMIN para inicializar a conta.");
+      }
       const data=pd.data(), est=Number(data.estoque)||0;if(est<b.qtd)throw new Error(`Estoque insuficiente. Restam ${est}.`);
       let beneficio=f6240Beneficio;
       if(beneficio?.solicitacaoId){
@@ -15215,6 +15225,35 @@ confirmarVendaModal=async function(){
       if(caixaAtualObj?.id)payload.caixaId=caixaAtualObj.id;
       if(beneficio){payload.beneficioTipo=beneficio.tipo;payload.descontoMotivo=beneficio.motivo||"";if(beneficio.solicitacaoId)payload.descontoSolicitacaoId=beneficio.solicitacaoId;if(beneficio.cupaoId){payload.cupaoId=beneficio.cupaoId;payload.cupaoCodigo=beneficio.codigo;}}
       tx.set(movRef,payload);
+      if(vendaPorTransferencia){
+        const saldoAntes = Number(saldoBancoDoc.data().saldo)||0;
+        const saldoDepois = saldoAntes + total;
+        tx.set(movEntradaRef,{
+          produto:"Recebimento por transferência — Venda " + produtoVendaAtual.nome,
+          tipo:"transferencia_entrada", quantidade:1, valor:total,
+          formaPagamento:"Transferencia - Venda (não físico)", cliente:nome,
+          usuario:auth.currentUser.email||"", nomeUsuario:usuarioNome||"Funcionário",
+          uid:auth.currentUser.uid, role:usuarioRole, data:agora,
+          ...(caixaAtualObj?.id?{caixaId:caixaAtualObj.id}:{}),
+          origem:"venda_transferencia", vendaMovimentoId:movRef.id,
+          tesourariaMovimentoId:tesVendaRef.id, impactoReceita:false
+        });
+        tx.set(tesVendaRef,{
+          tipo:"recebimento_venda_transferencia", origem:"cliente_externo", destino:"banco_stp",
+          moedaOrigem:"STN", moedaDestino:"STN", valorOrigem:0, valorDestino:total,
+          taxaReferencia:null, taxaAplicada:null, margemDb:0,
+          observacao:"Venda " + produtoVendaAtual.nome + " — " + nome,
+          vendaMovimentoId:movRef.id, movimentoCaixaId:movEntradaRef.id,
+          usuario:auth.currentUser.email||"", nomeUsuario:usuarioNome||"Funcionário",
+          uid:auth.currentUser.uid, role:usuarioRole, data:agora
+        });
+        tx.update(saldoBancoRef,{
+          saldo:saldoDepois, moeda:"STN", atualizadoEm:agora,
+          atualizadoPorUid:auth.currentUser.uid, atualizadoPorUsuario:auth.currentUser.email||"",
+          origemCalculo:"ledger_tesouraria", ultimaOperacao:"recebimento_venda_transferencia",
+          ultimaVendaId:movRef.id
+        });
+      }
     });
     const troco=forma==="Dinheiro"?recebido-total:0;
     fecharModalVenda();
