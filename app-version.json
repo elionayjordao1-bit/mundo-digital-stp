@@ -1,6 +1,6 @@
 {
-  "version": "6.24.8.1",
-  "release": "6.24.8.1",
-  "build": "2026.10.18-033",
-  "notes": "Build alinhado entre HTML, Service Worker e app-version; atualização PWA corrigida. Inclui registo de vendas por transferência na Tesouraria e Gestão de Caixa."
+  "version": "6.24.8.2",
+  "release": "6.24.8.2",
+  "build": "2026.10.18-034",
+  "notes": "Reconciliação automática e idempotente das vendas históricas por transferência na Tesouraria; sem duplicar movimentos nem alterar o Caixa físico. Versões PWA alinhadas."
 }
