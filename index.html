@@ -369,7 +369,7 @@ tr:nth-child(even) { background-color: #f8fafc; }
 <meta name="apple-mobile-web-app-title" content="Mundo Digital STP">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<meta name="mdstp-build" content="2026.10.18-033">
+<meta name="mdstp-build" content="2026.10.18-034">
 
 <style id="v6231-variant-ui-fix">
 #varProdutoBox label, #ptVariantesBox label{
@@ -8439,6 +8439,7 @@ function iniciarListenerTesouraria() {
     // transferências diretas GO-LIVE que tenham ficado sem perna de Tesouraria.
     reconciliarTransferenciasDiretasTesouraria619();
     reconciliarHistoricoTransferenciasDiretas620();
+    reconciliarVendasTransferenciaTesouraria6249();
   }, e => console.warn("Tesouraria:", e));
 }
 
@@ -15283,6 +15284,147 @@ function f6241FecharBeneficiosPOS(){
 const f6240SegOriginal=typeof aplicarSegurancaInterface64==="function"?aplicarSegurancaInterface64:null;
 if(f6240SegOriginal)aplicarSegurancaInterface64=function(){const r=f6240SegOriginal.apply(this,arguments);setTimeout(()=>{f6240AplicarUI();f6240Ouvir();},0);return r;};
 document.addEventListener("DOMContentLoaded",()=>setTimeout(()=>{f6240AplicarUI();if(auth.currentUser)f6240Ouvir();},1000));
+
+/* =========================================================================
+   FASE 6.24.9 — RECONCILIAÇÃO IDEMPOTENTE DE VENDAS POR TRANSFERÊNCIA
+   - ADMIN apenas; vendas desde 01/10/2026.
+   - Usa o histórico de movimentacoes como origem das vendas.
+   - Cria a perna de Tesouraria em falta e a linha operacional de transferência
+     apenas quando ainda não existem.
+   - IDs determinísticos e vendaMovimentoId evitam duplicações.
+   - Não altera o valor físico do Caixa nem atualiza snapshots diretamente:
+     recalcularSaldosTesouraria() deriva os saldos do razão.
+   ========================================================================= */
+let f6249VendasTransferenciaExecutada = false;
+let f6249VendasTransferenciaEmCurso = false;
+
+async function reconciliarVendasTransferenciaTesouraria6249(){
+  if(usuarioRole !== "admin" || !auth.currentUser ||
+     f6249VendasTransferenciaExecutada || f6249VendasTransferenciaEmCurso ||
+     !navigator.onLine) return;
+
+  f6249VendasTransferenciaEmCurso = true;
+  try{
+    const [movSnap, tesSnap] = await Promise.all([
+      db.collection("movimentacoes").get(),
+      db.collection("tesouraria_movimentos").get()
+    ]);
+
+    const movs = movSnap.docs.map(d => ({id:d.id, ...(d.data()||{})}));
+    const tesMovs = tesSnap.docs.map(d => ({id:d.id, ...(d.data()||{})}));
+    const tesIds = new Set(tesMovs.map(m => m.id));
+    const tesVendas = new Set(tesMovs.map(m => String(m.vendaMovimentoId||"")).filter(Boolean));
+    const movIds = new Set(movs.map(m => m.id));
+    const movVendas = new Set(movs.map(m => String(m.vendaMovimentoId||"")).filter(Boolean));
+    const estornadas = new Set(movs
+      .filter(m => m.tipo === "estorno_venda" && m.operacaoOriginalId)
+      .map(m => String(m.operacaoOriginalId)));
+
+    const marco = new Date(2026, 9, 1, 0, 0, 0, 0);
+    const normalizar = v => String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+    const dataSegura = v => {
+      if(v && typeof v.toDate === "function") return v.toDate();
+      if(v instanceof Date) return v;
+      const d = new Date(v||0);
+      return Number.isNaN(d.getTime()) ? null : d;
+    };
+
+    const candidatas = movs.filter(m => {
+      if(m.tipo !== "saida" || m.origem === "encomenda" || ehTransferenciaLegacy(m)) return false;
+      if(estornadas.has(String(m.id))) return false;
+      if(!normalizar(m.formaPagamento).includes("transfer")) return false;
+      const valor = Number(m.valor)||0, data = dataSegura(m.data);
+      return valor > 0 && data && data >= marco;
+    });
+
+    let vendasReconciliadas = 0, movimentosTesourariaCriados = 0, entradasOperacionaisCriadas = 0;
+    let valorTesourariaCriado = 0;
+    const lote = [];
+
+    for(const venda of candidatas){
+      const idTes = "venda_transf_" + venda.id;
+      const idMov = "venda_transf_" + venda.id;
+      const jaTemTes = tesIds.has(idTes) || tesVendas.has(String(venda.id));
+      const jaTemMov = movIds.has(idMov) || movVendas.has(String(venda.id));
+      if(jaTemTes && jaTemMov) continue;
+
+      const valor = Number(venda.valor)||0;
+      const dataOriginal = dataSegura(venda.data) || new Date();
+      const baseAuditoria = {
+        vendaMovimentoId:venda.id,
+        usuario:venda.usuario||auth.currentUser.email||"",
+        nomeUsuario:venda.nomeUsuario||"",
+        uid:venda.uid||auth.currentUser.uid,
+        role:venda.role||"admin",
+        data:dataOriginal,
+        reconciliadoAutomaticamente:true,
+        reconciliadoEm:new Date(),
+        reconciliadoPorUid:auth.currentUser.uid,
+        reconciliadoPorUsuario:auth.currentUser.email||""
+      };
+
+      if(!jaTemTes){
+        lote.push({kind:"tes",id:idTes,data:{
+          tipo:"recebimento_venda_transferencia",
+          origem:"cliente_externo",destino:"banco_stp",
+          moedaOrigem:"STN",moedaDestino:"STN",
+          valorOrigem:0,valorDestino:valor,
+          taxaReferencia:null,taxaAplicada:null,margemDb:0,
+          observacao:"Reconciliação automática — Venda "+(venda.produto||"Produto")+" — "+(venda.cliente||"Consumidor Final"),
+          movimentoCaixaId:idMov,
+          origemFluxo:"RECONCILIACAO_VENDA_TRANSFERENCIA_6_24_9",
+          ...baseAuditoria
+        }});
+        movimentosTesourariaCriados++;
+        valorTesourariaCriado += valor;
+      }
+
+      if(!jaTemMov){
+        lote.push({kind:"mov",id:idMov,data:{
+          produto:"Recebimento por transferência — Venda "+(venda.produto||"Produto"),
+          tipo:"transferencia_entrada",quantidade:1,valor,
+          formaPagamento:"Transferencia - Venda (não físico)",
+          cliente:venda.cliente||"Consumidor Final",
+          origem:"venda_transferencia",tesourariaMovimentoId:idTes,
+          impactoReceita:false,
+          ...(venda.caixaId?{caixaId:venda.caixaId}:{}),
+          ...baseAuditoria
+        }});
+        entradasOperacionaisCriadas++;
+      }
+      vendasReconciliadas++;
+    }
+
+    // Firestore permite no máximo 500 operações por batch; usar lotes pequenos.
+    for(let i=0;i<lote.length;i+=400){
+      const batch=db.batch();
+      lote.slice(i,i+400).forEach(op=>{
+        const ref=op.kind==="tes"
+          ? db.collection("tesouraria_movimentos").doc(op.id)
+          : db.collection("movimentacoes").doc(op.id);
+        batch.set(ref,op.data,{merge:true});
+      });
+      await batch.commit();
+    }
+
+    f6249VendasTransferenciaExecutada = true;
+    if(movimentosTesourariaCriados || entradasOperacionaisCriadas){
+      console.info("Fase 6.24.9: reconciliação de vendas por transferência concluída.",{
+        vendasReconciliadas,movimentosTesourariaCriados,entradasOperacionaisCriadas,valorTesourariaCriado
+      });
+      alert("Reconciliação automática concluída.\n\nVendas verificadas/reparadas: "+vendasReconciliadas+
+        "\nMovimentos novos na Tesouraria: "+movimentosTesourariaCriados+
+        "\nEntradas operacionais em falta: "+entradasOperacionaisCriadas+
+        "\nValor novo lançado na Tesouraria: "+valorTesourariaCriado.toLocaleString("pt-PT")+" Db"+
+        "\n\nO Caixa físico não foi aumentado. Os movimentos já existentes não foram duplicados.");
+    }
+  }catch(e){
+    console.warn("Fase 6.24.9 — reconciliação de vendas por transferência não concluída:",e);
+  }finally{
+    f6249VendasTransferenciaEmCurso = false;
+  }
+}
+
 </script>
 
 </body>
