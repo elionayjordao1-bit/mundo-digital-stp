@@ -1,6 +1,6 @@
 {
-  "version": "6.24.8.0",
-  "release": "6.24.8.0",
-  "build": "2026.10.18-032",
-  "notes": "Regista vendas pagas por transferência como entrada bancária na Gestão de Caixa e na Tesouraria, sem aumentar o numerário físico; atualização do cache PWA."
+  "version": "6.24.8.1",
+  "release": "6.24.8.1",
+  "build": "2026.10.18-033",
+  "notes": "Build alinhado entre HTML, Service Worker e app-version; atualização PWA corrigida. Inclui registo de vendas por transferência na Tesouraria e Gestão de Caixa."
 }
