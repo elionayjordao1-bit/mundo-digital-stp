@@ -1,6 +1,6 @@
 {
-  "version": "6.24.7.9",
-  "release": "6.24.7.8",
-  "build": "2026.10.18-031",
-  "notes": "Corrige o registo do consumo de cupões usando timestamp do servidor; aprovação e permissões mantidas."
+  "version": "6.24.8.0",
+  "release": "6.24.8.0",
+  "build": "2026.10.18-032",
+  "notes": "Regista vendas pagas por transferência como entrada bancária na Gestão de Caixa e na Tesouraria, sem aumentar o numerário físico; atualização do cache PWA."
 }
